@@ -29,6 +29,24 @@ A Python service that runs in Docker to display dynamic information on your Vest
 - (Optional) Home Assistant server with access token
 - (Optional) Mac with Apple Music for "Now Playing" feature
 
+### GitHub Codespaces (Recommended for Development)
+
+If you're using GitHub Codespaces:
+
+1. **Add Codespaces secrets** to your repository:
+   - Go to **Settings** → **Secrets and variables** → **Codespaces**
+   - Add `VB_READ_WRITE_KEY` (your Vestaboard API key)
+   - Add `WEATHER_API_KEY` (your Weather API key)
+
+2. **Launch a Codespace** from your repository
+
+3. **Run the setup script**:
+   ```bash
+   ./codespaces_setup.sh
+   ```
+
+See [CODESPACES_SETUP.md](./CODESPACES_SETUP.md) for detailed instructions.
+
 ### Basic Setup
 
 1. **Clone or navigate to the project directory**

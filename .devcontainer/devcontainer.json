@@ -1,0 +1,22 @@
+{
+  "name": "Vestaboard Display Service",
+  "image": "mcr.microsoft.com/devcontainers/python:3.10",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "postCreateCommand": "pip install -r requirements.txt",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance"
+      ]
+    }
+  },
+  "forwardPorts": [],
+  "remoteEnv": {
+    "VB_READ_WRITE_KEY": "${localEnv:VB_READ_WRITE_KEY}",
+    "WEATHER_API_KEY": "${localEnv:WEATHER_API_KEY}"
+  }
+}
+

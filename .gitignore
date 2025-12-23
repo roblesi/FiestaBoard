@@ -1,6 +1,9 @@
 # Environment variables - NEVER commit these!
 .env
 
+# Codespaces
+.devcontainer/secrets.json
+
 # Python
 __pycache__/
 *.py[cod]
