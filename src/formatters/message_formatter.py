@@ -157,15 +157,15 @@ class MessageFormatter:
         """
         lines = []
         
-        # Header
-        lines.append("Guest WiFi")
+        # Header with green color (welcoming)
+        lines.append("{66}Guest WiFi"[:self.MAX_COLS + 4])
         lines.append("")
         
-        # SSID
-        lines.append(f"SSID: {ssid}"[:self.MAX_COLS])
+        # SSID with blue color
+        lines.append(f"SSID: {{67}}{ssid}"[:self.MAX_COLS + 4])
         
-        # Password
-        lines.append(f"Password: {password}"[:self.MAX_COLS])
+        # Password with violet color (to distinguish from SSID)
+        lines.append(f"Password: {{68}}{password}"[:self.MAX_COLS + 4])
         
         # Ensure we don't exceed 6 rows
         result = "\n".join(lines[:self.MAX_ROWS])
@@ -192,13 +192,18 @@ class MessageFormatter:
         character = quote_data.get("character", "")
         series = quote_data.get("series", "").upper()
         
-        # Series name mapping
-        series_names = {
-            "tng": "TNG",
-            "voyager": "VOY",
-            "ds9": "DS9"
+        # Series name mapping with colors
+        # TNG = Yellow (classic gold uniforms)
+        # Voyager = Blue (blue/teal uniforms)
+        # DS9 = Red (command red)
+        series_info = {
+            "tng": {"name": "TNG", "color": "{65}"},      # Yellow
+            "voyager": {"name": "VOY", "color": "{67}"},  # Blue
+            "ds9": {"name": "DS9", "color": "{63}"}       # Red
         }
-        series_display = series_names.get(series.lower(), series)
+        series_data = series_info.get(series.lower(), {"name": series, "color": ""})
+        series_display = series_data["name"]
+        series_color = series_data["color"]
         
         # Split quote into lines that fit
         quote_lines = self.split_into_lines(quote, max_lines=4)
@@ -215,10 +220,11 @@ class MessageFormatter:
                 # Room for both character and series
                 lines.append(attribution[:self.MAX_COLS])
                 if series_display:
-                    lines.append(f"  {series_display}"[:self.MAX_COLS])
+                    # Add series with color
+                    lines.append(f"  {series_color}{series_display}"[:self.MAX_COLS + 4])
             else:
                 # Only room for one line - combine
-                lines.append(f"- {character} ({series_display})"[:self.MAX_COLS])
+                lines.append(f"- {character} ({series_color}{series_display})"[:self.MAX_COLS + 4])
         
         # Ensure we don't exceed 6 rows
         result = "\n".join(lines[:self.MAX_ROWS])
@@ -260,10 +266,10 @@ class MessageFormatter:
             # For lock: "unlocked" = unlocked (red), "locked" = locked (green)
             
             if error or state == "unavailable":
-                indicator = "[?]"
+                indicator = "{65}"  # Yellow - warning/unknown
                 status_text = "unavailable"
             elif state in ["on", "open", "unlocked"]:
-                indicator = "[R]"  # Red - needs attention
+                indicator = "{63}"  # Red - needs attention
                 # Convert to friendly text
                 if state == "on":
                     # For binary sensors, "on" usually means open/active
@@ -274,7 +280,7 @@ class MessageFormatter:
                 else:
                     status_text = state
             elif state in ["off", "closed", "locked"]:
-                indicator = "[G]"  # Green - secure/good
+                indicator = "{66}"  # Green - secure/good
                 # Convert to friendly text
                 if state == "off":
                     # For binary sensors, "off" usually means closed/inactive
@@ -285,16 +291,17 @@ class MessageFormatter:
                 else:
                     status_text = state
             else:
-                indicator = "[?]"
+                indicator = "{65}"  # Yellow - unknown state
                 status_text = state
             
-            # Format: "Name: status [G]" or "Name: status [R]"
+            # Format: "Name: status {color}"
+            # Color codes take 4 chars in text format: {63}
             # Truncate name if needed to fit
-            max_name_len = self.MAX_COLS - len(f": {status_text} {indicator}")
+            max_name_len = self.MAX_COLS - len(f": {status_text} {{63}}")
             display_name = name[:max_name_len] if len(name) > max_name_len else name
             
             line = f"{display_name}: {status_text} {indicator}"
-            lines.append(line[:self.MAX_COLS])
+            lines.append(line[:self.MAX_COLS + 4])  # +4 for color code format
         
         # Ensure we don't exceed 6 rows
         result = "\n".join(lines[:self.MAX_ROWS])
@@ -348,13 +355,16 @@ class MessageFormatter:
             symbol = weather_symbol_info.get("symbol", "?")
             condition_display = weather_symbol_info.get("description", condition)
             
+            # Get color for temperature
+            temp_color = self._get_temp_color(temp)
+            
             # Compact format to fit
             if len(lines) + 2 <= self.MAX_ROWS:
                 lines.append(f"{location}: {symbol} {condition_display}")
-                lines.append(f"Temp: {temp}°F")
+                lines.append(f"Temp: {temp_color}{temp}°F")
             elif len(lines) + 1 <= self.MAX_ROWS:
                 # Very compact
-                lines.append(f"{location}: {symbol} {temp}°F")
+                lines.append(f"{location}: {symbol} {temp_color}{temp}°F")
         
         # Ensure we don't exceed 6 rows
         result = "\n".join(lines[:self.MAX_ROWS])
@@ -364,6 +374,29 @@ class MessageFormatter:
         truncated = [line[:self.MAX_COLS] for line in result_lines]
         
         return "\n".join(truncated)
+    
+    def _get_temp_color(self, temp: int) -> str:
+        """
+        Get color code for temperature display.
+        
+        Args:
+            temp: Temperature in Fahrenheit
+            
+        Returns:
+            Color code string (e.g., "{63}" for red)
+        """
+        if temp >= 90:
+            return "{63}"  # Red - very hot
+        elif temp >= 80:
+            return "{64}"  # Orange - hot
+        elif temp >= 70:
+            return "{65}"  # Yellow - warm
+        elif temp >= 60:
+            return "{66}"  # Green - comfortable
+        elif temp >= 45:
+            return "{67}"  # Blue - cool
+        else:
+            return "{68}"  # Violet - cold
     
     def split_into_lines(self, text: str, max_lines: int = MAX_ROWS) -> List[str]:
         """

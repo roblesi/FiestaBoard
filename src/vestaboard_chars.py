@@ -79,6 +79,16 @@ class VestaboardChars:
     # Note: Actual codes may differ - verify with Vestaboard docs
     DEGREE = 54      # ° (if available, otherwise use 'O')
     
+    # Color codes (filled color tiles)
+    RED = 63        # Red color tile
+    ORANGE = 64     # Orange color tile
+    YELLOW = 65     # Yellow color tile
+    GREEN = 66      # Green color tile
+    BLUE = 67       # Blue color tile
+    VIOLET = 68     # Violet/Purple color tile
+    WHITE = 69      # White color tile
+    BLACK = 70      # Black color tile (if available)
+    
     # Weather-related symbol approximations using available characters
     # Since true icons aren't available, we use creative character combinations
     WEATHER_SUN = ASTERISK      # * for sun
@@ -133,6 +143,30 @@ class VestaboardChars:
         }
         
         return special_map.get(char)
+    
+    @classmethod
+    def get_color_code(cls, color_name: str) -> Optional[int]:
+        """
+        Get color code by name.
+        
+        Args:
+            color_name: Color name (red, green, blue, etc.)
+            
+        Returns:
+            Color code or None if not found
+        """
+        color_map = {
+            'red': cls.RED,
+            'orange': cls.ORANGE,
+            'yellow': cls.YELLOW,
+            'green': cls.GREEN,
+            'blue': cls.BLUE,
+            'violet': cls.VIOLET,
+            'purple': cls.VIOLET,
+            'white': cls.WHITE,
+            'black': cls.BLACK if hasattr(cls, 'BLACK') else None,
+        }
+        return color_map.get(color_name.lower())
     
     @classmethod
     def text_to_codes(cls, text: str) -> List[int]:
