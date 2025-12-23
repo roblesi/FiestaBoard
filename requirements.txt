@@ -1,0 +1,10 @@
+# Core dependencies
+requests>=2.31.0
+pyyaml>=6.0
+python-dotenv>=1.0.0
+schedule>=1.2.0
+pytz>=2023.3
+
+# Optional: Vestaboard Python library (alternative to manual implementation)
+# vesta>=0.1.0
+

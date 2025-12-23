@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  vestaboard-display:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vestaboard-display
+    env_file:
+      - .env
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # Uncomment to mount config directory if needed
+    # volumes:
+    #   - ./config:/app/config:ro
+
