@@ -9,9 +9,13 @@ import { ConfigDisplay } from "@/components/config-display";
 import { TransitionSettingsComponent } from "@/components/transition-settings";
 import { PageSelector } from "@/components/page-selector";
 import { PageBuilder } from "@/components/page-builder";
+import { RotationManager } from "@/components/rotation-manager";
+import { DisplayExplorer } from "@/components/display-explorer";
+import { LogsViewer } from "@/components/logs-viewer";
 
 export default function Home() {
   const [showPageBuilder, setShowPageBuilder] = useState(false);
+  const [showDisplayExplorer, setShowDisplayExplorer] = useState(false);
   const [editingPageId, setEditingPageId] = useState<string | null>(null);
 
   const handleCreatePage = () => {
@@ -57,6 +61,14 @@ export default function Home() {
                 onSave={handleCloseBuilder}
               />
             )}
+
+            {/* Display Explorer (when open) */}
+            {showDisplayExplorer && (
+              <DisplayExplorer onClose={() => setShowDisplayExplorer(false)} />
+            )}
+
+            {/* Logs Viewer */}
+            <LogsViewer />
           </div>
 
           {/* Right column - Controls & Config */}
@@ -66,6 +78,16 @@ export default function Home() {
               onCreateNew={handleCreatePage}
               onEditPage={handleEditPage}
             />
+            <RotationManager />
+            {/* Display Explorer Toggle */}
+            {!showDisplayExplorer && (
+              <button
+                onClick={() => setShowDisplayExplorer(true)}
+                className="w-full p-2 text-xs text-muted-foreground hover:text-foreground border border-dashed rounded-lg hover:border-primary/50 transition-colors"
+              >
+                Open Display Explorer
+              </button>
+            )}
             <TransitionSettingsComponent />
             <ConfigDisplay />
           </div>

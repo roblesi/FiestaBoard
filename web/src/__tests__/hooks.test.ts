@@ -2,10 +2,11 @@ import { describe, it, expect } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useStatus, usePreview, useConfig } from "@/hooks/use-vestaboard";
+import { ConfigOverridesProvider } from "@/hooks/use-config-overrides";
 import { mockStatus, mockPreview, mockConfig } from "./mocks/handlers";
 import React from "react";
 
-// Wrapper for react-query
+// Wrapper for react-query (without config overrides)
 function createWrapper() {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -16,6 +17,24 @@ function createWrapper() {
   });
   return function Wrapper({ children }: { children: React.ReactNode }) {
     return React.createElement(QueryClientProvider, { client: queryClient }, children);
+  };
+}
+
+// Wrapper with config overrides provider (required for usePreview)
+function createWrapperWithOverrides() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+  return function Wrapper({ children }: { children: React.ReactNode }) {
+    return React.createElement(
+      QueryClientProvider,
+      { client: queryClient },
+      React.createElement(ConfigOverridesProvider, null, children)
+    );
   };
 }
 
@@ -36,7 +55,7 @@ describe("useStatus", () => {
 describe("usePreview", () => {
   it("fetches preview message from API", async () => {
     const { result } = renderHook(() => usePreview(), {
-      wrapper: createWrapper(),
+      wrapper: createWrapperWithOverrides(),
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -48,7 +67,7 @@ describe("usePreview", () => {
 
   it("can be disabled", () => {
     const { result } = renderHook(() => usePreview(false), {
-      wrapper: createWrapper(),
+      wrapper: createWrapperWithOverrides(),
     });
 
     expect(result.current.isFetching).toBe(false);

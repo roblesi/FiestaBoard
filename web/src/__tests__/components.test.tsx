@@ -5,6 +5,7 @@ import { ThemeProvider } from "next-themes";
 import { ServiceStatus } from "@/components/service-status";
 import { ServiceControls } from "@/components/service-controls";
 import { ConfigDisplay } from "@/components/config-display";
+import { ConfigOverridesProvider } from "@/hooks/use-config-overrides";
 
 // Test wrapper with providers
 function TestWrapper({ children }: { children: React.ReactNode }) {
@@ -17,9 +18,11 @@ function TestWrapper({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="light">
-        {children}
-      </ThemeProvider>
+      <ConfigOverridesProvider>
+        <ThemeProvider attribute="class" defaultTheme="light">
+          {children}
+        </ThemeProvider>
+      </ConfigOverridesProvider>
     </QueryClientProvider>
   );
 }
@@ -48,8 +51,8 @@ describe("ServiceControls", () => {
     render(<ServiceControls />, { wrapper: TestWrapper });
 
     await waitFor(() => {
-      expect(screen.getByRole("switch")).toBeInTheDocument();
-      expect(screen.getByText(/dev mode/i)).toBeInTheDocument();
+      // There may be multiple switches (dev mode + auto-refresh), get by id
+      expect(screen.getByRole("switch", { name: /dev mode/i })).toBeInTheDocument();
     });
   });
 
@@ -68,9 +71,10 @@ describe("ConfigDisplay", () => {
     render(<ConfigDisplay />, { wrapper: TestWrapper });
 
     await waitFor(() => {
+      // These are the short labels defined in config-display.tsx
+      expect(screen.getByText("Date")).toBeInTheDocument();
       expect(screen.getByText("Weather")).toBeInTheDocument();
-      expect(screen.getByText("Apple Music")).toBeInTheDocument();
-      expect(screen.getByText("Star Trek Quotes")).toBeInTheDocument();
+      expect(screen.getByText("Music")).toBeInTheDocument();
     });
   });
 

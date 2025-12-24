@@ -14,9 +14,19 @@ logger = logging.getLogger(__name__)
 class Config:
     """Application configuration loaded from environment variables."""
     
-    # Vestaboard Local API Configuration (required)
-    VB_LOCAL_API_KEY: str = os.getenv("VB_LOCAL_API_KEY", os.getenv("VB_READ_WRITE_KEY", ""))
+    # Vestaboard API Configuration
+    # Mode: "local" for Local API (faster, requires local network) or "cloud" for Cloud API (internet-based)
+    VB_API_MODE: str = os.getenv("VB_API_MODE", "local")  # "local" or "cloud"
+    VB_LOCAL_API_KEY: str = os.getenv("VB_LOCAL_API_KEY", "")
+    VB_READ_WRITE_KEY: str = os.getenv("VB_READ_WRITE_KEY", "")
     VB_HOST: str = os.getenv("VB_HOST", os.getenv("VB_LOCAL_API_HOST", ""))
+    
+    @classmethod
+    def get_vb_api_key(cls) -> str:
+        """Get the appropriate API key based on mode."""
+        if cls.VB_API_MODE.lower() == "cloud":
+            return cls.VB_READ_WRITE_KEY
+        return cls.VB_LOCAL_API_KEY
     
     # Vestaboard Transition Settings (optional)
     VB_TRANSITION_STRATEGY: Optional[str] = os.getenv("VB_TRANSITION_STRATEGY", None)  # column, reverse-column, edges-to-center, row, diagonal, random
@@ -111,11 +121,17 @@ class Config:
         """Validate that required configuration is present."""
         errors = []
         
-        # Vestaboard Local API: require both key and host
-        if not cls.VB_LOCAL_API_KEY:
-            errors.append("VB_LOCAL_API_KEY is required (or VB_READ_WRITE_KEY for backwards compatibility)")
-        if not cls.VB_HOST:
-            errors.append("VB_HOST is required (or VB_LOCAL_API_HOST for backwards compatibility)")
+        # Vestaboard API: validate based on mode
+        if cls.VB_API_MODE.lower() == "cloud":
+            # Cloud API: only requires Read/Write key
+            if not cls.VB_READ_WRITE_KEY:
+                errors.append("VB_READ_WRITE_KEY is required when VB_API_MODE=cloud")
+        else:
+            # Local API: requires both key and host
+            if not cls.VB_LOCAL_API_KEY:
+                errors.append("VB_LOCAL_API_KEY is required when VB_API_MODE=local")
+            if not cls.VB_HOST:
+                errors.append("VB_HOST is required when VB_API_MODE=local")
         
         # Validate transition strategy if set
         if cls.VB_TRANSITION_STRATEGY and cls.VB_TRANSITION_STRATEGY not in cls.VALID_TRANSITION_STRATEGIES:
@@ -173,11 +189,12 @@ class Config:
             "home_assistant_enabled": cls.HOME_ASSISTANT_ENABLED,
             "star_trek_quotes_enabled": cls.STAR_TREK_QUOTES_ENABLED,
             # Vestaboard config
-            "vb_host": cls.VB_HOST,
-            "vb_key_set": bool(cls.VB_LOCAL_API_KEY),
+            "vb_api_mode": cls.VB_API_MODE,
+            "vb_host": cls.VB_HOST if cls.VB_API_MODE.lower() == "local" else "cloud",
+            "vb_key_set": bool(cls.get_vb_api_key()),
             "weather_key_set": bool(cls.WEATHER_API_KEY),
-            # Transition settings
-            "transition_strategy": cls.VB_TRANSITION_STRATEGY,
-            "transition_interval_ms": cls.VB_TRANSITION_INTERVAL_MS,
-            "transition_step_size": cls.VB_TRANSITION_STEP_SIZE,
+            # Transition settings (only available in Local API mode)
+            "transition_strategy": cls.VB_TRANSITION_STRATEGY if cls.VB_API_MODE.lower() == "local" else None,
+            "transition_interval_ms": cls.VB_TRANSITION_INTERVAL_MS if cls.VB_API_MODE.lower() == "local" else None,
+            "transition_step_size": cls.VB_TRANSITION_STEP_SIZE if cls.VB_API_MODE.lower() == "local" else None,
         }

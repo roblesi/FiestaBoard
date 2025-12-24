@@ -1,0 +1,70 @@
+# Vesta Project Development Rules
+
+## Docker-First Development
+
+This project uses Docker containers for ALL development, testing, and debugging activities.
+
+### Core Rules
+
+1. **NEVER run the API server (`src/api_server.py` or `python -m src.api_server`) directly on the host machine**
+   - Always use Docker containers via `docker-compose` commands
+
+2. **NEVER run the web UI (`npm run dev` in `web/` directory) directly on the host machine**
+   - Always use Docker containers via `docker-compose` commands
+
+3. **NEVER install Python dependencies locally or suggest running `pip install`**
+   - All Python dependencies are managed within Docker containers
+
+4. **NEVER install Node.js dependencies locally or suggest running `npm install` in the web/ directory**
+   - All Node.js dependencies are managed within Docker containers
+
+### Development Workflow
+
+- **Starting services**: Use `/start` command or `docker-compose -f docker-compose.dev.yml up`
+- **Stopping services**: Use `/stop` command or `docker-compose -f docker-compose.dev.yml down`
+- **Restarting**: Use `/restart` command (stops, rebuilds with --no-cache, restarts)
+- **Building**: Use `/build` command to rebuild images without restarting
+- **Running tests**: Use `/test-api` or `/test-web` commands to run tests inside Docker containers
+- **Debugging**: Use `docker-compose logs -f` or `docker-compose exec` for interactive debugging
+- **Checking status**: Use `docker-compose ps` to see which containers are running
+- **Code changes**: Edit code on host machine; Docker volumes will sync changes automatically
+- **Installing dependencies**: 
+  - For Python: Update `requirements.txt` and rebuild containers
+  - For Node.js: Update `web/package.json` and rebuild containers
+
+### Testing Guidelines
+
+- All tests must run inside Docker containers
+- Use `docker-compose exec <service> pytest` for Python tests
+- Use `docker-compose exec <service> npm test` for web tests
+- Re-testing after changes should also be done in containers
+
+### Exceptions
+
+The only code that may run locally:
+- The `macos_helper/` service (macOS-specific Apple Music integration)
+- Utility scripts explicitly marked for local execution
+
+### Available Cursor Commands
+
+- `/start` - Start all Docker containers
+- `/stop` - Stop all Docker containers
+- `/restart` - Stop, rebuild with --no-cache, and restart all containers
+- `/build` - Rebuild Docker images without restarting
+- `/test-api` - Run API tests in Docker
+- `/test-web` - Run web tests in Docker
+
+### When Suggesting Commands
+
+Always suggest Docker-based commands:
+- ✅ Use `/start` and `/stop` Cursor commands to control containers
+- ✅ Use `/restart` Cursor command for full redeployment with clean rebuild
+- ✅ Use `/build` Cursor command to rebuild images
+- ✅ Use `/test-api` or `/test-web` Cursor commands for testing
+- ✅ `docker-compose -f docker-compose.dev.yml up`
+- ✅ `docker-compose exec api pytest`
+- ✅ `docker-compose exec web npm test`
+- ❌ `python src/api_server.py`
+- ❌ `cd web && npm run dev`
+- ❌ `pip install -r requirements.txt`
+

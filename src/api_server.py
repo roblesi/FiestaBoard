@@ -3,8 +3,10 @@
 import logging
 import threading
 import time
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from contextlib import contextmanager
+from collections import deque
+from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,6 +21,7 @@ from .pages.models import PageCreate, PageUpdate
 from .templates.engine import get_template_engine
 from .rotations.service import get_rotation_service
 from .rotations.models import RotationCreate, RotationUpdate
+from .text_to_board import text_to_board_array
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +31,27 @@ _service_lock = threading.Lock()
 _service_thread: Optional[threading.Thread] = None
 _service_running = False
 _dev_mode = False  # When True, preview only - don't send to Vestaboard
+
+# In-memory log buffer (last 200 log entries)
+_log_buffer: deque = deque(maxlen=200)
+_log_lock = threading.Lock()
+
+
+class LogBufferHandler(logging.Handler):
+    """Custom logging handler that stores logs in memory for API access."""
+    
+    def emit(self, record):
+        try:
+            log_entry = {
+                "timestamp": datetime.fromtimestamp(record.created).isoformat(),
+                "level": record.levelname,
+                "logger": record.name,
+                "message": self.format(record)
+            }
+            with _log_lock:
+                _log_buffer.append(log_entry)
+        except Exception:
+            self.handleError(record)
 
 
 class MessageRequest(BaseModel):
@@ -63,6 +87,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Set up log buffer handler
+log_buffer_handler = LogBufferHandler()
+log_buffer_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+logging.getLogger().addHandler(log_buffer_handler)
 
 
 def get_service() -> Optional[VestaboardDisplayService]:
@@ -139,6 +168,27 @@ async def health():
         status="ok",
         service_running=_service_running and service is not None
     )
+
+
+@app.get("/logs")
+async def get_logs(limit: int = 100):
+    """Get recent application logs.
+    
+    Args:
+        limit: Maximum number of log entries to return (default 100, max 200)
+    
+    Returns:
+        List of log entries with timestamp, level, logger, and message
+    """
+    limit = min(limit, 200)  # Cap at buffer size
+    with _log_lock:
+        logs = list(_log_buffer)
+    
+    # Return most recent logs first
+    return {
+        "logs": logs[-limit:] if len(logs) > limit else logs,
+        "total": len(logs)
+    }
 
 
 @app.get("/status", response_model=StatusResponse)
@@ -238,7 +288,17 @@ async def send_message(request: MessageRequest):
         raise HTTPException(status_code=503, detail="Vestaboard client not initialized")
     
     try:
-        success, was_sent = service.vb_client.send_text(request.text)
+        # Convert text to board array for proper character/color support
+        board_array = text_to_board_array(request.text)
+        settings_service = get_settings_service()
+        transition = settings_service.get_transition_settings()
+        
+        success, was_sent = service.vb_client.send_characters(
+            board_array,
+            strategy=transition.strategy,
+            step_interval_ms=transition.step_interval_ms,
+            step_size=transition.step_size
+        )
         if success:
             if was_sent:
                 return {"status": "success", "message": "Message sent successfully"}
@@ -399,8 +459,10 @@ async def send_display(
     sent_to_board = False
     if send_to_board and not _dev_mode:
         transition = settings_service.get_transition_settings()
-        success, was_sent = service.vb_client.send_text(
-            result.formatted,
+        # Convert to board array for proper character/color support
+        board_array = text_to_board_array(result.formatted)
+        success, was_sent = service.vb_client.send_characters(
+            board_array,
             strategy=transition.strategy,
             step_interval_ms=transition.step_interval_ms,
             step_size=transition.step_size
@@ -652,8 +714,10 @@ async def send_page(page_id: str, target: Optional[str] = None):
     sent_to_board = False
     if send_to_board and not _dev_mode:
         transition = settings_service.get_transition_settings()
-        success, was_sent = service.vb_client.send_text(
-            result.formatted,
+        # Convert to board array for proper character/color support
+        board_array = text_to_board_array(result.formatted)
+        success, was_sent = service.vb_client.send_characters(
+            board_array,
             strategy=transition.strategy,
             step_interval_ms=transition.step_interval_ms,
             step_size=transition.step_size
@@ -1128,15 +1192,32 @@ async def publish_preview(
         _dev_mode = False
         
         try:
+            # Get transition settings
+            settings_service = get_settings_service()
+            transition = settings_service.get_transition_settings()
+            
+            # Convert to board array for proper character/color support
+            board_array = text_to_board_array(message)
+            
             # Force send since user explicitly wants to publish
-            success, was_sent = service.vb_client.send_text(message, force=True)
+            success, was_sent = service.vb_client.send_characters(
+                board_array,
+                strategy=transition.strategy,
+                step_interval_ms=transition.step_interval_ms,
+                step_size=transition.step_size,
+                force=True
+            )
             if success:
-                logger.info(f"Preview published to Vestaboard ({display_type}): {message[:50]}...")
+                if was_sent:
+                    logger.info(f"Preview published to Vestaboard ({display_type}): {message[:50]}...")
+                else:
+                    logger.info(f"Preview skipped (unchanged): {message[:50]}...")
                 return {
                     "status": "success",
-                    "message": "Preview published to Vestaboard successfully",
+                    "message": f"Preview {'published' if was_sent else 'unchanged (not sent)'} to Vestaboard",
                     "display_type": display_type,
-                    "preview_message": message
+                    "preview_message": message,
+                    "was_sent": was_sent
                 }
             else:
                 raise HTTPException(status_code=500, detail="Failed to publish to Vestaboard")

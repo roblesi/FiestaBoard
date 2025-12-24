@@ -1,22 +1,21 @@
 """Vestaboard character codes and symbol mappings.
 
-Vestaboard uses numeric character codes (0-63) to represent different characters.
-This module provides mappings for common characters and symbols that can be used
-for weather icons and other visual elements.
+Official Vestaboard character codes (0-71).
+Reference: https://docs.vestaboard.com/docs/characterCodes
 
-Note: Character codes are based on Vestaboard's 64-character set. Some codes
-may need to be verified against the official documentation.
+Note: Some codes (43, 45, 46, 51, 57, 58, 61) are not defined in the official table.
 """
 
 from typing import Dict, Optional, List
 
 
 class VestaboardChars:
-    """Vestaboard character code mappings."""
+    """Vestaboard character code mappings - Official codes."""
     
-    # Basic characters (standard ASCII-like mapping)
-    # These are the most common character codes
-    SPACE = 0
+    # Blank/Space
+    SPACE = 0       # Black on black / white on white
+    
+    # Letters A-Z (codes 1-26)
     A = 1
     B = 2
     C = 3
@@ -44,59 +43,59 @@ class VestaboardChars:
     Y = 25
     Z = 26
     
-    # Numbers
-    ZERO = 27
-    ONE = 28
-    TWO = 29
-    THREE = 30
-    FOUR = 31
-    FIVE = 32
-    SIX = 33
-    SEVEN = 34
-    EIGHT = 35
-    NINE = 36
+    # Numbers - IMPORTANT: 1-9 are 27-35, then 0 is 36
+    ONE = 27
+    TWO = 28
+    THREE = 29
+    FOUR = 30
+    FIVE = 31
+    SIX = 32
+    SEVEN = 33
+    EIGHT = 34
+    NINE = 35
+    ZERO = 36
     
-    # Punctuation and symbols (approximate mappings)
-    PERIOD = 37      # .
-    COMMA = 38       # ,
-    APOSTROPHE = 39  # '
-    EXCLAMATION = 40 # !
-    QUESTION = 41    # ?
-    COLON = 42       # :
-    SEMICOLON = 43   # ;
-    DASH = 44        # -
-    SLASH = 45       # /
-    PLUS = 46        # +
-    EQUALS = 47      # =
-    ASTERISK = 48    # *
-    PERCENT = 49     # %
-    POUND = 50       # #
-    AMPERSAND = 51   # &
-    AT = 52          # @
-    DOLLAR = 53      # $
-    
-    # Additional symbols (may vary - these are common patterns)
-    # Note: Actual codes may differ - verify with Vestaboard docs
-    DEGREE = 54      # ° (if available, otherwise use 'O')
+    # Punctuation and symbols (official codes)
+    EXCLAMATION = 37     # !
+    AT = 38              # @
+    POUND = 39           # #
+    DOLLAR = 40          # $
+    LEFT_PAREN = 41      # (
+    RIGHT_PAREN = 42     # )
+    # 43 is undefined
+    DASH = 44            # - (hyphen)
+    # 45 is undefined
+    # 46 is undefined
+    AMPERSAND = 47       # &
+    EQUALS = 48          # =
+    SEMICOLON = 49       # ;
+    COLON = 50           # :
+    # 51 is undefined
+    SINGLE_QUOTE = 52    # '
+    DOUBLE_QUOTE = 53    # "
+    PERCENT = 54         # %
+    COMMA = 55           # ,
+    PERIOD = 56          # .
+    # 57-58 are undefined
+    SLASH = 59           # /
+    QUESTION = 60        # ?
+    # 61 is undefined
+    DEGREE = 62          # ° (Vestaboard Flagship only, Heart on Vestaboard Note)
     
     # Color codes (filled color tiles)
-    RED = 63        # Red color tile
-    ORANGE = 64     # Orange color tile
-    YELLOW = 65     # Yellow color tile
-    GREEN = 66      # Green color tile
-    BLUE = 67       # Blue color tile
-    VIOLET = 68     # Violet/Purple color tile
-    WHITE = 69      # White color tile
-    BLACK = 70      # Black color tile (if available)
+    RED = 63
+    ORANGE = 64
+    YELLOW = 65
+    GREEN = 66
+    BLUE = 67
+    VIOLET = 68          # Also called Purple
+    WHITE = 69           # Black on white Vestaboard (local API)
+    BLACK = 70           # White on white Vestaboard (local API)
+    FILLED = 71          # White on black / black on white (not available for local API)
     
-    # Weather-related symbol approximations using available characters
-    # Since true icons aren't available, we use creative character combinations
-    WEATHER_SUN = ASTERISK      # * for sun
-    WEATHER_CLOUD = O           # O for cloud (can be styled)
-    WEATHER_RAIN = SLASH       # / for rain
-    WEATHER_SNOW = ASTERISK     # * for snow (or use different char)
-    WEATHER_STORM = EXCLAMATION # ! for storm
-    WEATHER_PARTLY = PERCENT    # % for partly cloudy
+    # Aliases for compatibility
+    APOSTROPHE = SINGLE_QUOTE
+    HYPHEN = DASH
     
     @classmethod
     def get_char_code(cls, char: str) -> Optional[int]:
@@ -107,39 +106,42 @@ class VestaboardChars:
             char: Single character to convert
             
         Returns:
-            Character code (0-63) or None if not found
+            Character code (0-71) or None if not found
         """
         char = char.upper()
         
-        # Letters
+        # Letters A-Z → codes 1-26
         if 'A' <= char <= 'Z':
             return ord(char) - ord('A') + 1
         
-        # Numbers
-        if '0' <= char <= '9':
-            return ord(char) - ord('0') + 27
+        # Numbers: 1-9 → codes 27-35, 0 → code 36
+        if '1' <= char <= '9':
+            return ord(char) - ord('1') + 27  # 1→27, 2→28, ..., 9→35
+        elif char == '0':
+            return 36
         
-        # Special characters mapping
+        # Special characters mapping (official codes)
         special_map = {
             ' ': cls.SPACE,
-            '.': cls.PERIOD,
-            ',': cls.COMMA,
-            "'": cls.APOSTROPHE,
             '!': cls.EXCLAMATION,
-            '?': cls.QUESTION,
-            ':': cls.COLON,
-            ';': cls.SEMICOLON,
-            '-': cls.DASH,
-            '/': cls.SLASH,
-            '+': cls.PLUS,
-            '=': cls.EQUALS,
-            '*': cls.ASTERISK,
-            '%': cls.PERCENT,
-            '#': cls.POUND,
-            '&': cls.AMPERSAND,
             '@': cls.AT,
+            '#': cls.POUND,
             '$': cls.DOLLAR,
-            '°': cls.DEGREE if hasattr(cls, 'DEGREE') else ord('O') - ord('A') + 1,
+            '(': cls.LEFT_PAREN,
+            ')': cls.RIGHT_PAREN,
+            '-': cls.DASH,
+            '&': cls.AMPERSAND,
+            '=': cls.EQUALS,
+            ';': cls.SEMICOLON,
+            ':': cls.COLON,
+            "'": cls.SINGLE_QUOTE,
+            '"': cls.DOUBLE_QUOTE,
+            '%': cls.PERCENT,
+            ',': cls.COMMA,
+            '.': cls.PERIOD,
+            '/': cls.SLASH,
+            '?': cls.QUESTION,
+            '°': cls.DEGREE,
         }
         
         return special_map.get(char)
@@ -164,7 +166,8 @@ class VestaboardChars:
             'violet': cls.VIOLET,
             'purple': cls.VIOLET,
             'white': cls.WHITE,
-            'black': cls.BLACK if hasattr(cls, 'BLACK') else None,
+            'black': cls.BLACK,
+            'filled': cls.FILLED,
         }
         return color_map.get(color_name.lower())
     
@@ -193,19 +196,19 @@ class VestaboardChars:
 # Weather condition to symbol mapping
 WEATHER_SYMBOLS: Dict[str, Dict[str, any]] = {
     "Clear": {
-        "symbol": "*",  # Sun
-        "char_code": VestaboardChars.ASTERISK,
+        "symbol": "O",  # Sun approximation
+        "char_code": VestaboardChars.O,
         "description": "Sunny"
     },
     "Sunny": {
-        "symbol": "*",
-        "char_code": VestaboardChars.ASTERISK,
+        "symbol": "O",
+        "char_code": VestaboardChars.O,
         "description": "Sunny"
     },
     "Partly Cloudy": {
         "symbol": "%",
         "char_code": VestaboardChars.PERCENT,
-        "description": "Partly Cloudy"
+        "description": "Partly"
     },
     "Cloudy": {
         "symbol": "O",
@@ -230,12 +233,12 @@ WEATHER_SYMBOLS: Dict[str, Dict[str, any]] = {
     "Light Rain": {
         "symbol": "/",
         "char_code": VestaboardChars.SLASH,
-        "description": "Light Rain"
+        "description": "Lt Rain"
     },
     "Heavy Rain": {
-        "symbol": "//",
+        "symbol": "/",
         "char_code": VestaboardChars.SLASH,
-        "description": "Heavy Rain"
+        "description": "Hvy Rain"
     },
     "Thunderstorm": {
         "symbol": "!",
@@ -248,22 +251,22 @@ WEATHER_SYMBOLS: Dict[str, Dict[str, any]] = {
         "description": "Storm"
     },
     "Snow": {
-        "symbol": "*",
-        "char_code": VestaboardChars.ASTERISK,
+        "symbol": "O",
+        "char_code": VestaboardChars.O,
         "description": "Snow"
     },
     "Snowy": {
-        "symbol": "*",
-        "char_code": VestaboardChars.ASTERISK,
+        "symbol": "O",
+        "char_code": VestaboardChars.O,
         "description": "Snow"
     },
     "Fog": {
-        "symbol": "~",
-        "char_code": VestaboardChars.DASH,  # Approximation
+        "symbol": "-",
+        "char_code": VestaboardChars.DASH,
         "description": "Fog"
     },
     "Mist": {
-        "symbol": "~",
+        "symbol": "-",
         "char_code": VestaboardChars.DASH,
         "description": "Mist"
     },
@@ -302,6 +305,5 @@ def get_weather_symbol(condition: str) -> Dict[str, any]:
     return {
         "symbol": "?",
         "char_code": VestaboardChars.QUESTION,
-        "description": condition
+        "description": condition[:8]  # Truncate long descriptions
     }
-

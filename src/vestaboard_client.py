@@ -1,11 +1,16 @@
-"""Vestaboard Local API client with transition/animation support.
+"""Vestaboard API client with support for both Local and Cloud APIs.
 
-This client exclusively uses the Vestaboard Local API for faster updates
-and full transition control. Cloud API is not supported.
+Supports:
+- Local API: Fast updates with transitions (requires local network access)
+- Cloud API: Remote access via Vestaboard's Read/Write API (internet required)
 
 Local API Reference:
 - POST http://{host}:7000/local-api/message - Send message with optional transitions
 - GET http://{host}:7000/local-api/message - Read current display
+
+Cloud API Reference:
+- POST https://rw.vestaboard.com/ - Send message (text or character array)
+- GET https://rw.vestaboard.com/ - Read current display
 """
 
 import logging
@@ -58,49 +63,64 @@ VALID_STRATEGIES = [
 
 
 class VestaboardClient:
-    """Client for Vestaboard Local API with transition support.
+    """Client for Vestaboard with support for Local and Cloud APIs.
     
     Features:
-    - Local API only (no cloud) for faster updates
-    - Transition animations (column, reverse-column, edges-to-center, row, diagonal, random)
+    - Local API: Fast updates with transition animations (requires local network)
+    - Cloud API: Remote access via internet (fallback option)
     - Client-side caching to skip sending unchanged messages
-    - Only flips changed characters (Classic mode)
+    - Transition animations (Local API only)
     """
     
     LOCAL_API_PORT = 7000
+    CLOUD_API_URL = "https://rw.vestaboard.com/"
     
     def __init__(
         self,
         api_key: str,
-        host: str,
+        host: Optional[str] = None,
+        use_cloud: bool = False,
         skip_unchanged: bool = True
     ):
         """
-        Initialize Vestaboard Local API client.
+        Initialize Vestaboard API client.
         
         Args:
-            api_key: Vestaboard Local API key
-            host: IP or hostname of Vestaboard (e.g., "192.168.0.11" or "vestaboard.local")
+            api_key: Vestaboard API key (Local API key or Read/Write key)
+            host: IP or hostname of Vestaboard for Local API (e.g., "192.168.0.11")
+            use_cloud: If True, use Cloud API instead of Local API
             skip_unchanged: If True (default), skip sending if message hasn't changed
         """
         if not api_key:
             raise ValueError("api_key is required")
-        if not host:
-            raise ValueError("host is required for Local API")
         
-        self.host = host
+        self.api_key = api_key
+        self.use_cloud = use_cloud
         self.skip_unchanged = skip_unchanged
-        self.base_url = f"http://{host}:{self.LOCAL_API_PORT}/local-api/message"
-        self.headers = {
-            "X-Vestaboard-Local-Api-Key": api_key,
-            "Content-Type": "application/json"
-        }
+        
+        if use_cloud:
+            # Cloud API mode
+            self.base_url = self.CLOUD_API_URL
+            self.headers = {
+                "X-Vestaboard-Read-Write-Key": api_key,
+                "Content-Type": "application/json"
+            }
+            logger.info(f"Vestaboard client initialized with Cloud API (skip_unchanged={skip_unchanged})")
+        else:
+            # Local API mode
+            if not host:
+                raise ValueError("host is required for Local API")
+            self.host = host
+            self.base_url = f"http://{host}:{self.LOCAL_API_PORT}/local-api/message"
+            self.headers = {
+                "X-Vestaboard-Local-Api-Key": api_key,
+                "Content-Type": "application/json"
+            }
+            logger.info(f"Vestaboard client initialized with Local API at {host} (skip_unchanged={skip_unchanged})")
         
         # Client-side cache to avoid sending unchanged messages
         self._last_text: Optional[str] = None
         self._last_characters: Optional[List[List[int]]] = None
-        
-        logger.info(f"Vestaboard client initialized with Local API at {host} (skip_unchanged={skip_unchanged})")
     
     def send_text(
         self,
@@ -110,14 +130,14 @@ class VestaboardClient:
         """
         Send plain text message to Vestaboard.
         
-        Note: This method automatically strips color markers (like {63} or {red})
-        from text since the Vestaboard text API doesn't support them.
-        The Local API converts text to characters internally.
+        Note: This method automatically:
+        - Strips color markers (like {63} or {red}) - text API doesn't support colors
+        - Converts to UPPERCASE - Vestaboard only displays uppercase letters
         
         For transition animations or color support, use send_characters() instead.
         
         Args:
-            text: Plain text message to display (color markers will be stripped)
+            text: Plain text message to display (will be uppercased, color markers stripped)
             force: If True, send even if message unchanged (default: False)
             
         Returns:
@@ -125,8 +145,8 @@ class VestaboardClient:
             - success: True if message was sent successfully OR skipped because unchanged
             - was_sent: True if message was actually sent to the board
         """
-        # Strip color markers since the text API doesn't support them
-        clean_text = strip_color_markers(text)
+        # Strip color markers and convert to uppercase (Vestaboard requirement)
+        clean_text = strip_color_markers(text).upper()
         
         # Check if message has changed (client-side caching)
         if self.skip_unchanged and not force and self._last_text == clean_text:
@@ -205,15 +225,19 @@ class VestaboardClient:
             logger.debug("Character array unchanged, skipping send")
             return (True, False)
         
-        # Build payload with transition options
-        payload: dict = {"characters": characters}
-        
-        if strategy is not None:
-            payload["strategy"] = strategy
-        if step_interval_ms is not None:
-            payload["step_interval_ms"] = step_interval_ms
-        if step_size is not None:
-            payload["step_size"] = step_size
+        # Build payload - format differs between Cloud and Local API
+        if self.use_cloud:
+            # Cloud API (Read/Write API) expects the array directly
+            payload = characters
+        else:
+            # Local API expects {"characters": [...]} with optional transitions
+            payload = {"characters": characters}
+            if strategy is not None:
+                payload["strategy"] = strategy
+            if step_interval_ms is not None:
+                payload["step_interval_ms"] = step_interval_ms
+            if step_size is not None:
+                payload["step_size"] = step_size
         
         try:
             response = requests.post(

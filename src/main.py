@@ -16,6 +16,7 @@ from .data_sources.apple_music import get_apple_music_source
 from .data_sources.home_assistant import get_home_assistant_source
 from .data_sources.star_trek_quotes import get_star_trek_quotes_source
 from .formatters.message_formatter import get_message_formatter
+from .text_to_board import text_to_board_array, format_board_array_preview
 
 # Configure logging
 logging.basicConfig(
@@ -55,6 +56,41 @@ class VestaboardDisplayService:
         logger.info(f"Received signal {signum}, shutting down gracefully...")
         self.running = False
     
+    def _send_message(self, message: str, transition_settings: dict = None) -> tuple:
+        """
+        Convert formatted text to character array and send to Vestaboard.
+        
+        Args:
+            message: Formatted text message (with optional color markers)
+            transition_settings: Optional dict with transition parameters
+            
+        Returns:
+            Tuple of (success, was_sent)
+        """
+        # Convert text to character array
+        board_array = text_to_board_array(message)
+        
+        # Log preview for debugging
+        preview = format_board_array_preview(board_array)
+        logger.debug(f"Board array preview:\n{preview}")
+        
+        # Log full board array for diagnostic verification
+        logger.info("Sending board array (6x22):")
+        for i, row in enumerate(board_array):
+            logger.info(f"  Row {i}: {row}")
+        
+        # Get transition settings from config if not provided
+        if transition_settings is None:
+            transition_settings = Config.get_transition_settings()
+        
+        # Send to Vestaboard using character array
+        return self.vb_client.send_characters(
+            board_array,
+            strategy=transition_settings.get("strategy"),
+            step_interval_ms=transition_settings.get("step_interval_ms"),
+            step_size=transition_settings.get("step_size")
+        )
+    
     def initialize(self) -> bool:
         """Initialize all components."""
         logger.info("Initializing Vestaboard Display Service...")
@@ -64,11 +100,13 @@ class VestaboardDisplayService:
             logger.error("Configuration validation failed")
             return False
         
-        # Initialize Vestaboard client (Local API only)
+        # Initialize Vestaboard client (Local or Cloud API)
         try:
+            use_cloud = Config.VB_API_MODE.lower() == "cloud"
             self.vb_client = VestaboardClient(
-                api_key=Config.VB_LOCAL_API_KEY,
-                host=Config.VB_HOST,
+                api_key=Config.get_vb_api_key(),
+                host=Config.VB_HOST if not use_cloud else None,
+                use_cloud=use_cloud,
                 skip_unchanged=True  # Default: skip sending unchanged messages
             )
             # Sync cache with current board state to avoid unnecessary initial update
@@ -163,7 +201,7 @@ class VestaboardDisplayService:
                     logger.info(f"[DEV MODE] Would send Guest WiFi (not actually sending):\n{message}")
                     return
                 if self.vb_client:
-                    success, was_sent = self.vb_client.send_text(message)
+                    success, was_sent = self._send_message(message)
                     if success:
                         if was_sent:
                             logger.info("Display updated with Guest WiFi")
@@ -221,7 +259,7 @@ class VestaboardDisplayService:
                 logger.info(f"[DEV MODE] Would send Apple Music (not actually sending):\n{message}")
                 return
             if self.vb_client:
-                success, was_sent = self.vb_client.send_text(message)
+                success, was_sent = self._send_message(message)
                 if success:
                     if was_sent:
                         logger.info("Display updated with Apple Music")
@@ -255,7 +293,7 @@ class VestaboardDisplayService:
                         self.last_rotation_change = current_time
                         return
                     if self.vb_client:
-                        success, was_sent = self.vb_client.send_text(message)
+                        success, was_sent = self._send_message(message)
                         if success:
                             if was_sent:
                                 logger.info("Display updated with Star Trek quote")
@@ -280,7 +318,7 @@ class VestaboardDisplayService:
                 self.last_rotation_change = current_time
                 return
             if self.vb_client:
-                success, was_sent = self.vb_client.send_text(message)
+                success, was_sent = self._send_message(message)
                 if success:
                     if was_sent:
                         logger.info("Display updated with House Status")
@@ -326,7 +364,7 @@ class VestaboardDisplayService:
                     self.current_rotation_screen = "weather"
                     self.last_rotation_change = current_time
                 elif self.vb_client:
-                    success, was_sent = self.vb_client.send_text(message)
+                    success, was_sent = self._send_message(message)
                     if success:
                         if was_sent:
                             logger.info("Display updated successfully")
