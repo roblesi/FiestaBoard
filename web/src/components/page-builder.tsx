@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { VariablePicker } from "@/components/variable-picker";
 import { toast } from "sonner";
 import {
   Wand2,
@@ -19,6 +20,8 @@ import {
   Palette,
   Info,
   Trash2,
+  ChevronRight,
+  ChevronLeft,
 } from "lucide-react";
 import { api, PageCreate, PageUpdate, PageType, RowConfig } from "@/lib/api";
 
@@ -84,6 +87,9 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
   const [rows, setRows] = useState<RowConfig[]>([]);
   const [duration, setDuration] = useState(300);
   const [preview, setPreview] = useState<string | null>(null);
+  const [showVariablePicker, setShowVariablePicker] = useState(true);
+  const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Fetch existing page if editing
   const { data: existingPage, isLoading: loadingPage } = useQuery({
@@ -166,18 +172,30 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
     },
   });
 
-  // Insert variable helper
-  const insertVariable = (variable: string, lineIndex: number) => {
-    const newLines = [...templateLines];
-    newLines[lineIndex] = newLines[lineIndex] + `{{${variable}}}`;
-    setTemplateLines(newLines);
-  };
-
-  // Insert color helper
-  const insertColor = (colorName: string, lineIndex: number) => {
-    const newLines = [...templateLines];
-    newLines[lineIndex] = newLines[lineIndex] + `{${colorName}}`;
-    setTemplateLines(newLines);
+  // Insert variable/text at cursor position
+  const insertAtCursor = (text: string) => {
+    const lineIndex = activeLineIndex ?? 0;
+    const input = inputRefs.current[lineIndex];
+    
+    if (input) {
+      const start = input.selectionStart ?? templateLines[lineIndex].length;
+      const end = input.selectionEnd ?? templateLines[lineIndex].length;
+      const newLines = [...templateLines];
+      const currentLine = newLines[lineIndex];
+      newLines[lineIndex] = currentLine.substring(0, start) + text + currentLine.substring(end);
+      setTemplateLines(newLines);
+      
+      // Focus and set cursor position after inserted text
+      setTimeout(() => {
+        input.focus();
+        input.setSelectionRange(start + text.length, start + text.length);
+      }, 0);
+    } else {
+      // Fallback: append to active line
+      const newLines = [...templateLines];
+      newLines[lineIndex] = newLines[lineIndex] + text;
+      setTemplateLines(newLines);
+    }
   };
 
   if (pageId && loadingPage) {
@@ -191,20 +209,22 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Wand2 className="h-4 w-4" />
-            {pageId ? "Edit Page" : "Create Page"}
-          </CardTitle>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardHeader>
+    <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
+      {/* Main Editor */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Wand2 className="h-4 w-4" />
+              {pageId ? "Edit Page" : "Create Page"}
+            </CardTitle>
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardHeader>
 
-      <CardContent className="space-y-4">
+        <CardContent className="space-y-4">
         {/* Page name */}
         <div className="space-y-1.5">
           <label className="text-xs font-medium">Page Name</label>
@@ -261,40 +281,44 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-medium">Template Lines</label>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-6 px-2 text-xs"
-                onClick={() => previewMutation.mutate()}
-                disabled={previewMutation.isPending}
-              >
-                <Eye className="h-3 w-3 mr-1" />
-                Preview
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-6 px-2 text-xs lg:hidden"
+                  onClick={() => setShowVariablePicker(!showVariablePicker)}
+                >
+                  {showVariablePicker ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-6 px-2 text-xs"
+                  onClick={() => previewMutation.mutate()}
+                  disabled={previewMutation.isPending}
+                >
+                  <Eye className="h-3 w-3 mr-1" />
+                  Preview
+                </Button>
+              </div>
             </div>
 
-            {/* Helper: show available variables */}
-            <div className="p-2 bg-muted/50 rounded-md text-[10px] space-y-1">
+            {/* Helper text */}
+            <div className="p-2 bg-muted/50 rounded-md text-xs space-y-1">
               <div className="flex items-center gap-1 text-muted-foreground">
                 <Info className="h-3 w-3" />
-                Variables: {"{"}{"{"}<span className="text-primary">source.field</span>{"}"}{"}"}, e.g. {"{"}{"{"}<span className="text-primary">weather.temp</span>{"}"}{"}"}
-              </div>
-              <div className="flex gap-1 flex-wrap">
-                {variablesData?.symbols?.slice(0, 6).map((s: string) => (
-                  <Badge key={s} variant="outline" className="text-[10px]">
-                    {"{"+s+"}"}
-                  </Badge>
-                ))}
+                Click variables in the sidebar to insert them. Mix static text with {"{{variables}}"}.
               </div>
             </div>
 
             {/* 6 template lines */}
             {templateLines.map((line, i) => (
-              <div key={i} className="flex gap-1">
+              <div key={i} className="flex gap-2">
                 <span className="text-xs text-muted-foreground w-4 shrink-0 pt-2">
                   {i + 1}
                 </span>
                 <input
+                  ref={(el) => (inputRefs.current[i] = el)}
                   type="text"
                   value={line}
                   onChange={(e) => {
@@ -302,55 +326,26 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
                     newLines[i] = e.target.value;
                     setTemplateLines(newLines);
                   }}
+                  onFocus={() => setActiveLineIndex(i)}
                   maxLength={60}
-                  placeholder={`Line ${i + 1}...`}
-                  className="flex-1 h-7 px-2 text-xs font-mono rounded border bg-background"
+                  placeholder={`Line ${i + 1} - Type text or insert variables...`}
+                  className={`flex-1 h-9 px-3 text-sm font-mono rounded border bg-background transition-colors ${
+                    activeLineIndex === i ? "border-primary ring-1 ring-primary" : ""
+                  }`}
                 />
-                {/* Quick insert buttons */}
-                <div className="flex gap-0.5">
-                  <button
-                    className="p-1 text-muted-foreground hover:text-primary"
-                    title="Insert variable"
-                    onClick={() => {
-                      const variable = prompt("Enter variable (e.g., weather.temp):");
-                      if (variable) insertVariable(variable, i);
-                    }}
-                  >
-                    <Plus className="h-3 w-3" />
-                  </button>
-                  <button
-                    className="p-1 text-muted-foreground hover:text-primary"
-                    title="Insert color"
-                    onClick={() => {
-                      const color = prompt("Enter color (red, blue, green, etc.):");
-                      if (color) insertColor(color, i);
-                    }}
-                  >
-                    <Palette className="h-3 w-3" />
-                  </button>
-                </div>
+                <span className="text-xs text-muted-foreground w-8 shrink-0 pt-2">
+                  {line.length}/60
+                </span>
               </div>
             ))}
 
-            {/* Color palette */}
-            <div className="flex gap-1 pt-1">
-              {COLORS.map((c) => (
-                <button
-                  key={c.name}
-                  title={c.name}
-                  onClick={() => {
-                    const idx = templateLines.findIndex(l => l === "") || 0;
-                    insertColor(c.name, Math.min(idx, 5));
-                  }}
-                  className={`w-5 h-5 rounded ${c.className}`}
-                />
-              ))}
-            </div>
-
             {/* Live preview */}
             {preview && (
-              <div className="mt-2 p-2 bg-black text-white font-mono text-xs rounded">
-                <pre className="whitespace-pre-wrap">{preview}</pre>
+              <div className="mt-4">
+                <label className="text-xs font-medium mb-2 block">Preview</label>
+                <div className="p-3 bg-black text-white font-mono text-sm rounded">
+                  <pre className="whitespace-pre-wrap">{preview}</pre>
+                </div>
               </div>
             )}
           </div>
@@ -547,8 +542,20 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
             Cancel
           </Button>
         </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      {/* Variable Picker Sidebar - Only show for template mode */}
+      {pageType === "template" && showVariablePicker && (
+        <div className="lg:block hidden">
+          <VariablePicker 
+            onInsert={insertAtCursor}
+            showColors={true}
+            showSymbols={true}
+          />
+        </div>
+      )}
+    </div>
   );
 }
 
