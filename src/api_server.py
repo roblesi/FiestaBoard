@@ -14,6 +14,7 @@ from pydantic import BaseModel
 
 from .main import VestaboardDisplayService
 from .config import Config
+from .config_manager import get_config_manager
 from .displays.service import get_display_service, DISPLAY_TYPES, DisplayResult
 from .settings.service import get_settings_service, VALID_STRATEGIES, VALID_OUTPUT_TARGETS
 from .pages.service import get_page_service
@@ -313,8 +314,167 @@ async def send_message(request: MessageRequest):
 
 @app.get("/config")
 async def get_config():
-    """Get current configuration (without sensitive keys)."""
+    """Get current configuration summary (without sensitive keys)."""
     return Config.get_summary()
+
+
+# =============================================================================
+# Configuration Management Endpoints
+# =============================================================================
+
+@app.get("/config/full")
+async def get_full_config():
+    """
+    Get the full configuration with sensitive fields masked.
+    
+    Returns the complete config structure including all features and settings.
+    API keys and passwords are masked with '***'.
+    """
+    config_manager = get_config_manager()
+    return config_manager.get_all_masked()
+
+
+@app.get("/config/features")
+async def get_features_config():
+    """Get configuration for all features."""
+    config_manager = get_config_manager()
+    full_config = config_manager.get_all_masked()
+    return {
+        "features": full_config.get("features", {}),
+        "available_features": config_manager.get_feature_list()
+    }
+
+
+@app.get("/config/features/{feature_name}")
+async def get_feature_config(feature_name: str):
+    """
+    Get configuration for a specific feature.
+    
+    Args:
+        feature_name: One of: weather, datetime, home_assistant, apple_music,
+                      guest_wifi, star_trek_quotes, rotation
+    """
+    config_manager = get_config_manager()
+    feature = config_manager.get_feature(feature_name)
+    
+    if feature is None:
+        available = config_manager.get_feature_list()
+        raise HTTPException(
+            status_code=404,
+            detail=f"Feature not found: {feature_name}. Available: {available}"
+        )
+    
+    # Mask sensitive fields
+    masked = config_manager._mask_sensitive(feature)
+    
+    return {
+        "feature": feature_name,
+        "config": masked
+    }
+
+
+@app.put("/config/features/{feature_name}")
+async def update_feature_config(feature_name: str, request: dict):
+    """
+    Update configuration for a specific feature.
+    
+    Args:
+        feature_name: The feature to update
+        request: Partial feature configuration to update
+    
+    Example body:
+    {
+        "enabled": true,
+        "api_key": "your-api-key",
+        "location": "New York, NY"
+    }
+    """
+    config_manager = get_config_manager()
+    
+    if feature_name not in config_manager.get_feature_list():
+        available = config_manager.get_feature_list()
+        raise HTTPException(
+            status_code=404,
+            detail=f"Feature not found: {feature_name}. Available: {available}"
+        )
+    
+    # Update the feature
+    success = config_manager.set_feature(feature_name, request)
+    
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to update feature")
+    
+    # Reload config in the Config class
+    Config.reload()
+    
+    # Get updated config (masked)
+    updated = config_manager.get_feature(feature_name)
+    masked = config_manager._mask_sensitive(updated)
+    
+    return {
+        "status": "success",
+        "feature": feature_name,
+        "config": masked
+    }
+
+
+@app.get("/config/vestaboard")
+async def get_vestaboard_config():
+    """Get Vestaboard connection configuration (keys masked)."""
+    config_manager = get_config_manager()
+    vb_config = config_manager.get_vestaboard()
+    masked = config_manager._mask_sensitive(vb_config)
+    
+    return {
+        "config": masked,
+        "api_modes": ["local", "cloud"]
+    }
+
+
+@app.put("/config/vestaboard")
+async def update_vestaboard_config(request: dict):
+    """
+    Update Vestaboard configuration.
+    
+    Example body:
+    {
+        "api_mode": "local",
+        "local_api_key": "your-key",
+        "host": "192.168.1.100"
+    }
+    """
+    config_manager = get_config_manager()
+    
+    # Update vestaboard config
+    config_manager.set_vestaboard(request)
+    
+    # Reload config in the Config class
+    Config.reload()
+    
+    # Get updated config (masked)
+    updated = config_manager.get_vestaboard()
+    masked = config_manager._mask_sensitive(updated)
+    
+    return {
+        "status": "success",
+        "config": masked
+    }
+
+
+@app.get("/config/validate")
+async def validate_config():
+    """
+    Validate the current configuration.
+    
+    Returns validation status and any errors found.
+    """
+    config_manager = get_config_manager()
+    is_valid, errors = config_manager.validate()
+    
+    return {
+        "valid": is_valid,
+        "errors": errors
+    }
 
 
 # =============================================================================

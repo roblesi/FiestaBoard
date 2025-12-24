@@ -2,8 +2,9 @@
 
 import { ServiceControls } from "@/components/service-controls";
 import { TransitionSettingsComponent } from "@/components/transition-settings";
-import { ConfigDisplay } from "@/components/config-display";
 import { OutputTargetSelector } from "@/components/output-target-selector";
+import { FeatureSettings } from "@/components/feature-settings";
+import { VestaboardSettings } from "@/components/feature-settings/vestaboard-settings";
 
 export default function SettingsPage() {
   return (
@@ -16,33 +17,45 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        <div className="grid gap-8 max-w-4xl">
-          {/* Service Controls */}
-          <section>
-            <h2 className="text-xl font-semibold mb-4">Service Control</h2>
-            <ServiceControls />
-          </section>
+        <div className="grid gap-8 lg:grid-cols-[1fr_400px]">
+          {/* Main Settings */}
+          <div className="space-y-8">
+            {/* Vestaboard Connection */}
+            <section>
+              <h2 className="text-xl font-semibold mb-4">Vestaboard Connection</h2>
+              <VestaboardSettings />
+            </section>
 
-          {/* Output Settings */}
-          <section>
-            <h2 className="text-xl font-semibold mb-4">Display Output</h2>
-            <OutputTargetSelector />
-          </section>
+            {/* Feature Configuration */}
+            <section>
+              <h2 className="text-xl font-semibold mb-4">Features</h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Enable and configure data sources for your Vestaboard display. 
+                Click a feature to expand its settings.
+              </p>
+              <FeatureSettings />
+            </section>
+          </div>
 
-          {/* Transition Settings */}
-          <section>
-            <h2 className="text-xl font-semibold mb-4">Transitions</h2>
-            <TransitionSettingsComponent />
-          </section>
+          {/* Sidebar - Service & Display Settings */}
+          <div className="space-y-6">
+            <section>
+              <h2 className="text-lg font-semibold mb-3">Service Control</h2>
+              <ServiceControls />
+            </section>
 
-          {/* Configuration Display */}
-          <section>
-            <h2 className="text-xl font-semibold mb-4">Feature Configuration</h2>
-            <ConfigDisplay />
-          </section>
+            <section>
+              <h2 className="text-lg font-semibold mb-3">Display Output</h2>
+              <OutputTargetSelector />
+            </section>
+
+            <section>
+              <h2 className="text-lg font-semibold mb-3">Transitions</h2>
+              <TransitionSettingsComponent />
+            </section>
+          </div>
         </div>
       </div>
     </div>
   );
 }
-
