@@ -57,9 +57,36 @@ pip install -r requirements.txt
 
 ### 4. Run Locally (for testing)
 
+You have several options for local development:
+
+**Option A: Run the service directly (original)**
 ```bash
-python src/main.py
+python -m src.main
 ```
+
+**Option B: Run the API server (new - recommended for development)**
+```bash
+# Install FastAPI dependencies (if not already done)
+pip install -r requirements.txt
+
+# Run API server with auto-reload
+uvicorn src.api_server:app --reload --host 0.0.0.0 --port 8000
+```
+
+Then access:
+- API: http://localhost:8000
+- API Docs: http://localhost:8000/docs
+
+**Option C: Run with Docker Compose (full setup)**
+```bash
+docker-compose up --build
+```
+
+Then access:
+- Web UI: http://localhost:8080
+- API: http://localhost:8000
+
+For detailed development workflows, see [LOCAL_DEVELOPMENT.md](./LOCAL_DEVELOPMENT.md).
 
 ### 5. Build and Run with Docker
 
@@ -75,11 +102,17 @@ docker run -d \
   vestaboard-display
 ```
 
-Or use docker-compose:
+Or use docker-compose (now includes API + Web UI):
 
 ```bash
-docker-compose up -d
+# Build and run both API and UI services
+docker-compose up -d --build
+
+# Access Web UI at http://localhost:8080
+# Access API at http://localhost:8000
 ```
+
+See [DOCKER_SETUP.md](./DOCKER_SETUP.md) for more details.
 
 ## Security Notes
 

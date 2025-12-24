@@ -122,7 +122,7 @@ class VestaboardDisplayService:
         
         return True
     
-    def fetch_and_display(self, force_apple_music: bool = False):
+    def fetch_and_display(self, force_apple_music: bool = False, dev_mode: bool = False):
         """
         Fetch data and display on Vestaboard.
         
@@ -148,6 +148,9 @@ class VestaboardDisplayService:
                 )
                 logger.info(f"Formatted message (Guest WiFi):\n{message}")
                 
+                if dev_mode:
+                    logger.info(f"[DEV MODE] Would send Guest WiFi (not actually sending):\n{message}")
+                    return
                 if self.vb_client:
                     success = self.vb_client.send_text(message)
                     if success:
@@ -200,6 +203,9 @@ class VestaboardDisplayService:
             message = self.formatter.format_apple_music(apple_music_data)
             logger.info(f"Formatted message (Apple Music):\n{message}")
             
+            if dev_mode:
+                logger.info(f"[DEV MODE] Would send Apple Music (not actually sending):\n{message}")
+                return
             if self.vb_client:
                 success = self.vb_client.send_text(message)
                 if success:
@@ -226,6 +232,11 @@ class VestaboardDisplayService:
                     message = self.formatter.format_star_trek_quote(quote_data)
                     logger.info(f"Formatted message (Star Trek - {quote_data['series'].upper()}):\n{message}")
                     
+                    if dev_mode:
+                        logger.info(f"[DEV MODE] Would send Star Trek quote (not actually sending):\n{message}")
+                        self.current_rotation_screen = "star_trek"
+                        self.last_rotation_change = current_time
+                        return
                     if self.vb_client:
                         success = self.vb_client.send_text(message)
                         if success:
@@ -243,6 +254,11 @@ class VestaboardDisplayService:
             message = self.formatter.format_house_status(home_assistant_data)
             logger.info(f"Formatted message (House Status):\n{message}")
             
+            if dev_mode:
+                logger.info(f"[DEV MODE] Would send Home Assistant (not actually sending):\n{message}")
+                self.current_rotation_screen = "home_assistant"
+                self.last_rotation_change = current_time
+                return
             if self.vb_client:
                 success = self.vb_client.send_text(message)
                 if success:
@@ -282,7 +298,11 @@ class VestaboardDisplayService:
                 logger.info(f"Formatted message:\n{message}")
                 
                 # Send to Vestaboard
-                if self.vb_client:
+                if dev_mode:
+                    logger.info(f"[DEV MODE] Would send Weather/DateTime (not actually sending):\n{message}")
+                    self.current_rotation_screen = "weather"
+                    self.last_rotation_change = current_time
+                elif self.vb_client:
                     success = self.vb_client.send_text(message)
                     if success:
                         logger.info("Display updated successfully")
@@ -386,27 +406,27 @@ class VestaboardDisplayService:
         
         # Schedule periodic updates
         interval_minutes = Config.REFRESH_INTERVAL_SECONDS / 60
-        schedule.every(interval_minutes).minutes.do(self.fetch_and_display)
+        schedule.every(interval_minutes).minutes.do(lambda: self.fetch_and_display(dev_mode=False))
         logger.info(f"Scheduled updates every {interval_minutes} minutes")
         
         # Schedule Apple Music checks more frequently (if enabled)
         if self.apple_music_source:
             apple_music_interval = Config.APPLE_MUSIC_REFRESH_SECONDS
             schedule.every(apple_music_interval).seconds.do(
-                lambda: self.fetch_and_display(force_apple_music=False)
+                lambda: self.fetch_and_display(force_apple_music=False, dev_mode=False)
             )
             logger.info(f"Apple Music checks every {apple_music_interval} seconds")
         
         # Schedule Guest WiFi refresh (if enabled)
         if Config.GUEST_WIFI_ENABLED:
             guest_wifi_interval = Config.GUEST_WIFI_REFRESH_SECONDS
-            schedule.every(guest_wifi_interval).seconds.do(self.fetch_and_display)
+            schedule.every(guest_wifi_interval).seconds.do(lambda: self.fetch_and_display(dev_mode=False))
             logger.info(f"Guest WiFi refresh every {guest_wifi_interval} seconds")
         
         # Schedule Home Assistant checks (if enabled)
         if self.home_assistant_source:
             ha_interval = Config.HOME_ASSISTANT_REFRESH_SECONDS
-            schedule.every(ha_interval).seconds.do(self.fetch_and_display)
+            schedule.every(ha_interval).seconds.do(lambda: self.fetch_and_display(dev_mode=False))
             logger.info(f"Home Assistant checks every {ha_interval} seconds")
         
         # Main loop

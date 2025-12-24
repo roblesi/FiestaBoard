@@ -13,7 +13,17 @@
       ]
     }
   },
-  "forwardPorts": [],
+  "forwardPorts": [8000, 8080],
+  "portsAttributes": {
+    "8000": {
+      "label": "API Server",
+      "onAutoForward": "notify"
+    },
+    "8080": {
+      "label": "Web UI",
+      "onAutoForward": "notify"
+    }
+  },
   "remoteEnv": {
     "VB_READ_WRITE_KEY": "${localEnv:VB_READ_WRITE_KEY}",
     "WEATHER_API_KEY": "${localEnv:WEATHER_API_KEY}"

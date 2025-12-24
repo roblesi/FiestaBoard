@@ -5,6 +5,11 @@ python-dotenv>=1.0.0
 schedule>=1.2.0
 pytz>=2023.3
 
+# API Server dependencies
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.0.0
+
 # Optional: Vestaboard Python library (alternative to manual implementation)
 # vesta>=0.1.0
 

@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vestaboard Display Control</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-indicator.running {
+            background-color: #10b981;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+        }
+
+        .status-indicator.stopped {
+            background-color: #ef4444;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        button.danger {
+            background: #ef4444;
+        }
+
+        button.danger:hover {
+            background: #dc2626;
+        }
+
+        button.success {
+            background: #10b981;
+        }
+
+        button.success:hover {
+            background: #059669;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #4b5563;
+            font-weight: 500;
+        }
+
+        textarea, input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 16px;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        textarea:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .config-item {
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+
+        .config-item label {
+            font-size: 12px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .config-item .value {
+            font-size: 18px;
+            color: #111827;
+            margin-top: 5px;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .message.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #10b981;
+        }
+
+        .message.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #ef4444;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .auto-refresh {
+            color: #6b7280;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        #previewDisplay {
+            font-family: 'Courier New', monospace;
+            background: #111827;
+            color: #10b981;
+            padding: 15px;
+            border-radius: 4px;
+            line-height: 1.8;
+            min-height: 150px;
+            white-space: pre-wrap;
+            font-size: 14px;
+            letter-spacing: 1px;
+            border: 2px solid #374151;
+        }
+
+        #previewDisplay.empty {
+            color: #6b7280;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Vestaboard Display Control</h1>
+            <p>
+                <span class="status-indicator" id="statusIndicator"></span>
+                <span id="statusText">Checking status...</span>
+            </p>
+        </div>
+
+        <div id="message" class="message"></div>
+
+        <div class="card">
+            <h2>📺 Display Preview</h2>
+            <p style="color: #6b7280; margin-bottom: 15px;">
+                <span id="previewModeInfo">Preview what will be sent to your Vestaboard.</span>
+                <span id="devModeInfo" style="display: none; color: #f59e0b; font-weight: 500;">⚠️ Dev Mode: Previewing only (not sending to Vestaboard)</span>
+            </p>
+            <div class="button-group">
+                <button onclick="previewMessage()" class="success">👁️ Update Preview</button>
+                <button id="autoPreviewBtn" onclick="toggleAutoPreview()">⏸️ Auto-Refresh: Off</button>
+                <button onclick="publishPreview()" class="success" style="background: #3b82f6;">📤 Publish to Vestaboard</button>
+            </div>
+            <div id="previewContainer" style="margin-top: 20px;">
+                <div style="background: #1f2937; padding: 20px; border-radius: 8px; font-family: 'Courier New', monospace;">
+                    <div style="color: #9ca3af; font-size: 12px; margin-bottom: 10px; text-transform: uppercase;">Preview (6 rows × 22 columns)</div>
+                    <div id="previewDisplay" style="background: #111827; color: #10b981; padding: 15px; border-radius: 4px; line-height: 1.8; min-height: 150px; white-space: pre-wrap; font-size: 14px; letter-spacing: 1px; border: 2px solid #374151;">Click "Update Preview" to see what will be displayed</div>
+                    <div id="previewInfo" style="color: #6b7280; font-size: 12px; margin-top: 10px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Service Control</h2>
+            <div class="button-group">
+                <button id="startBtn" onclick="startService()">▶ Start Service</button>
+                <button id="stopBtn" onclick="stopService()" class="danger">⏹ Stop Service</button>
+                <button id="devModeBtn" onclick="toggleDevMode()" style="background: #f59e0b;">🔧 Dev Mode: Off</button>
+            </div>
+            <p style="color: #6b7280; font-size: 14px; margin-top: 15px;">
+                <strong>Local Development:</strong> Dev mode is ON by default - preview only, no Vestaboard updates.<br>
+                <strong>Production (Synology):</strong> Dev mode is OFF - updates go to Vestaboard automatically.
+            </p>
+        </div>
+
+        <div class="card">
+            <h2>Configuration</h2>
+            <div class="config-grid" id="configGrid">
+                <div class="config-item">
+                    <label>Loading...</label>
+                    <div class="value">-</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Use /api proxy if available, otherwise try direct connection
+        const API_BASE = window.location.origin + '/api';
+        const API_BASE_FALLBACK = window.location.origin.replace(/:\d+$/, ':8000');
+        let statusCheckInterval;
+        let autoPreviewInterval = null;
+        let autoPreviewEnabled = false;
+
+        // Show message
+        function showMessage(text, type = 'success') {
+            const msgEl = document.getElementById('message');
+            msgEl.textContent = text;
+            msgEl.className = `message ${type} show`;
+            setTimeout(() => {
+                msgEl.classList.remove('show');
+            }, 5000);
+        }
+
+        // Helper to fetch from API with fallback
+        async function apiFetch(path, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${path}`, options);
+                if (response.ok) return response;
+                throw new Error(`HTTP ${response.status}`);
+            } catch (error) {
+                // Try fallback if primary fails
+                try {
+                    return await fetch(`${API_BASE_FALLBACK}${path}`, options);
+                } catch (fallbackError) {
+                    throw new Error(`API unavailable: ${error.message}`);
+                }
+            }
+        }
+
+        // Update status
+        async function updateStatus() {
+            try {
+                const response = await apiFetch('/status');
+                const data = await response.json();
+                
+                const indicator = document.getElementById('statusIndicator');
+                const statusText = document.getElementById('statusText');
+                const startBtn = document.getElementById('startBtn');
+                const stopBtn = document.getElementById('stopBtn');
+                const devModeBtn = document.getElementById('devModeBtn');
+                const devModeWarning = document.getElementById('devModeWarning');
+                
+                if (data.running) {
+                    indicator.className = 'status-indicator running';
+                    statusText.textContent = 'Service Running';
+                    startBtn.disabled = true;
+                    stopBtn.disabled = false;
+                } else {
+                    indicator.className = 'status-indicator stopped';
+                    statusText.textContent = 'Service Stopped';
+                    startBtn.disabled = false;
+                    stopBtn.disabled = true;
+                }
+                
+                // Update dev mode status
+                const devMode = data.config_summary?.dev_mode || false;
+                const devModeInfo = document.getElementById('devModeInfo');
+                const previewModeInfo = document.getElementById('previewModeInfo');
+                
+                if (devMode) {
+                    devModeBtn.textContent = '🔧 Dev Mode: On';
+                    devModeBtn.style.background = '#10b981';
+                    devModeInfo.style.display = 'inline';
+                    previewModeInfo.style.display = 'none';
+                } else {
+                    devModeBtn.textContent = '🔧 Dev Mode: Off';
+                    devModeBtn.style.background = '#f59e0b';
+                    devModeInfo.style.display = 'none';
+                    previewModeInfo.style.display = 'inline';
+                }
+            } catch (error) {
+                console.error('Error checking status:', error);
+                const indicator = document.getElementById('statusIndicator');
+                const statusText = document.getElementById('statusText');
+                indicator.className = 'status-indicator stopped';
+                statusText.textContent = 'Unable to connect to API';
+            }
+        }
+
+        // Toggle dev mode
+        async function toggleDevMode() {
+            try {
+                // Get current status first
+                const statusResponse = await apiFetch('/status');
+                const statusData = await statusResponse.json();
+                const currentDevMode = statusData.config_summary?.dev_mode || false;
+                
+                // Toggle it
+                const response = await apiFetch('/dev-mode', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ dev_mode: !currentDevMode })
+                });
+                const data = await response.json();
+                
+                showMessage(data.message || `Dev mode ${data.dev_mode ? 'enabled' : 'disabled'}`, 'success');
+                setTimeout(updateStatus, 500);
+            } catch (error) {
+                showMessage('Failed to toggle dev mode: ' + error.message, 'error');
+            }
+        }
+
+        // Load configuration
+        async function loadConfig() {
+            try {
+                const response = await apiFetch('/config');
+                const config = await response.json();
+                
+                const grid = document.getElementById('configGrid');
+                grid.innerHTML = '';
+                
+                for (const [key, value] of Object.entries(config)) {
+                    const item = document.createElement('div');
+                    item.className = 'config-item';
+                    item.innerHTML = `
+                        <label>${key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</label>
+                        <div class="value">${typeof value === 'boolean' ? (value ? '✓ Enabled' : '✗ Disabled') : value}</div>
+                    `;
+                    grid.appendChild(item);
+                }
+            } catch (error) {
+                console.error('Error loading config:', error);
+            }
+        }
+
+        // Start service
+        async function startService() {
+            try {
+                const response = await apiFetch('/start', { method: 'POST' });
+                const data = await response.json();
+                showMessage(data.message || 'Service started', 'success');
+                setTimeout(updateStatus, 1000);
+            } catch (error) {
+                showMessage('Failed to start service: ' + error.message, 'error');
+            }
+        }
+
+        // Stop service
+        async function stopService() {
+            try {
+                const response = await apiFetch('/stop', { method: 'POST' });
+                const data = await response.json();
+                showMessage(data.message || 'Service stopped', 'success');
+                setTimeout(updateStatus, 1000);
+            } catch (error) {
+                showMessage('Failed to stop service: ' + error.message, 'error');
+            }
+        }
+
+        // Refresh display
+        async function refreshDisplay() {
+            const btn = document.getElementById('refreshBtn');
+            btn.disabled = true;
+            btn.innerHTML = 'Refreshing... <span class="loading"></span>';
+            
+            try {
+                const response = await apiFetch('/refresh', { method: 'POST' });
+                const data = await response.json();
+                showMessage(data.message || 'Display refreshed', 'success');
+            } catch (error) {
+                showMessage('Failed to refresh display: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🔄 Refresh Display';
+            }
+        }
+
+        // Preview message
+        async function previewMessage() {
+            const container = document.getElementById('previewContainer');
+            const display = document.getElementById('previewDisplay');
+            const info = document.getElementById('previewInfo');
+            
+            container.style.display = 'block';
+            display.textContent = 'Loading preview...';
+            display.className = '';
+            info.textContent = '';
+            
+            try {
+                const response = await apiFetch('/preview');
+                const data = await response.json();
+                
+                // Display the message
+                if (data.message) {
+                    display.textContent = data.message;
+                    display.className = data.display_type || '';
+                    
+                    // Show info
+                    const typeNames = {
+                        'guest_wifi': 'Guest WiFi',
+                        'apple_music': 'Apple Music',
+                        'star_trek': 'Star Trek Quote',
+                        'home_assistant': 'Home Assistant',
+                        'weather_datetime': 'Weather + DateTime',
+                        'empty': 'Empty'
+                    };
+                    info.textContent = `Type: ${typeNames[data.display_type] || data.display_type} | Lines: ${data.line_count || data.lines.length}`;
+                } else {
+                    display.textContent = 'No preview available';
+                    display.className = 'empty';
+                }
+            } catch (error) {
+                display.textContent = `Error: ${error.message}`;
+                display.className = 'empty';
+                info.textContent = '';
+            }
+        }
+
+        // Toggle auto-preview
+        function toggleAutoPreview() {
+            const btn = document.getElementById('autoPreviewBtn');
+            
+            if (autoPreviewEnabled) {
+                // Disable
+                clearInterval(autoPreviewInterval);
+                autoPreviewInterval = null;
+                autoPreviewEnabled = false;
+                btn.textContent = '▶️ Auto-Refresh: Off';
+                btn.classList.remove('success');
+            } else {
+                // Enable
+                previewMessage(); // Show immediately
+                autoPreviewInterval = setInterval(previewMessage, 5000); // Update every 5 seconds
+                autoPreviewEnabled = true;
+                btn.textContent = '⏸️ Auto-Refresh: On (5s)';
+                btn.classList.add('success');
+            }
+        }
+
+
+        // Publish preview to Vestaboard
+        async function publishPreview() {
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = 'Publishing... <span class="loading"></span>';
+            
+            try {
+                const response = await apiFetch('/publish-preview', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                showMessage(data.message || 'Preview published to Vestaboard!', 'success');
+            } catch (error) {
+                showMessage('Failed to publish: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '📤 Publish to Vestaboard';
+            }
+        }
+
+        // Initialize
+        updateStatus();
+        loadConfig();
+        previewMessage(); // Auto-load preview on page load
+        statusCheckInterval = setInterval(updateStatus, 5000); // Check every 5 seconds
+    </script>
+</body>
+</html>
+
