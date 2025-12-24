@@ -14,7 +14,16 @@ import {
   RotateCw,
 } from "lucide-react";
 
-// Feature configurations with their fields
+// Output parameter definition
+export interface OutputParameter {
+  name: string;           // Template variable name (e.g., "temp")
+  description: string;    // Human-readable description
+  example: string;        // Example output
+  maxChars: number;       // Maximum character length
+  typical?: string;       // Typical value format
+}
+
+// Feature configurations with their fields and output parameters
 const FEATURE_DEFINITIONS: Record<
   string,
   {
@@ -22,12 +31,17 @@ const FEATURE_DEFINITIONS: Record<
     description: string;
     icon: typeof Cloud;
     fields: FeatureField[];
+    outputs: OutputParameter[];
+    hasRefreshInterval?: boolean;
+    defaultRefreshSeconds?: number;
   }
 > = {
   weather: {
     title: "Weather",
     description: "Display current weather conditions",
     icon: Cloud,
+    hasRefreshInterval: true,
+    defaultRefreshSeconds: 300,
     fields: [
       {
         key: "api_key",
@@ -54,12 +68,28 @@ const FEATURE_DEFINITIONS: Record<
         required: true,
         description: "City name or coordinates",
       },
+      {
+        key: "refresh_seconds",
+        label: "Refresh Interval (seconds)",
+        type: "number",
+        placeholder: "300",
+        description: "How often to fetch new weather data (min: 60)",
+      },
+    ],
+    outputs: [
+      { name: "temp", description: "Temperature in °F", example: "72", maxChars: 3, typical: "2-3 digits" },
+      { name: "temperature", description: "Temperature (alias)", example: "72", maxChars: 3 },
+      { name: "condition", description: "Weather condition", example: "Sunny", maxChars: 12, typical: "4-12 chars" },
+      { name: "humidity", description: "Humidity percentage", example: "65", maxChars: 3, typical: "2-3 digits" },
+      { name: "location", description: "Location name", example: "San Francisco", maxChars: 15, typical: "5-15 chars" },
+      { name: "wind_speed", description: "Wind speed in mph", example: "12", maxChars: 3, typical: "1-3 digits" },
     ],
   },
   datetime: {
     title: "Date & Time",
     description: "Display current date and time",
     icon: Calendar,
+    hasRefreshInterval: false, // Always current
     fields: [
       {
         key: "timezone",
@@ -69,11 +99,23 @@ const FEATURE_DEFINITIONS: Record<
         description: "IANA timezone identifier",
       },
     ],
+    outputs: [
+      { name: "time", description: "Current time (HH:MM)", example: "14:30", maxChars: 5, typical: "5 chars" },
+      { name: "date", description: "Current date", example: "2025-01-15", maxChars: 10, typical: "10 chars" },
+      { name: "day", description: "Day of month", example: "15", maxChars: 2, typical: "1-2 digits" },
+      { name: "day_of_week", description: "Day name", example: "Wednesday", maxChars: 9, typical: "6-9 chars" },
+      { name: "month", description: "Month name", example: "January", maxChars: 9, typical: "3-9 chars" },
+      { name: "year", description: "Current year", example: "2025", maxChars: 4, typical: "4 digits" },
+      { name: "hour", description: "Hour (24h)", example: "14", maxChars: 2, typical: "2 digits" },
+      { name: "minute", description: "Minute", example: "30", maxChars: 2, typical: "2 digits" },
+    ],
   },
   home_assistant: {
     title: "Home Assistant",
     description: "Display smart home status",
     icon: Home,
+    hasRefreshInterval: true,
+    defaultRefreshSeconds: 30,
     fields: [
       {
         key: "base_url",
@@ -101,13 +143,20 @@ const FEATURE_DEFINITIONS: Record<
         label: "Refresh Interval (seconds)",
         type: "number",
         placeholder: "30",
+        description: "How often to poll entity states (min: 10)",
       },
+    ],
+    outputs: [
+      { name: "{entity}.state", description: "Entity state value", example: "on", maxChars: 10, typical: "2-10 chars" },
+      { name: "{entity}.friendly_name", description: "Entity display name", example: "Front Door", maxChars: 15 },
     ],
   },
   apple_music: {
     title: "Apple Music",
     description: "Display now playing info",
     icon: Music,
+    hasRefreshInterval: true,
+    defaultRefreshSeconds: 10,
     fields: [
       {
         key: "service_url",
@@ -128,13 +177,21 @@ const FEATURE_DEFINITIONS: Record<
         label: "Refresh Interval (seconds)",
         type: "number",
         placeholder: "10",
+        description: "How often to check now playing (min: 5)",
       },
+    ],
+    outputs: [
+      { name: "track", description: "Song/track name", example: "Bohemian Rhapsody", maxChars: 22, typical: "5-22 chars" },
+      { name: "artist", description: "Artist name", example: "Queen", maxChars: 22, typical: "3-22 chars" },
+      { name: "album", description: "Album name", example: "A Night at the Opera", maxChars: 22, typical: "5-22 chars" },
+      { name: "playing", description: "Is playing (bool)", example: "Yes", maxChars: 3, typical: "Yes/No" },
     ],
   },
   guest_wifi: {
     title: "Guest WiFi",
     description: "Display WiFi credentials",
     icon: Wifi,
+    hasRefreshInterval: false, // Static data
     fields: [
       {
         key: "ssid",
@@ -151,11 +208,16 @@ const FEATURE_DEFINITIONS: Record<
         required: true,
       },
     ],
+    outputs: [
+      { name: "ssid", description: "Network name", example: "GuestWiFi", maxChars: 22, typical: "5-22 chars" },
+      { name: "password", description: "WiFi password", example: "guest123", maxChars: 22, typical: "8-22 chars" },
+    ],
   },
   star_trek_quotes: {
     title: "Star Trek Quotes",
     description: "Display random quotes",
     icon: Sparkles,
+    hasRefreshInterval: false, // Changes per rotation
     fields: [
       {
         key: "ratio",
@@ -165,11 +227,17 @@ const FEATURE_DEFINITIONS: Record<
         description: "Weighted ratio for quote selection",
       },
     ],
+    outputs: [
+      { name: "quote", description: "The quote text", example: "Make it so.", maxChars: 120, typical: "20-120 chars (multi-line)" },
+      { name: "character", description: "Character name", example: "Picard", maxChars: 15, typical: "4-15 chars" },
+      { name: "series", description: "Series name", example: "TNG", maxChars: 3, typical: "3 chars" },
+    ],
   },
   rotation: {
     title: "Rotation",
     description: "Rotate between displays",
     icon: RotateCw,
+    hasRefreshInterval: false,
     fields: [
       {
         key: "default_duration",
@@ -179,6 +247,7 @@ const FEATURE_DEFINITIONS: Record<
         description: "How long each display shows before rotating",
       },
     ],
+    outputs: [], // Rotation doesn't have template outputs
   },
 };
 
@@ -214,6 +283,7 @@ export function FeatureSettings() {
             description={definition.description}
             icon={definition.icon}
             fields={definition.fields}
+            outputs={definition.outputs}
             initialConfig={featureConfig as Record<string, unknown> | undefined}
             isLoading={isLoading}
           />
@@ -223,3 +293,5 @@ export function FeatureSettings() {
   );
 }
 
+// Export for use in other components
+export { FEATURE_DEFINITIONS };

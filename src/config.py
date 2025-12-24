@@ -130,6 +130,12 @@ class Config:
         """Whether weather is enabled."""
         return cls._get_feature("weather").get("enabled", False)
     
+    @classmethod
+    @property
+    def WEATHER_REFRESH_SECONDS(cls) -> int:
+        """Weather data refresh interval in seconds."""
+        return cls._get_feature("weather").get("refresh_seconds", 300)
+    
     # ==================== DateTime Configuration ====================
     
     @classmethod

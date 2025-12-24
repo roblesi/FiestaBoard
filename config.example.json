@@ -13,7 +13,8 @@
       "enabled": true,
       "api_key": "your-weatherapi-key",
       "provider": "weatherapi",
-      "location": "San Francisco, CA"
+      "location": "San Francisco, CA",
+      "refresh_seconds": 300
     },
     "datetime": {
       "enabled": true,
@@ -36,8 +37,7 @@
     "guest_wifi": {
       "enabled": false,
       "ssid": "MyGuestNetwork",
-      "password": "guest-password",
-      "refresh_seconds": 60
+      "password": "guest-password"
     },
     "star_trek_quotes": {
       "enabled": false,

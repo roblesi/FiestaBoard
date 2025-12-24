@@ -30,10 +30,12 @@ DEFAULT_CONFIG: Dict[str, Any] = {
             "api_key": "",
             "provider": "weatherapi",
             "location": "San Francisco, CA",
+            "refresh_seconds": 300,  # 5 minutes - weather doesn't change fast
         },
         "datetime": {
             "enabled": True,
             "timezone": "America/Los_Angeles",
+            # No refresh_seconds - always current
         },
         "home_assistant": {
             "enabled": False,
@@ -41,23 +43,24 @@ DEFAULT_CONFIG: Dict[str, Any] = {
             "access_token": "",
             "entities": [],
             "timeout": 5,
-            "refresh_seconds": 30,
+            "refresh_seconds": 30,  # 30 seconds for home status
         },
         "apple_music": {
             "enabled": False,
             "service_url": "",
             "timeout": 5,
-            "refresh_seconds": 10,
+            "refresh_seconds": 10,  # 10 seconds to catch song changes
         },
         "guest_wifi": {
             "enabled": False,
             "ssid": "",
             "password": "",
-            "refresh_seconds": 60,
+            # No refresh_seconds - static data
         },
         "star_trek_quotes": {
             "enabled": False,
             "ratio": "3:5:9",
+            # No refresh_seconds - changes per rotation
         },
         "rotation": {
             "enabled": True,

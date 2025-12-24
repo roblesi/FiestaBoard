@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { ChevronDown, ChevronUp, Save, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { ChevronDown, ChevronUp, Save, Eye, EyeOff, AlertCircle, Copy, Check } from "lucide-react";
 import { api, FeatureName } from "@/lib/api";
 import { LucideIcon } from "lucide-react";
 
@@ -22,12 +22,21 @@ export interface FeatureField {
   description?: string;
 }
 
+export interface OutputParameter {
+  name: string;
+  description: string;
+  example: string;
+  maxChars: number;
+  typical?: string;
+}
+
 interface FeatureCardProps {
   featureName: FeatureName;
   title: string;
   description: string;
   icon: LucideIcon;
   fields: FeatureField[];
+  outputs?: OutputParameter[];
   initialConfig?: Record<string, unknown>;
   isLoading?: boolean;
 }
@@ -38,6 +47,7 @@ export function FeatureCard({
   description,
   icon: Icon,
   fields,
+  outputs = [],
   initialConfig,
   isLoading = false,
 }: FeatureCardProps) {
@@ -46,6 +56,7 @@ export function FeatureCard({
   const [formData, setFormData] = useState<Record<string, unknown>>({});
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const [hasChanges, setHasChanges] = useState(false);
+  const [copiedVar, setCopiedVar] = useState<string | null>(null);
 
   // Initialize form data from config
   useEffect(() => {
@@ -90,6 +101,15 @@ export function FeatureCard({
   // Handle save
   const handleSave = () => {
     updateMutation.mutate(formData);
+  };
+
+  // Copy template variable
+  const handleCopyVar = (varName: string) => {
+    const templateVar = `{{${featureName}.${varName}}}`;
+    navigator.clipboard.writeText(templateVar);
+    setCopiedVar(varName);
+    setTimeout(() => setCopiedVar(null), 2000);
+    toast.success(`Copied ${templateVar}`);
   };
 
   // Check if secret field has value (masked as ***)
@@ -155,11 +175,11 @@ export function FeatureCard({
       </CardHeader>
 
       {expanded && (
-        <CardContent className="pt-0 space-y-4">
-          {fields.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No additional configuration required.</p>
-          ) : (
-            <>
+        <CardContent className="pt-0 space-y-6">
+          {/* Settings Section */}
+          {fields.length > 0 && (
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium text-muted-foreground">Settings</h4>
               {fields.map((field) => (
                 <div key={field.key} className="space-y-1.5">
                   <label className="text-xs font-medium flex items-center gap-1">
@@ -240,34 +260,98 @@ export function FeatureCard({
                   )}
                 </div>
               ))}
+            </div>
+          )}
 
-              {/* Warning for enabled but missing required fields */}
-              {enabled && fields.some((f) => f.required && !formData[f.key]) && (
-                <div className="flex items-center gap-2 p-2 rounded-md bg-destructive/10 text-destructive text-xs">
-                  <AlertCircle className="h-4 w-4" />
-                  <span>Some required fields are empty</span>
-                </div>
-              )}
+          {/* Output Parameters Section */}
+          {outputs.length > 0 && (
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-muted-foreground">
+                Template Variables
+                <span className="ml-2 text-xs font-normal">(click to copy)</span>
+              </h4>
+              <div className="rounded-md border overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="text-left px-3 py-2 font-medium">Variable</th>
+                      <th className="text-left px-3 py-2 font-medium">Description</th>
+                      <th className="text-left px-3 py-2 font-medium">Example</th>
+                      <th className="text-center px-3 py-2 font-medium">Max</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {outputs.map((output) => (
+                      <tr 
+                        key={output.name} 
+                        className="hover:bg-muted/30 cursor-pointer transition-colors"
+                        onClick={() => handleCopyVar(output.name)}
+                      >
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-1.5">
+                            <code className="text-primary font-mono bg-primary/10 px-1.5 py-0.5 rounded">
+                              {featureName}.{output.name}
+                            </code>
+                            {copiedVar === output.name ? (
+                              <Check className="h-3 w-3 text-emerald-500" />
+                            ) : (
+                              <Copy className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100" />
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-muted-foreground">
+                          {output.description}
+                        </td>
+                        <td className="px-3 py-2">
+                          <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                            {output.example}
+                          </code>
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <Badge variant="outline" className="text-[10px]">
+                            {output.maxChars}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Use in templates as <code className="bg-muted px-1 rounded">{`{{${featureName}.variable}}`}</code>
+              </p>
+            </div>
+          )}
 
-              {/* Save button */}
-              {hasChanges && (
-                <div className="pt-2">
-                  <Button
-                    size="sm"
-                    onClick={handleSave}
-                    disabled={updateMutation.isPending}
-                    className="w-full"
-                  >
-                    <Save className="h-4 w-4 mr-2" />
-                    {updateMutation.isPending ? "Saving..." : "Save Changes"}
-                  </Button>
-                </div>
-              )}
-            </>
+          {/* No config needed message */}
+          {fields.length === 0 && outputs.length === 0 && (
+            <p className="text-sm text-muted-foreground">No additional configuration required.</p>
+          )}
+
+          {/* Warning for enabled but missing required fields */}
+          {enabled && fields.some((f) => f.required && !formData[f.key]) && (
+            <div className="flex items-center gap-2 p-2 rounded-md bg-destructive/10 text-destructive text-xs">
+              <AlertCircle className="h-4 w-4" />
+              <span>Some required fields are empty</span>
+            </div>
+          )}
+
+          {/* Save button */}
+          {hasChanges && (
+            <div className="pt-2">
+              <Button
+                size="sm"
+                onClick={handleSave}
+                disabled={updateMutation.isPending}
+                className="w-full"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {updateMutation.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
           )}
         </CardContent>
       )}
     </Card>
   );
 }
-
