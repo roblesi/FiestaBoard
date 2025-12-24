@@ -30,7 +30,10 @@ jobs:
     
     - name: Verify imports
       run: |
-        python -c "import sys; sys.path.insert(0, 'src'); import config; import vestaboard_client; import main; print('✅ All imports successful')"
+        python -c "import sys; sys.path.insert(0, '.'); from src import config, vestaboard_client, vestaboard_chars; print('✅ Core imports successful')"
+        python -c "import sys; sys.path.insert(0, '.'); from src.data_sources import weather, datetime, apple_music, home_assistant, star_trek_quotes; print('✅ Data source imports successful')"
+        python -c "import sys; sys.path.insert(0, '.'); from src.formatters import message_formatter; print('✅ Formatter imports successful')"
+        python -c "import sys; sys.path.insert(0, '.'); from src.main import VestaboardDisplayService; print('✅ Main module imports successful')"
     
     - name: Run pylint
       run: |
@@ -52,9 +55,9 @@ jobs:
       run: |
         python -c "
         import sys
-        sys.path.insert(0, 'src')
-        from config import Config
-        from vestaboard_chars import VestaboardChars
+        sys.path.insert(0, '.')
+        from src.config import Config
+        from src.vestaboard_chars import VestaboardChars
         print('✅ Config and VestaboardChars can be imported')
         print(f'✅ Config class has required attributes: {hasattr(Config, \"VB_READ_WRITE_KEY\")}')
         "
