@@ -1,0 +1,32 @@
+services:
+  # API Service (same as production)
+  vestaboard-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: vestaboard-api-dev
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    environment:
+      - PRODUCTION=false
+
+  # Web UI - Development mode with HMR
+  vestaboard-ui-dev:
+    image: node:20-alpine
+    container_name: vestaboard-ui-dev
+    working_dir: /app
+    volumes:
+      - ./web:/app
+      - /app/node_modules  # Anonymous volume to preserve node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - WATCHPACK_POLLING=true  # Enable polling for file changes in Docker
+    command: sh -c "npm install && npm run dev -- -H 0.0.0.0"
+    depends_on:
+      - vestaboard-api
+
+

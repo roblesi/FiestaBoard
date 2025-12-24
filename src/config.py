@@ -14,8 +14,18 @@ logger = logging.getLogger(__name__)
 class Config:
     """Application configuration loaded from environment variables."""
     
-    # Vestaboard Configuration
-    VB_READ_WRITE_KEY: str = os.getenv("VB_READ_WRITE_KEY", "")
+    # Vestaboard Local API Configuration (required)
+    VB_LOCAL_API_KEY: str = os.getenv("VB_LOCAL_API_KEY", os.getenv("VB_READ_WRITE_KEY", ""))
+    VB_HOST: str = os.getenv("VB_HOST", os.getenv("VB_LOCAL_API_HOST", ""))
+    
+    # Vestaboard Transition Settings (optional)
+    VB_TRANSITION_STRATEGY: Optional[str] = os.getenv("VB_TRANSITION_STRATEGY", None)  # column, reverse-column, edges-to-center, row, diagonal, random
+    VB_TRANSITION_INTERVAL_MS: Optional[int] = int(os.getenv("VB_TRANSITION_INTERVAL_MS", "0")) or None  # 0 = as fast as possible
+    VB_TRANSITION_STEP_SIZE: Optional[int] = int(os.getenv("VB_TRANSITION_STEP_SIZE", "0")) or None  # 0 = 1 at a time
+    
+    # Output Target Configuration
+    # Controls where display output is sent: "ui", "board", or "both"
+    OUTPUT_TARGET: str = os.getenv("OUTPUT_TARGET", "board")
     
     # Weather Configuration
     WEATHER_API_KEY: str = os.getenv("WEATHER_API_KEY", "")
@@ -68,6 +78,12 @@ class Config:
     HOME_ASSISTANT_TIMEOUT: int = int(os.getenv("HOME_ASSISTANT_TIMEOUT", "5"))
     HOME_ASSISTANT_REFRESH_SECONDS: int = int(os.getenv("HOME_ASSISTANT_REFRESH_SECONDS", "30"))  # Check every 30 seconds
     
+    # Valid transition strategies
+    VALID_TRANSITION_STRATEGIES = [
+        "column", "reverse-column", "edges-to-center",
+        "row", "diagonal", "random"
+    ]
+    
     @classmethod
     def get_ha_entities(cls) -> List[Dict[str, str]]:
         """Parse Home Assistant entities from JSON string."""
@@ -82,12 +98,28 @@ class Config:
             return []
     
     @classmethod
+    def get_transition_settings(cls) -> Dict:
+        """Get current transition settings."""
+        return {
+            "strategy": cls.VB_TRANSITION_STRATEGY,
+            "step_interval_ms": cls.VB_TRANSITION_INTERVAL_MS,
+            "step_size": cls.VB_TRANSITION_STEP_SIZE,
+        }
+    
+    @classmethod
     def validate(cls) -> bool:
         """Validate that required configuration is present."""
         errors = []
         
-        if not cls.VB_READ_WRITE_KEY:
-            errors.append("VB_READ_WRITE_KEY is required")
+        # Vestaboard Local API: require both key and host
+        if not cls.VB_LOCAL_API_KEY:
+            errors.append("VB_LOCAL_API_KEY is required (or VB_READ_WRITE_KEY for backwards compatibility)")
+        if not cls.VB_HOST:
+            errors.append("VB_HOST is required (or VB_LOCAL_API_HOST for backwards compatibility)")
+        
+        # Validate transition strategy if set
+        if cls.VB_TRANSITION_STRATEGY and cls.VB_TRANSITION_STRATEGY not in cls.VALID_TRANSITION_STRATEGIES:
+            errors.append(f"VB_TRANSITION_STRATEGY must be one of {cls.VALID_TRANSITION_STRATEGIES}, got '{cls.VB_TRANSITION_STRATEGY}'")
         
         if not cls.WEATHER_API_KEY:
             errors.append("WEATHER_API_KEY is required")
@@ -130,13 +162,22 @@ class Config:
             "weather_location": cls.WEATHER_LOCATION,
             "timezone": cls.TIMEZONE,
             "refresh_interval_seconds": cls.REFRESH_INTERVAL_SECONDS,
+            # Service enabled flags (for UI display)
+            "datetime_enabled": True,  # DateTime is always available
+            "weather_enabled": bool(cls.WEATHER_API_KEY),
+            "rotation_enabled": cls.ROTATION_ENABLED,
             "baywheels_enabled": cls.BAYWHEELS_ENABLED,
             "waymo_enabled": cls.WAYMO_ENABLED,
             "apple_music_enabled": cls.APPLE_MUSIC_ENABLED,
             "guest_wifi_enabled": cls.GUEST_WIFI_ENABLED,
             "home_assistant_enabled": cls.HOME_ASSISTANT_ENABLED,
             "star_trek_quotes_enabled": cls.STAR_TREK_QUOTES_ENABLED,
-            "vb_key_set": bool(cls.VB_READ_WRITE_KEY),
+            # Vestaboard config
+            "vb_host": cls.VB_HOST,
+            "vb_key_set": bool(cls.VB_LOCAL_API_KEY),
             "weather_key_set": bool(cls.WEATHER_API_KEY),
+            # Transition settings
+            "transition_strategy": cls.VB_TRANSITION_STRATEGY,
+            "transition_interval_ms": cls.VB_TRANSITION_INTERVAL_MS,
+            "transition_step_size": cls.VB_TRANSITION_STEP_SIZE,
         }
-

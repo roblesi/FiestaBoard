@@ -12,6 +12,13 @@ from pydantic import BaseModel
 
 from .main import VestaboardDisplayService
 from .config import Config
+from .displays.service import get_display_service, DISPLAY_TYPES, DisplayResult
+from .settings.service import get_settings_service, VALID_STRATEGIES, VALID_OUTPUT_TARGETS
+from .pages.service import get_page_service
+from .pages.models import PageCreate, PageUpdate
+from .templates.engine import get_template_engine
+from .rotations.service import get_rotation_service
+from .rotations.models import RotationCreate, RotationUpdate
 
 logger = logging.getLogger(__name__)
 
@@ -231,9 +238,12 @@ async def send_message(request: MessageRequest):
         raise HTTPException(status_code=503, detail="Vestaboard client not initialized")
     
     try:
-        success = service.vb_client.send_text(request.text)
+        success, was_sent = service.vb_client.send_text(request.text)
         if success:
-            return {"status": "success", "message": "Message sent successfully"}
+            if was_sent:
+                return {"status": "success", "message": "Message sent successfully"}
+            else:
+                return {"status": "success", "message": "Message unchanged, no update needed", "skipped": True}
         else:
             raise HTTPException(status_code=500, detail="Failed to send message")
     except Exception as e:
@@ -245,6 +255,650 @@ async def send_message(request: MessageRequest):
 async def get_config():
     """Get current configuration (without sensitive keys)."""
     return Config.get_summary()
+
+
+# =============================================================================
+# Display Source Endpoints
+# =============================================================================
+
+@app.get("/displays")
+async def list_displays():
+    """
+    List all available display types and their status.
+    
+    Returns information about each display source including whether
+    it's currently available/configured.
+    """
+    display_service = get_display_service()
+    displays = display_service.get_available_displays()
+    return {
+        "displays": displays,
+        "total": len(displays),
+        "available_count": sum(1 for d in displays if d["available"])
+    }
+
+
+@app.get("/displays/{display_type}")
+async def get_display(display_type: str):
+    """
+    Get formatted output for a specific display type.
+    
+    Args:
+        display_type: One of: weather, datetime, weather_datetime, 
+                      home_assistant, apple_music, star_trek, guest_wifi
+    
+    Returns:
+        Formatted message text ready for display on Vestaboard.
+    """
+    if display_type not in DISPLAY_TYPES:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Invalid display type: {display_type}. Valid types: {DISPLAY_TYPES}"
+        )
+    
+    display_service = get_display_service()
+    result = display_service.get_display(display_type)
+    
+    if not result.available and result.error:
+        raise HTTPException(status_code=503, detail=result.error)
+    
+    return {
+        "display_type": result.display_type,
+        "message": result.formatted,
+        "lines": result.formatted.split('\n') if result.formatted else [],
+        "line_count": len(result.formatted.split('\n')) if result.formatted else 0,
+        "available": result.available
+    }
+
+
+@app.get("/displays/{display_type}/raw")
+async def get_display_raw(display_type: str):
+    """
+    Get raw data from a display source (before formatting).
+    
+    This is useful for debugging or building custom displays.
+    
+    Args:
+        display_type: One of: weather, datetime, weather_datetime,
+                      home_assistant, apple_music, star_trek, guest_wifi
+    
+    Returns:
+        Raw data dictionary from the source.
+    """
+    if display_type not in DISPLAY_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid display type: {display_type}. Valid types: {DISPLAY_TYPES}"
+        )
+    
+    display_service = get_display_service()
+    result = display_service.get_display(display_type)
+    
+    if not result.available and result.error:
+        raise HTTPException(status_code=503, detail=result.error)
+    
+    return {
+        "display_type": result.display_type,
+        "data": result.raw,
+        "available": result.available,
+        "error": result.error
+    }
+
+
+@app.post("/displays/{display_type}/send")
+async def send_display(
+    display_type: str,
+    target: Optional[str] = None
+):
+    """
+    Send a display to the configured target (ui, board, or both).
+    
+    Args:
+        display_type: The display type to send
+        target: Override output target (ui, board, both). If not provided,
+                uses the configured default based on dev_mode.
+    
+    Returns:
+        Result of the send operation.
+    """
+    global _dev_mode
+    
+    if display_type not in DISPLAY_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid display type: {display_type}. Valid types: {DISPLAY_TYPES}"
+        )
+    
+    if target is not None and target not in VALID_OUTPUT_TARGETS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid target: {target}. Valid targets: {VALID_OUTPUT_TARGETS}"
+        )
+    
+    display_service = get_display_service()
+    settings_service = get_settings_service()
+    service = get_service()
+    
+    if not service or not service.vb_client:
+        raise HTTPException(status_code=503, detail="Service not initialized")
+    
+    # Get the display content
+    result = display_service.get_display(display_type)
+    
+    if not result.available:
+        raise HTTPException(status_code=503, detail=result.error or "Display not available")
+    
+    # Determine target
+    if target is None:
+        # Use settings-based logic
+        send_to_board = settings_service.should_send_to_board(_dev_mode)
+    else:
+        send_to_board = target in ["board", "both"]
+    
+    # Send to board if appropriate
+    sent_to_board = False
+    if send_to_board and not _dev_mode:
+        transition = settings_service.get_transition_settings()
+        success, was_sent = service.vb_client.send_text(
+            result.formatted,
+            strategy=transition.strategy,
+            step_interval_ms=transition.step_interval_ms,
+            step_size=transition.step_size
+        )
+        sent_to_board = was_sent
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to send to board")
+    
+    return {
+        "status": "success",
+        "display_type": display_type,
+        "message": result.formatted,
+        "sent_to_board": sent_to_board,
+        "target": target or ("ui" if _dev_mode else settings_service.get_output_settings().target),
+        "dev_mode": _dev_mode
+    }
+
+
+# =============================================================================
+# Settings Endpoints
+# =============================================================================
+
+@app.get("/settings/transitions")
+async def get_transition_settings():
+    """Get current transition animation settings."""
+    settings_service = get_settings_service()
+    transition = settings_service.get_transition_settings()
+    return {
+        "strategy": transition.strategy,
+        "step_interval_ms": transition.step_interval_ms,
+        "step_size": transition.step_size,
+        "available_strategies": VALID_STRATEGIES
+    }
+
+
+@app.put("/settings/transitions")
+async def update_transition_settings(request: dict):
+    """
+    Update transition animation settings.
+    
+    Body can include:
+    - strategy: One of column, reverse-column, edges-to-center, row, diagonal, random, or null
+    - step_interval_ms: Delay between animation steps (ms), or null for default
+    - step_size: How many columns/rows animate at once, or null for default
+    """
+    settings_service = get_settings_service()
+    
+    try:
+        # Use ... as sentinel for "not provided"
+        strategy = request.get("strategy", ...)
+        step_interval_ms = request.get("step_interval_ms", ...)
+        step_size = request.get("step_size", ...)
+        
+        transition = settings_service.update_transition_settings(
+            strategy=strategy,
+            step_interval_ms=step_interval_ms,
+            step_size=step_size
+        )
+        
+        return {
+            "status": "success",
+            "settings": transition.to_dict()
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/settings/output")
+async def get_output_settings():
+    """Get current output target settings."""
+    global _dev_mode
+    settings_service = get_settings_service()
+    output = settings_service.get_output_settings()
+    return {
+        "target": output.target,
+        "dev_mode": _dev_mode,
+        "effective_target": "ui" if _dev_mode else output.target,
+        "available_targets": VALID_OUTPUT_TARGETS
+    }
+
+
+@app.put("/settings/output")
+async def update_output_settings(request: dict):
+    """
+    Update output target settings.
+    
+    Body should include:
+    - target: One of "ui", "board", or "both"
+    """
+    if "target" not in request:
+        raise HTTPException(status_code=400, detail="target parameter required")
+    
+    settings_service = get_settings_service()
+    
+    try:
+        output = settings_service.set_output_target(request["target"])
+        return {
+            "status": "success",
+            "settings": output.to_dict()
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# =============================================================================
+# Pages Endpoints
+# =============================================================================
+
+@app.get("/pages")
+async def list_pages():
+    """List all saved pages."""
+    page_service = get_page_service()
+    pages = page_service.list_pages()
+    
+    return {
+        "pages": [p.model_dump() for p in pages],
+        "total": len(pages)
+    }
+
+
+@app.post("/pages")
+async def create_page(page_data: PageCreate):
+    """
+    Create a new page.
+    
+    Page types:
+    - single: Display a single source (set display_type)
+    - composite: Combine rows from multiple sources (set rows)
+    - template: Custom templated content (set template)
+    """
+    page_service = get_page_service()
+    
+    try:
+        page = page_service.create_page(page_data)
+        return {
+            "status": "success",
+            "page": page.model_dump()
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/pages/{page_id}")
+async def get_page(page_id: str):
+    """Get a page by ID."""
+    page_service = get_page_service()
+    page = page_service.get_page(page_id)
+    
+    if not page:
+        raise HTTPException(status_code=404, detail=f"Page not found: {page_id}")
+    
+    return page.model_dump()
+
+
+@app.put("/pages/{page_id}")
+async def update_page(page_id: str, page_data: PageUpdate):
+    """Update an existing page."""
+    page_service = get_page_service()
+    
+    try:
+        page = page_service.update_page(page_id, page_data)
+        if not page:
+            raise HTTPException(status_code=404, detail=f"Page not found: {page_id}")
+        
+        return {
+            "status": "success",
+            "page": page.model_dump()
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.delete("/pages/{page_id}")
+async def delete_page(page_id: str):
+    """Delete a page."""
+    page_service = get_page_service()
+    
+    if not page_service.delete_page(page_id):
+        raise HTTPException(status_code=404, detail=f"Page not found: {page_id}")
+    
+    return {"status": "success", "message": f"Page {page_id} deleted"}
+
+
+@app.post("/pages/{page_id}/preview")
+async def preview_page(page_id: str):
+    """
+    Preview a page's rendered output.
+    
+    Returns the formatted text that would be displayed.
+    """
+    page_service = get_page_service()
+    result = page_service.preview_page(page_id)
+    
+    if result is None:
+        raise HTTPException(status_code=404, detail=f"Page not found: {page_id}")
+    
+    if not result.available:
+        raise HTTPException(status_code=503, detail=result.error or "Page rendering failed")
+    
+    return {
+        "page_id": page_id,
+        "message": result.formatted,
+        "lines": result.formatted.split('\n'),
+        "display_type": result.display_type,
+        "raw": result.raw
+    }
+
+
+@app.post("/pages/{page_id}/send")
+async def send_page(page_id: str, target: Optional[str] = None):
+    """
+    Send a page to the configured target.
+    
+    Args:
+        page_id: The page ID
+        target: Override output target (ui, board, both)
+    """
+    global _dev_mode
+    
+    if target is not None and target not in VALID_OUTPUT_TARGETS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid target: {target}. Valid targets: {VALID_OUTPUT_TARGETS}"
+        )
+    
+    page_service = get_page_service()
+    settings_service = get_settings_service()
+    service = get_service()
+    
+    if not service or not service.vb_client:
+        raise HTTPException(status_code=503, detail="Service not initialized")
+    
+    # Render the page
+    result = page_service.preview_page(page_id)
+    
+    if result is None:
+        raise HTTPException(status_code=404, detail=f"Page not found: {page_id}")
+    
+    if not result.available:
+        raise HTTPException(status_code=503, detail=result.error or "Page rendering failed")
+    
+    # Determine target
+    if target is None:
+        send_to_board = settings_service.should_send_to_board(_dev_mode)
+    else:
+        send_to_board = target in ["board", "both"]
+    
+    # Send to board if appropriate
+    sent_to_board = False
+    if send_to_board and not _dev_mode:
+        transition = settings_service.get_transition_settings()
+        success, was_sent = service.vb_client.send_text(
+            result.formatted,
+            strategy=transition.strategy,
+            step_interval_ms=transition.step_interval_ms,
+            step_size=transition.step_size
+        )
+        sent_to_board = was_sent
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to send to board")
+    
+    return {
+        "status": "success",
+        "page_id": page_id,
+        "message": result.formatted,
+        "sent_to_board": sent_to_board,
+        "target": target or ("ui" if _dev_mode else settings_service.get_output_settings().target),
+        "dev_mode": _dev_mode
+    }
+
+
+# =============================================================================
+# Template Endpoints
+# =============================================================================
+
+@app.get("/templates/variables")
+async def get_template_variables():
+    """
+    Get available template variables by source.
+    
+    Returns a dictionary mapping source names to available field names.
+    Use these in templates as {{source.field}}, e.g., {{weather.temp}}.
+    """
+    template_engine = get_template_engine()
+    return {
+        "variables": template_engine.get_available_variables(),
+        "colors": {
+            "red": 63,
+            "orange": 64,
+            "yellow": 65,
+            "green": 66,
+            "blue": 67,
+            "violet": 68,
+            "white": 69,
+            "black": 70,
+        },
+        "symbols": ["sun", "star", "cloud", "rain", "snow", "storm", "fog", "partly", "heart", "check", "x"],
+        "filters": ["pad:N", "upper", "lower", "truncate:N", "capitalize"],
+        "syntax_examples": {
+            "variable": "{{weather.temp}}",
+            "variable_with_filter": "{{weather.temp|pad:3}}",
+            "color_inline": "{red}Warning{/}",
+            "color_code": "{63}",
+            "symbol": "{sun}",
+        }
+    }
+
+
+@app.post("/templates/validate")
+async def validate_template(request: dict):
+    """
+    Validate template syntax.
+    
+    Body should include:
+    - template: Template string or list of lines to validate
+    
+    Returns validation errors if any.
+    """
+    if "template" not in request:
+        raise HTTPException(status_code=400, detail="template parameter required")
+    
+    template = request["template"]
+    
+    # Handle both string and list input
+    if isinstance(template, list):
+        template = '\n'.join(template)
+    
+    template_engine = get_template_engine()
+    errors = template_engine.validate_template(template)
+    
+    return {
+        "valid": len(errors) == 0,
+        "errors": [
+            {"line": e.line, "column": e.column, "message": e.message}
+            for e in errors
+        ]
+    }
+
+
+@app.post("/templates/render")
+async def render_template(request: dict):
+    """
+    Render a template with current data.
+    
+    Body should include:
+    - template: Template string or list of lines to render
+    
+    Useful for previewing template output before saving as a page.
+    """
+    if "template" not in request:
+        raise HTTPException(status_code=400, detail="template parameter required")
+    
+    template = request["template"]
+    
+    template_engine = get_template_engine()
+    
+    try:
+        if isinstance(template, list):
+            rendered = template_engine.render_lines(template)
+        else:
+            rendered = template_engine.render(template)
+        
+        return {
+            "rendered": rendered,
+            "lines": rendered.split('\n'),
+            "line_count": len(rendered.split('\n'))
+        }
+    except Exception as e:
+        logger.error(f"Template rendering error: {e}", exc_info=True)
+        raise HTTPException(status_code=400, detail=f"Template rendering failed: {str(e)}")
+
+
+# =============================================================================
+# Rotation Endpoints
+# =============================================================================
+
+@app.get("/rotations")
+async def list_rotations():
+    """List all rotation configurations."""
+    rotation_service = get_rotation_service()
+    rotations = rotation_service.list_rotations()
+    active = rotation_service.get_active_rotation()
+    
+    return {
+        "rotations": [r.model_dump() for r in rotations],
+        "total": len(rotations),
+        "active_rotation_id": active.id if active else None
+    }
+
+
+@app.post("/rotations")
+async def create_rotation(rotation_data: RotationCreate):
+    """
+    Create a new rotation configuration.
+    
+    Rotations define sequences of pages to display with timing.
+    """
+    rotation_service = get_rotation_service()
+    
+    try:
+        rotation = rotation_service.create_rotation(rotation_data)
+        return {
+            "status": "success",
+            "rotation": rotation.model_dump()
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/rotations/active")
+async def get_active_rotation():
+    """Get the currently active rotation and its state."""
+    rotation_service = get_rotation_service()
+    state = rotation_service.get_rotation_state()
+    
+    return state
+
+
+@app.get("/rotations/{rotation_id}")
+async def get_rotation(rotation_id: str):
+    """Get a rotation by ID."""
+    rotation_service = get_rotation_service()
+    rotation = rotation_service.get_rotation(rotation_id)
+    
+    if not rotation:
+        raise HTTPException(status_code=404, detail=f"Rotation not found: {rotation_id}")
+    
+    # Check for missing pages
+    missing = rotation_service.validate_rotation_pages(rotation)
+    
+    return {
+        **rotation.model_dump(),
+        "missing_pages": missing
+    }
+
+
+@app.put("/rotations/{rotation_id}")
+async def update_rotation(rotation_id: str, rotation_data: RotationUpdate):
+    """Update an existing rotation."""
+    rotation_service = get_rotation_service()
+    
+    try:
+        rotation = rotation_service.update_rotation(rotation_id, rotation_data)
+        if not rotation:
+            raise HTTPException(status_code=404, detail=f"Rotation not found: {rotation_id}")
+        
+        return {
+            "status": "success",
+            "rotation": rotation.model_dump()
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.delete("/rotations/{rotation_id}")
+async def delete_rotation(rotation_id: str):
+    """Delete a rotation."""
+    rotation_service = get_rotation_service()
+    
+    if not rotation_service.delete_rotation(rotation_id):
+        raise HTTPException(status_code=404, detail=f"Rotation not found: {rotation_id}")
+    
+    return {"status": "success", "message": f"Rotation {rotation_id} deleted"}
+
+
+@app.post("/rotations/{rotation_id}/activate")
+async def activate_rotation(rotation_id: str):
+    """
+    Activate a rotation.
+    
+    The active rotation determines which pages cycle on the Vestaboard.
+    Validates that all pages in the rotation exist before activating.
+    """
+    rotation_service = get_rotation_service()
+    
+    try:
+        if not rotation_service.activate_rotation(rotation_id):
+            raise HTTPException(status_code=404, detail=f"Rotation not found: {rotation_id}")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    return {
+        "status": "success",
+        "message": f"Rotation {rotation_id} activated",
+        "state": rotation_service.get_rotation_state()
+    }
+
+
+@app.post("/rotations/deactivate")
+async def deactivate_rotation():
+    """Deactivate the current rotation."""
+    rotation_service = get_rotation_service()
+    rotation_service.deactivate_rotation()
+    
+    return {
+        "status": "success",
+        "message": "Rotation deactivated"
+    }
 
 
 @app.get("/dev-mode")
@@ -269,11 +923,79 @@ async def set_dev_mode(request: dict):
     raise HTTPException(status_code=400, detail="dev_mode parameter required")
 
 
+@app.get("/cache-status")
+async def get_cache_status():
+    """Get the current client-side cache status for the Vestaboard client."""
+    service = get_service()
+    if not service or not service.vb_client:
+        raise HTTPException(status_code=503, detail="Service not initialized")
+    
+    return service.vb_client.get_cache_status()
+
+
+@app.post("/clear-cache")
+async def clear_cache():
+    """
+    Clear the client-side message cache.
+    
+    This forces the next update to be sent to the Vestaboard, 
+    even if the message content hasn't changed.
+    """
+    service = get_service()
+    if not service or not service.vb_client:
+        raise HTTPException(status_code=503, detail="Service not initialized")
+    
+    service.vb_client.clear_cache()
+    return {"status": "success", "message": "Cache cleared - next update will be sent to board"}
+
+
+@app.post("/force-refresh")
+async def force_refresh():
+    """
+    Force a display refresh, ignoring the cache.
+    
+    Unlike /refresh, this will send to the Vestaboard even if the message 
+    content hasn't changed. Useful when you want to resync the board.
+    """
+    global _dev_mode
+    service = get_service()
+    if not service:
+        raise HTTPException(status_code=503, detail="Service not initialized")
+    
+    if _dev_mode:
+        return {
+            "status": "success", 
+            "message": "Force refresh previewed (dev mode enabled - not sent to Vestaboard)",
+            "dev_mode": True
+        }
+    
+    # Clear cache to force send
+    if service.vb_client:
+        service.vb_client.clear_cache()
+    
+    try:
+        service.fetch_and_display(dev_mode=False)
+        return {"status": "success", "message": "Display force-refreshed successfully"}
+    except Exception as e:
+        logger.error(f"Error force-refreshing display: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to force refresh: {str(e)}")
+
+
 @app.post("/publish-preview")
-async def publish_preview():
+async def publish_preview(
+    datetime_enabled: Optional[bool] = None,
+    weather_enabled: Optional[bool] = None,
+    home_assistant_enabled: Optional[bool] = None,
+    apple_music_enabled: Optional[bool] = None,
+    guest_wifi_enabled: Optional[bool] = None,
+    star_trek_quotes_enabled: Optional[bool] = None,
+    rotation_enabled: Optional[bool] = None,
+):
     """
     Publish the current preview to the actual Vestaboard.
     This bypasses dev mode and sends the message.
+    
+    Accepts the same override parameters as /preview to publish exactly what's shown in the UI.
     """
     global _dev_mode
     service = get_service()
@@ -283,18 +1005,26 @@ async def publish_preview():
     if not service.vb_client:
         raise HTTPException(status_code=503, detail="Vestaboard client not initialized")
     
+    # Build effective config (backend config with UI overrides) - same logic as /preview
+    eff_datetime = datetime_enabled if datetime_enabled is not None else True
+    eff_weather = weather_enabled if weather_enabled is not None else bool(Config.WEATHER_API_KEY)
+    eff_home_assistant = home_assistant_enabled if home_assistant_enabled is not None else Config.HOME_ASSISTANT_ENABLED
+    eff_apple_music = apple_music_enabled if apple_music_enabled is not None else Config.APPLE_MUSIC_ENABLED
+    eff_guest_wifi = guest_wifi_enabled if guest_wifi_enabled is not None else Config.GUEST_WIFI_ENABLED
+    eff_star_trek = star_trek_quotes_enabled if star_trek_quotes_enabled is not None else Config.STAR_TREK_QUOTES_ENABLED
+    eff_rotation = rotation_enabled if rotation_enabled is not None else Config.ROTATION_ENABLED
+    
     try:
-        # Get the preview message by calling the preview logic directly
         import time as time_module
         current_time = time_module.time()
         
-        # Check Home Assistant status (if enabled)
+        # Check Home Assistant status (if enabled by override)
         check_home_assistant = (
+            eff_home_assistant and
             service.home_assistant_source and
             current_time - service.last_home_assistant_check >= Config.HOME_ASSISTANT_REFRESH_SECONDS
         )
         
-        # Fetch Home Assistant data (if it's time)
         home_assistant_data = None
         if check_home_assistant and service.home_assistant_source:
             try:
@@ -303,8 +1033,9 @@ async def publish_preview():
             except Exception as e:
                 logger.error(f"Error fetching Home Assistant data: {e}")
         
-        # Check Apple Music
+        # Check Apple Music (if enabled by override)
         check_apple_music = (
+            eff_apple_music and
             service.apple_music_source and 
             current_time - service.last_apple_music_check >= Config.APPLE_MUSIC_REFRESH_SECONDS
         )
@@ -316,44 +1047,62 @@ async def publish_preview():
             except Exception as e:
                 logger.error(f"Error fetching Apple Music: {e}")
         
-        # Determine what would be displayed (following priority)
+        # Determine what would be displayed (following priority) - using effective overrides
         message = None
+        display_type = "unknown"
         
-        # PRIORITY 1: Guest WiFi
-        if Config.GUEST_WIFI_ENABLED:
+        # PRIORITY 1: Guest WiFi (if enabled by override)
+        if eff_guest_wifi:
             if Config.GUEST_WIFI_SSID and Config.GUEST_WIFI_PASSWORD:
                 message = service.formatter.format_guest_wifi(
                     Config.GUEST_WIFI_SSID,
                     Config.GUEST_WIFI_PASSWORD
                 )
+                display_type = "guest_wifi"
         
-        # PRIORITY 2: Apple Music (when playing)
-        elif apple_music_data and apple_music_data.get("playing"):
+        # PRIORITY 2: Apple Music (when playing and enabled by override)
+        if not message and eff_apple_music and apple_music_data and apple_music_data.get("playing"):
             message = service.formatter.format_apple_music(apple_music_data)
+            display_type = "apple_music"
         
-        # PRIORITY 3: Rotation
-        else:
-            rotation_screen = service._get_rotation_screen(
-                current_time,
-                home_assistant_data is not None,
-                service.star_trek_quotes_source is not None
-            )
+        # PRIORITY 3: Rotation or Weather
+        if not message:
+            # Build available screens based on effective config
+            available_screens = []
+            if eff_weather or eff_datetime:
+                available_screens.append("weather")
+            if eff_home_assistant and home_assistant_data:
+                available_screens.append("home_assistant")
+            if eff_star_trek and service.star_trek_quotes_source:
+                available_screens.append("star_trek")
             
-            if rotation_screen == "star_trek" and service.star_trek_quotes_source:
+            # If rotation disabled or only one screen, use first available
+            if not eff_rotation or len(available_screens) <= 1:
+                rotation_screen = available_screens[0] if available_screens else "weather"
+            else:
+                rotation_screen = service._get_rotation_screen(
+                    current_time,
+                    home_assistant_data is not None,
+                    service.star_trek_quotes_source is not None and eff_star_trek
+                )
+            
+            if rotation_screen == "star_trek" and service.star_trek_quotes_source and eff_star_trek:
                 try:
                     quote_data = service.star_trek_quotes_source.get_random_quote()
                     if quote_data:
                         message = service.formatter.format_star_trek_quote(quote_data)
+                        display_type = "star_trek"
                 except Exception as e:
                     logger.error(f"Error getting Star Trek quote: {e}")
             
             elif rotation_screen == "home_assistant" and home_assistant_data:
                 message = service.formatter.format_house_status(home_assistant_data)
+                display_type = "home_assistant"
             
-            elif rotation_screen == "weather" or not Config.ROTATION_ENABLED:
+            elif rotation_screen == "weather" or not message:
                 # Fetch weather data
                 weather_data = None
-                if service.weather_source:
+                if service.weather_source and eff_weather:
                     try:
                         weather_data = service.weather_source.fetch_current_weather()
                     except Exception as e:
@@ -361,7 +1110,7 @@ async def publish_preview():
                 
                 # Fetch datetime data
                 datetime_data = None
-                if service.datetime_source:
+                if service.datetime_source and eff_datetime:
                     try:
                         datetime_data = service.datetime_source.get_current_datetime()
                     except Exception as e:
@@ -369,6 +1118,7 @@ async def publish_preview():
                 
                 if weather_data or datetime_data:
                     message = service.formatter.format_combined(weather_data, datetime_data)
+                    display_type = "weather"
         
         if not message:
             raise HTTPException(status_code=400, detail="No message available to publish")
@@ -378,12 +1128,14 @@ async def publish_preview():
         _dev_mode = False
         
         try:
-            success = service.vb_client.send_text(message)
+            # Force send since user explicitly wants to publish
+            success, was_sent = service.vb_client.send_text(message, force=True)
             if success:
-                logger.info(f"Preview published to Vestaboard: {message[:50]}...")
+                logger.info(f"Preview published to Vestaboard ({display_type}): {message[:50]}...")
                 return {
                     "status": "success",
                     "message": "Preview published to Vestaboard successfully",
+                    "display_type": display_type,
                     "preview_message": message
                 }
             else:
@@ -399,14 +1151,33 @@ async def publish_preview():
 
 
 @app.get("/preview")
-async def preview_message():
+async def preview_message(
+    datetime_enabled: Optional[bool] = None,
+    weather_enabled: Optional[bool] = None,
+    home_assistant_enabled: Optional[bool] = None,
+    apple_music_enabled: Optional[bool] = None,
+    guest_wifi_enabled: Optional[bool] = None,
+    star_trek_quotes_enabled: Optional[bool] = None,
+    rotation_enabled: Optional[bool] = None,
+):
     """
     Preview what would be sent to the Vestaboard without actually sending it.
     Perfect for development/testing!
+    
+    Query params allow overriding enabled states for preview purposes.
     """
     service = get_service()
     if not service:
         raise HTTPException(status_code=503, detail="Service not initialized")
+    
+    # Build effective config (backend config with UI overrides)
+    eff_datetime = datetime_enabled if datetime_enabled is not None else True  # Always on by default
+    eff_weather = weather_enabled if weather_enabled is not None else bool(Config.WEATHER_API_KEY)
+    eff_home_assistant = home_assistant_enabled if home_assistant_enabled is not None else Config.HOME_ASSISTANT_ENABLED
+    eff_apple_music = apple_music_enabled if apple_music_enabled is not None else Config.APPLE_MUSIC_ENABLED
+    eff_guest_wifi = guest_wifi_enabled if guest_wifi_enabled is not None else Config.GUEST_WIFI_ENABLED
+    eff_star_trek = star_trek_quotes_enabled if star_trek_quotes_enabled is not None else Config.STAR_TREK_QUOTES_ENABLED
+    eff_rotation = rotation_enabled if rotation_enabled is not None else Config.ROTATION_ENABLED
     
     try:
         import time as time_module
@@ -416,6 +1187,7 @@ async def preview_message():
         
         # Check Home Assistant status (if enabled)
         check_home_assistant = (
+            eff_home_assistant and
             service.home_assistant_source and
             current_time - service.last_home_assistant_check >= Config.HOME_ASSISTANT_REFRESH_SECONDS
         )
@@ -433,6 +1205,7 @@ async def preview_message():
         
         # Check Apple Music
         check_apple_music = (
+            eff_apple_music and
             service.apple_music_source and 
             current_time - service.last_apple_music_check >= Config.APPLE_MUSIC_REFRESH_SECONDS
         )
@@ -451,7 +1224,7 @@ async def preview_message():
         display_type = "unknown"
         
         # PRIORITY 1: Guest WiFi
-        if Config.GUEST_WIFI_ENABLED:
+        if eff_guest_wifi:
             if Config.GUEST_WIFI_SSID and Config.GUEST_WIFI_PASSWORD:
                 message = service.formatter.format_guest_wifi(
                     Config.GUEST_WIFI_SSID,
@@ -460,17 +1233,33 @@ async def preview_message():
                 display_type = "guest_wifi"
         
         # PRIORITY 2: Apple Music (when playing)
-        elif apple_music_data and apple_music_data.get("playing"):
+        if not message and eff_apple_music and apple_music_data and apple_music_data.get("playing"):
             message = service.formatter.format_apple_music(apple_music_data)
             display_type = "apple_music"
         
-        # PRIORITY 3: Rotation
-        else:
-            rotation_screen = service._get_rotation_screen(
-                current_time,
-                home_assistant_data is not None,
-                service.star_trek_quotes_source is not None
-            )
+        # PRIORITY 3: Rotation or Weather
+        if not message:
+            # Build available screens based on effective config
+            available_screens = []
+            if eff_weather or eff_datetime:
+                available_screens.append("weather")  # "weather" screen shows both weather and datetime
+            if eff_home_assistant and home_assistant_data:
+                available_screens.append("home_assistant")
+            if eff_star_trek and service.star_trek_quotes_source:
+                available_screens.append("star_trek")
+            
+            rotation_screen = None
+            if eff_rotation and available_screens:
+                rotation_screen = service._get_rotation_screen(
+                    current_time,
+                    "home_assistant" in available_screens,
+                    "star_trek" in available_screens
+                )
+                # Only use if it's in our available screens
+                if rotation_screen not in available_screens:
+                    rotation_screen = available_screens[0] if available_screens else None
+            elif available_screens:
+                rotation_screen = available_screens[0]
             
             if rotation_screen == "star_trek" and service.star_trek_quotes_source:
                 try:
@@ -485,10 +1274,10 @@ async def preview_message():
                 message = service.formatter.format_house_status(home_assistant_data)
                 display_type = "home_assistant"
             
-            elif rotation_screen == "weather" or not Config.ROTATION_ENABLED:
+            elif rotation_screen == "weather" and (eff_weather or eff_datetime):
                 # Fetch weather data
                 weather_data = None
-                if service.weather_source:
+                if eff_weather and service.weather_source:
                     try:
                         weather_data = service.weather_source.fetch_current_weather()
                     except Exception as e:
@@ -496,7 +1285,7 @@ async def preview_message():
                 
                 # Fetch datetime data
                 datetime_data = None
-                if service.datetime_source:
+                if eff_datetime and service.datetime_source:
                     try:
                         datetime_data = service.datetime_source.get_current_datetime()
                     except Exception as e:
@@ -504,7 +1293,12 @@ async def preview_message():
                 
                 if weather_data or datetime_data:
                     message = service.formatter.format_combined(weather_data, datetime_data)
-                    display_type = "weather_datetime"
+                    if weather_data and datetime_data:
+                        display_type = "weather_datetime"
+                    elif weather_data:
+                        display_type = "weather"
+                    else:
+                        display_type = "datetime"
         
         if not message:
             message = "No data available to display"

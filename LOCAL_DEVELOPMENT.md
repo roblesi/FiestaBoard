@@ -288,3 +288,4 @@ pip install -r requirements.txt
 - If running UI separately, update API URL in `index.html`
 - Check browser console for CORS errors
 
+

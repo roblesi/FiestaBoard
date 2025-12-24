@@ -64,10 +64,21 @@ class VestaboardDisplayService:
             logger.error("Configuration validation failed")
             return False
         
-        # Initialize Vestaboard client
+        # Initialize Vestaboard client (Local API only)
         try:
-            self.vb_client = VestaboardClient(Config.VB_READ_WRITE_KEY)
-            logger.info("Vestaboard client initialized")
+            self.vb_client = VestaboardClient(
+                api_key=Config.VB_LOCAL_API_KEY,
+                host=Config.VB_HOST,
+                skip_unchanged=True  # Default: skip sending unchanged messages
+            )
+            # Sync cache with current board state to avoid unnecessary initial update
+            logger.info("Syncing cache with current board state...")
+            self.vb_client.read_current_message(sync_cache=True)
+            
+            # Log transition settings if configured
+            transition = Config.get_transition_settings()
+            if transition["strategy"]:
+                logger.info(f"Default transition: {transition['strategy']} (interval={transition['step_interval_ms']}ms, step_size={transition['step_size']})")
         except Exception as e:
             logger.error(f"Failed to initialize Vestaboard client: {e}")
             return False
@@ -152,9 +163,12 @@ class VestaboardDisplayService:
                     logger.info(f"[DEV MODE] Would send Guest WiFi (not actually sending):\n{message}")
                     return
                 if self.vb_client:
-                    success = self.vb_client.send_text(message)
+                    success, was_sent = self.vb_client.send_text(message)
                     if success:
-                        logger.info("Display updated with Guest WiFi")
+                        if was_sent:
+                            logger.info("Display updated with Guest WiFi")
+                        else:
+                            logger.debug("Guest WiFi unchanged, no update needed")
                     else:
                         logger.error("Failed to update display with Guest WiFi")
                 return  # Guest WiFi overrides everything else
@@ -207,9 +221,12 @@ class VestaboardDisplayService:
                 logger.info(f"[DEV MODE] Would send Apple Music (not actually sending):\n{message}")
                 return
             if self.vb_client:
-                success = self.vb_client.send_text(message)
+                success, was_sent = self.vb_client.send_text(message)
                 if success:
-                    logger.info("Display updated with Apple Music")
+                    if was_sent:
+                        logger.info("Display updated with Apple Music")
+                    else:
+                        logger.debug("Apple Music unchanged, no update needed")
                 else:
                     logger.error("Failed to update display")
             return
@@ -238,9 +255,12 @@ class VestaboardDisplayService:
                         self.last_rotation_change = current_time
                         return
                     if self.vb_client:
-                        success = self.vb_client.send_text(message)
+                        success, was_sent = self.vb_client.send_text(message)
                         if success:
-                            logger.info("Display updated with Star Trek quote")
+                            if was_sent:
+                                logger.info("Display updated with Star Trek quote")
+                            else:
+                                logger.debug("Star Trek quote unchanged, no update needed")
                             self.current_rotation_screen = "star_trek"
                             self.last_rotation_change = current_time
                         else:
@@ -260,9 +280,12 @@ class VestaboardDisplayService:
                 self.last_rotation_change = current_time
                 return
             if self.vb_client:
-                success = self.vb_client.send_text(message)
+                success, was_sent = self.vb_client.send_text(message)
                 if success:
-                    logger.info("Display updated with House Status")
+                    if was_sent:
+                        logger.info("Display updated with House Status")
+                    else:
+                        logger.debug("House Status unchanged, no update needed")
                     self.current_rotation_screen = "home_assistant"
                     self.last_rotation_change = current_time
                 else:
@@ -303,9 +326,12 @@ class VestaboardDisplayService:
                     self.current_rotation_screen = "weather"
                     self.last_rotation_change = current_time
                 elif self.vb_client:
-                    success = self.vb_client.send_text(message)
+                    success, was_sent = self.vb_client.send_text(message)
                     if success:
-                        logger.info("Display updated successfully")
+                        if was_sent:
+                            logger.info("Display updated successfully")
+                        else:
+                            logger.debug("Weather/DateTime unchanged, no update needed")
                         self.current_rotation_screen = "weather"
                         self.last_rotation_change = current_time
                     else:

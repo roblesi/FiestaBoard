@@ -194,3 +194,4 @@ Both services use the same `.env` file. Key variables:
 
 For production deployment to Synology NAS, see [DEPLOY_TO_SYNOLOGY.md](./DEPLOY_TO_SYNOLOGY.md).
 
+
