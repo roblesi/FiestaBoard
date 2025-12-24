@@ -24,6 +24,16 @@ const COLOR_CODES: Record<string, string> = {
   "68": "#9b59b6", // Violet
   "69": "#ffffff", // White
   "70": "#1a1a1a", // Black (same as tile bg)
+  // Named color aliases
+  "red": "#eb4034",
+  "orange": "#f5a623",
+  "yellow": "#f8e71c",
+  "blue": "#4a90d9",
+  "green": "#7ed321",
+  "violet": "#9b59b6",
+  "purple": "#9b59b6",
+  "white": "#ffffff",
+  "black": "#1a1a1a",
 };
 
 // Parse a line into tokens (characters and color codes)
@@ -34,22 +44,25 @@ function parseLine(line: string): Token[] {
   let i = 0;
   
   while (i < line.length) {
-    // Check for color code pattern {XX}
-    if (line[i] === "{" && i + 3 < line.length && line[i + 3] === "}") {
-      const code = line.substring(i + 1, i + 3);
-      if (COLOR_CODES[code]) {
-        tokens.push({ type: "color", code });
-        i += 4;
-        continue;
-      }
-    }
-    // Also handle {X} single digit (shouldn't happen but be safe)
-    if (line[i] === "{" && i + 2 < line.length && line[i + 2] === "}") {
-      const code = line.substring(i + 1, i + 2);
-      if (COLOR_CODES[code]) {
-        tokens.push({ type: "color", code });
-        i += 3;
-        continue;
+    // Check for color markers: {63}, {red}, {/red}, {/}
+    if (line[i] === "{") {
+      const closingBrace = line.indexOf("}", i);
+      if (closingBrace !== -1) {
+        const content = line.substring(i + 1, closingBrace);
+        
+        // Check if it's an end tag {/...} or {/}
+        if (content.startsWith("/")) {
+          // Skip end tags - they don't render anything
+          i = closingBrace + 1;
+          continue;
+        }
+        
+        // Check if it's a valid color code (numeric or named)
+        if (COLOR_CODES[content]) {
+          tokens.push({ type: "color", code: content });
+          i = closingBrace + 1;
+          continue;
+        }
       }
     }
     
