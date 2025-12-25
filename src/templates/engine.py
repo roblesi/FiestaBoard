@@ -65,6 +65,7 @@ AVAILABLE_VARIABLES = {
     "star_trek": ["quote", "character", "series", "series_color"],
     "guest_wifi": ["ssid", "password"],
     "air_fog": ["aqi", "air_status", "air_color", "fog_status", "fog_color", "is_foggy", "visibility", "formatted"],
+    "muni": ["line", "stop_name", "arrivals", "is_delayed", "delay_description", "formatted"],
 }
 
 # Maximum character lengths for each variable (for validation)
@@ -105,6 +106,12 @@ VARIABLE_MAX_LENGTHS = {
     "air_fog.is_foggy": 3,  # Yes/No
     "air_fog.visibility": 5,  # e.g., "1.2mi"
     "air_fog.formatted": 22,  # Pre-formatted message
+    "muni.line": 12,
+    "muni.stop_name": 22,
+    "muni.arrivals": 15,
+    "muni.is_delayed": 3,
+    "muni.delay_description": 22,
+    "muni.formatted": 22,
 }
 
 # Regex patterns
@@ -466,7 +473,7 @@ class TemplateEngine:
         context = {}
         
         # Fetch from each source
-        sources = ["weather", "datetime", "home_assistant", "apple_music", "star_trek", "guest_wifi"]
+        sources = ["weather", "datetime", "home_assistant", "apple_music", "star_trek", "guest_wifi", "muni"]
         
         for source in sources:
             try:
@@ -527,6 +534,7 @@ class TemplateEngine:
             "apple_music": "apple_music",
             "star_trek": "star_trek_quotes",
             "guest_wifi": "guest_wifi",
+            "muni": "muni",
         }
         
         feature_name = feature_map.get(source)
@@ -679,6 +687,7 @@ class TemplateEngine:
             "apple_music": "apple_music",
             "star_trek": "star_trek_quotes",
             "guest_wifi": "guest_wifi",
+            "muni": "muni",
         }
         
         feature_name = feature_map.get(source)
@@ -924,7 +933,7 @@ class TemplateEngine:
             List of source names that are configured
         """
         available = []
-        sources = ["weather", "datetime", "home_assistant", "apple_music", "star_trek", "guest_wifi"]
+        sources = ["weather", "datetime", "home_assistant", "apple_music", "star_trek", "guest_wifi", "muni"]
         
         for source in sources:
             try:

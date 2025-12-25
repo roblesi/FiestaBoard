@@ -322,6 +322,38 @@ class Config:
         """Air/fog data refresh interval in seconds."""
         return cls._get_feature("air_fog").get("refresh_seconds", 300)
     
+    # ==================== Muni Transit Configuration ====================
+    
+    @classmethod
+    @property
+    def MUNI_ENABLED(cls) -> bool:
+        """Whether Muni transit is enabled."""
+        return cls._get_feature("muni").get("enabled", False)
+    
+    @classmethod
+    @property
+    def MUNI_API_KEY(cls) -> str:
+        """511.org API key."""
+        return cls._get_feature("muni").get("api_key", "")
+    
+    @classmethod
+    @property
+    def MUNI_STOP_CODE(cls) -> str:
+        """Muni stop code to monitor."""
+        return cls._get_feature("muni").get("stop_code", "")
+    
+    @classmethod
+    @property
+    def MUNI_LINE_NAME(cls) -> str:
+        """Optional line name filter (e.g., 'N' for N-Judah)."""
+        return cls._get_feature("muni").get("line_name", "")
+    
+    @classmethod
+    @property
+    def MUNI_REFRESH_SECONDS(cls) -> int:
+        """Muni data refresh interval in seconds."""
+        return cls._get_feature("muni").get("refresh_seconds", 60)
+    
     # ==================== Legacy/Unused Configuration ====================
     
     # These are kept for backward compatibility but not actively used
@@ -387,6 +419,7 @@ class Config:
             "home_assistant_enabled": cls.HOME_ASSISTANT_ENABLED,
             "star_trek_quotes_enabled": cls.STAR_TREK_QUOTES_ENABLED,
             "air_fog_enabled": cls.AIR_FOG_ENABLED,
+            "muni_enabled": cls.MUNI_ENABLED,
             # Vestaboard config
             "vb_api_mode": cls.VB_API_MODE,
             "vb_host": cls.VB_HOST if cls.VB_API_MODE.lower() == "local" else "cloud",

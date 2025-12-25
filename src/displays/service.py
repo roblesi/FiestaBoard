@@ -15,6 +15,7 @@ from ..data_sources.apple_music import get_apple_music_source
 from ..data_sources.home_assistant import get_home_assistant_source
 from ..data_sources.star_trek_quotes import get_star_trek_quotes_source
 from ..data_sources.air_fog import get_air_fog_source
+from ..data_sources.muni import get_muni_source
 from ..formatters.message_formatter import get_message_formatter
 
 logger = logging.getLogger(__name__)
@@ -29,6 +30,7 @@ DISPLAY_TYPES = [
     "star_trek",
     "guest_wifi",
     "air_fog",
+    "muni",
 ]
 
 
@@ -62,6 +64,7 @@ class DisplayService:
         self.home_assistant_source = get_home_assistant_source()
         self.star_trek_quotes_source = get_star_trek_quotes_source()
         self.air_fog_source = get_air_fog_source()
+        self.muni_source = get_muni_source()
         
         logger.info("DisplayService initialized")
     
@@ -115,6 +118,11 @@ class DisplayService:
                 "available": self.air_fog_source is not None and Config.AIR_FOG_ENABLED,
                 "description": "Air quality and fog conditions",
             },
+            {
+                "type": "muni",
+                "available": self.muni_source is not None and Config.MUNI_ENABLED,
+                "description": "Real-time Muni transit arrivals",
+            },
         ]
         return displays
     
@@ -153,6 +161,8 @@ class DisplayService:
                 return self._get_guest_wifi()
             elif display_type == "air_fog":
                 return self._get_air_fog()
+            elif display_type == "muni":
+                return self._get_muni()
             else:
                 return DisplayResult(
                     display_type=display_type,
@@ -419,6 +429,36 @@ class DisplayService:
         
         return DisplayResult(
             display_type="air_fog",
+            formatted=formatted,
+            raw=raw_data,
+            available=True
+        )
+    
+    def _get_muni(self) -> DisplayResult:
+        """Get Muni transit display."""
+        if not self.muni_source or not Config.MUNI_ENABLED:
+            return DisplayResult(
+                display_type="muni",
+                formatted="",
+                raw={},
+                available=False,
+                error="Muni transit not configured or disabled"
+            )
+        
+        raw_data = self.muni_source.fetch_arrivals()
+        
+        if not raw_data:
+            return DisplayResult(
+                display_type="muni",
+                formatted="Muni: No arrivals",
+                raw={},
+                available=True,
+                error="Failed to fetch Muni data"
+            )
+        
+        formatted = self.formatter.format_muni(raw_data)
+        return DisplayResult(
+            display_type="muni",
             formatted=formatted,
             raw=raw_data,
             available=True

@@ -436,6 +436,80 @@ class MessageFormatter:
                 result.append(line)
         
         return result[:max_lines]
+    
+    def format_muni(self, muni_data: Dict) -> str:
+        """
+        Format Muni transit data for display.
+        
+        Uses colored tiles as status indicators:
+        - Red tile = delay status
+        - Orange = occupancy is full
+        
+        Format: "N-JUDAH: 4, 12, 19 MIN (DELAY)"
+        
+        Args:
+            muni_data: Dictionary with Muni arrival information
+            
+        Returns:
+            Formatted string (max 6 lines)
+        """
+        if not muni_data:
+            return "Muni: No arrivals"
+        
+        lines = []
+        
+        # Get data
+        line = muni_data.get("line", "MUNI")
+        arrivals = muni_data.get("arrivals", [])
+        is_delayed = muni_data.get("is_delayed", False)
+        delay_description = muni_data.get("delay_description", "")
+        stop_name = muni_data.get("stop_name", "")
+        
+        # Header with transit icon indicator
+        if is_delayed:
+            lines.append("{red} MUNI Transit")
+        else:
+            lines.append("{blue} MUNI Transit")
+        
+        # Stop name (if available and fits)
+        if stop_name:
+            lines.append(stop_name[:self.MAX_COLS])
+        
+        # Format arrival times
+        if arrivals:
+            times = []
+            for arr in arrivals:
+                mins = arr.get("minutes", 0)
+                is_full = arr.get("is_full", False)
+                
+                if is_full:
+                    # Orange marker for full trains
+                    times.append(f"{{orange}}{mins}")
+                else:
+                    times.append(str(mins))
+            
+            time_str = ", ".join(times)
+            
+            # Line name and times
+            suffix = " MIN"
+            if is_delayed:
+                suffix = " MIN (DELAY)"
+            
+            arrival_line = f"{line}: {time_str}{suffix}"
+            
+            # Apply delay color if needed
+            if is_delayed:
+                arrival_line = f"{{red}}{arrival_line}"
+            
+            lines.append(arrival_line[:self.MAX_COLS + 10])  # Account for color markers
+        else:
+            lines.append(f"{line}: No arrivals")
+        
+        # Add delay description if present
+        if delay_description and len(lines) < self.MAX_ROWS:
+            lines.append(delay_description[:self.MAX_COLS])
+        
+        return "\n".join(lines[:self.MAX_ROWS])
 
 
 def get_message_formatter() -> MessageFormatter:
