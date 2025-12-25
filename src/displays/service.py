@@ -16,6 +16,7 @@ from ..data_sources.home_assistant import get_home_assistant_source
 from ..data_sources.star_trek_quotes import get_star_trek_quotes_source
 from ..data_sources.air_fog import get_air_fog_source
 from ..data_sources.muni import get_muni_source
+from ..data_sources.surf import get_surf_source
 from ..data_sources.baywheels import get_baywheels_source
 from ..formatters.message_formatter import get_message_formatter
 
@@ -32,6 +33,7 @@ DISPLAY_TYPES = [
     "guest_wifi",
     "air_fog",
     "muni",
+    "surf",
     "baywheels",
 ]
 
@@ -67,6 +69,7 @@ class DisplayService:
         self.star_trek_quotes_source = get_star_trek_quotes_source()
         self.air_fog_source = get_air_fog_source()
         self.muni_source = get_muni_source()
+        self.surf_source = get_surf_source()
         self.baywheels_source = get_baywheels_source()
         
         logger.info("DisplayService initialized")
@@ -117,6 +120,7 @@ class DisplayService:
                 "description": "Guest WiFi credentials",
             },
             {
+<<<<<<< HEAD
                 "type": "air_fog",
                 "available": self.air_fog_source is not None and Config.AIR_FOG_ENABLED,
                 "description": "Air quality and fog conditions",
@@ -125,6 +129,11 @@ class DisplayService:
                 "type": "muni",
                 "available": self.muni_source is not None and Config.MUNI_ENABLED,
                 "description": "Real-time Muni transit arrivals",
+            },
+            {
+                "type": "surf",
+                "available": self.surf_source is not None and Config.SURF_ENABLED,
+                "description": "Ocean Beach surf conditions",
             },
             {
                 "type": "baywheels",
@@ -167,10 +176,13 @@ class DisplayService:
                 return self._get_star_trek()
             elif display_type == "guest_wifi":
                 return self._get_guest_wifi()
+<<<<<<< HEAD
             elif display_type == "air_fog":
                 return self._get_air_fog()
             elif display_type == "muni":
                 return self._get_muni()
+            elif display_type == "surf":
+                return self._get_surf()
             elif display_type == "baywheels":
                 return self._get_baywheels()
             else:
@@ -372,6 +384,41 @@ class DisplayService:
             available=True
         )
     
+    def _get_surf(self) -> DisplayResult:
+        """Get surf conditions display."""
+        if not self.surf_source or not Config.SURF_ENABLED:
+            return DisplayResult(
+                display_type="surf",
+                formatted="",
+                raw={},
+                available=False,
+                error="Surf source not configured or not enabled"
+            )
+        
+        raw_data = self.surf_source.fetch_surf_data()
+        if not raw_data:
+            return DisplayResult(
+                display_type="surf",
+                formatted="Surf: Unavailable",
+                raw={},
+                available=True,
+                error="Failed to fetch surf data"
+            )
+        
+        formatted = raw_data.get("formatted_message", "")
+        if not formatted:
+            # Build a simple formatted message if not provided
+            wave_height = raw_data.get("wave_height", 0)
+            quality = raw_data.get("quality", "UNKNOWN")
+            formatted = f"WAVES: {wave_height}FT {quality}"
+        
+        return DisplayResult(
+            display_type="surf",
+            formatted=formatted,
+            raw=raw_data,
+            available=True
+        )
+    
     def _get_guest_wifi(self) -> DisplayResult:
         """Get Guest WiFi display."""
         if not Config.GUEST_WIFI_ENABLED:
@@ -469,6 +516,41 @@ class DisplayService:
         formatted = self.formatter.format_muni(raw_data)
         return DisplayResult(
             display_type="muni",
+            formatted=formatted,
+            raw=raw_data,
+            available=True
+        )
+    
+    def _get_surf(self) -> DisplayResult:
+        """Get surf conditions display."""
+        if not self.surf_source or not Config.SURF_ENABLED:
+            return DisplayResult(
+                display_type="surf",
+                formatted="",
+                raw={},
+                available=False,
+                error="Surf source not configured or not enabled"
+            )
+        
+        raw_data = self.surf_source.fetch_surf_data()
+        if not raw_data:
+            return DisplayResult(
+                display_type="surf",
+                formatted="Surf: Unavailable",
+                raw={},
+                available=True,
+                error="Failed to fetch surf data"
+            )
+        
+        formatted = raw_data.get("formatted_message", "")
+        if not formatted:
+            # Build a simple formatted message if not provided
+            wave_height = raw_data.get("wave_height", 0)
+            quality = raw_data.get("quality", "UNKNOWN")
+            formatted = f"WAVES: {wave_height}FT {quality}"
+        
+        return DisplayResult(
+            display_type="surf",
             formatted=formatted,
             raw=raw_data,
             available=True

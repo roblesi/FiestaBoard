@@ -64,8 +64,10 @@ AVAILABLE_VARIABLES = {
     "apple_music": ["track", "artist", "album", "playing"],
     "star_trek": ["quote", "character", "series", "series_color"],
     "guest_wifi": ["ssid", "password"],
+<<<<<<< HEAD
     "air_fog": ["aqi", "air_status", "air_color", "fog_status", "fog_color", "is_foggy", "visibility", "formatted"],
     "muni": ["line", "stop_name", "arrivals", "is_delayed", "delay_description", "formatted"],
+    "surf": ["wave_height", "swell_period", "quality", "quality_color", "formatted"],
     "baywheels": ["electric_bikes", "classic_bikes", "num_bikes_available", "is_renting", "station_name", "status_color"],
 }
 
@@ -99,6 +101,7 @@ VARIABLE_MAX_LENGTHS = {
     "home_assistant.state": 10,
     "home_assistant.state_color": 4,  # Color tile
     "home_assistant.friendly_name": 15,
+<<<<<<< HEAD
     "air_fog.aqi": 3,  # 0-500
     "air_fog.air_status": 18,  # UNHEALTHY_SENSITIVE
     "air_fog.air_color": 4,  # Color tile
@@ -113,6 +116,11 @@ VARIABLE_MAX_LENGTHS = {
     "muni.is_delayed": 3,
     "muni.delay_description": 22,
     "muni.formatted": 22,
+    "surf.wave_height": 4,  # e.g., "3.5"
+    "surf.swell_period": 4,  # e.g., "12.5"
+    "surf.quality": 9,  # EXCELLENT, GOOD, FAIR, POOR
+    "surf.quality_color": 4,  # Color tile
+    "surf.formatted": 22,  # Pre-formatted message
     "baywheels.electric_bikes": 2,
     "baywheels.classic_bikes": 2,
     "baywheels.num_bikes_available": 2,
@@ -480,7 +488,7 @@ class TemplateEngine:
         context = {}
         
         # Fetch from each source
-        sources = ["weather", "datetime", "home_assistant", "apple_music", "star_trek", "guest_wifi", "air_fog", "muni", "baywheels"]
+        sources = ["weather", "datetime", "home_assistant", "apple_music", "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels"]
         
         for source in sources:
             try:
@@ -543,6 +551,7 @@ class TemplateEngine:
             "guest_wifi": "guest_wifi",
             "air_fog": "air_fog",
             "muni": "muni",
+            "surf": "surf",
             "baywheels": "baywheels",
         }
         
@@ -698,6 +707,7 @@ class TemplateEngine:
             "guest_wifi": "guest_wifi",
             "air_fog": "air_fog",
             "muni": "muni",
+            "surf": "surf",
             "baywheels": "baywheels",
         }
         
@@ -944,7 +954,7 @@ class TemplateEngine:
             List of source names that are configured
         """
         available = []
-        sources = ["weather", "datetime", "home_assistant", "apple_music", "star_trek", "guest_wifi", "air_fog", "muni", "baywheels"]
+        sources = ["weather", "datetime", "home_assistant", "apple_music", "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels"]
         
         for source in sources:
             try:
@@ -1055,6 +1065,7 @@ class TemplateEngine:
                     "home_assistant": "home_assistant",
                     "air_fog": "air_fog",
                     "muni": "muni",
+                    "surf": "surf",
                     "baywheels": "baywheels",
                 }
                 feature = feature_map.get(source)

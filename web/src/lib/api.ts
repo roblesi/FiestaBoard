@@ -333,6 +333,13 @@ export interface BayWheelsFeatureConfig {
     refresh_seconds: number;
 }
 
+export interface SurfFeatureConfig {
+  enabled: boolean;
+  latitude: number;
+  longitude: number;
+  refresh_seconds: number;
+}
+
 export interface RotationFeatureConfig {
   enabled: boolean;
   default_duration: number;
@@ -343,12 +350,13 @@ export interface FeaturesConfig {
   datetime: DateTimeFeatureConfig;
   home_assistant: HomeAssistantFeatureConfig;
   apple_music: AppleMusicFeatureConfig;
-    guest_wifi: GuestWifiFeatureConfig;
-    star_trek_quotes: StarTrekQuotesFeatureConfig;
-    air_fog: AirFogFeatureConfig;
-    muni: MuniFeatureConfig;
-    baywheels: BayWheelsFeatureConfig;
-    rotation: RotationFeatureConfig;
+  guest_wifi: GuestWifiFeatureConfig;
+  star_trek_quotes: StarTrekQuotesFeatureConfig;
+  air_fog: AirFogFeatureConfig;
+  muni: MuniFeatureConfig;
+  surf: SurfFeatureConfig;
+  baywheels: BayWheelsFeatureConfig;
+  rotation: RotationFeatureConfig;
 }
 
 export interface GeneralConfig {

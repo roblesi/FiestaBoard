@@ -13,7 +13,7 @@ class TestDisplayTypes:
     def test_all_display_types_defined(self):
         """Test that all expected display types are defined."""
         expected = ["weather", "datetime", "weather_datetime", "home_assistant", 
-                    "apple_music", "star_trek", "guest_wifi", "air_fog", "muni", "baywheels"]
+                    "apple_music", "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels"]
         assert DISPLAY_TYPES == expected
 
 
@@ -30,6 +30,7 @@ class TestDisplayService:
              patch('src.displays.service.get_star_trek_quotes_source') as mock_trek, \
              patch('src.displays.service.get_air_fog_source') as mock_air_fog, \
              patch('src.displays.service.get_muni_source') as mock_muni, \
+             patch('src.displays.service.get_surf_source') as mock_surf, \
              patch('src.displays.service.get_baywheels_source') as mock_baywheels:
             
             # Setup mock sources
@@ -40,6 +41,7 @@ class TestDisplayService:
             mock_trek.return_value = None
             mock_air_fog.return_value = None  # Disabled by default
             mock_muni.return_value = None  # Disabled by default
+            mock_surf.return_value = None  # Disabled by default
             mock_baywheels.return_value = None
             
             service = DisplayService()
@@ -49,13 +51,15 @@ class TestDisplayService:
         """Test listing available displays."""
         displays = service.get_available_displays()
         
-        assert len(displays) == 10
+        assert len(displays) == 11
         display_types = [d["type"] for d in displays]
         assert "weather" in display_types
         assert "datetime" in display_types
         assert "guest_wifi" in display_types
+<<<<<<< HEAD
         assert "air_fog" in display_types
         assert "muni" in display_types
+        assert "surf" in display_types
         assert "baywheels" in display_types
     
     def test_get_available_displays_includes_availability(self, service):

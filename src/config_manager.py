@@ -95,6 +95,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
                 ],
             },
         },
+<<<<<<< HEAD
         "air_fog": {
             "enabled": False,
             "purpleair_api_key": "",  # PurpleAir API key
@@ -120,6 +121,20 @@ DEFAULT_CONFIG: Dict[str, Any] = {
             "refresh_seconds": 60,  # 1 minute for transit data
             "color_rules": {},
         },
+        "surf": {
+            "enabled": False,
+            "latitude": 37.7599,  # Ocean Beach, SF
+            "longitude": -122.5121,  # Ocean Beach, SF
+            "refresh_seconds": 1800,  # 30 minutes for surf conditions
+            "color_rules": {
+                "quality": [
+                    {"condition": "==", "value": "EXCELLENT", "color": "green"},
+                    {"condition": "==", "value": "GOOD", "color": "yellow"},
+                    {"condition": "==", "value": "FAIR", "color": "orange"},
+                    {"condition": "==", "value": "POOR", "color": "red"},
+                ],
+            },
+        },
         "baywheels": {
             "enabled": False,
             "station_id": "",  # Bay Wheels/GBFS station ID
@@ -131,6 +146,9 @@ DEFAULT_CONFIG: Dict[str, Any] = {
                     {"condition": "<", "value": 2, "color": "red"},
                     {"condition": "<=", "value": 5, "color": "yellow"},
                     {"condition": ">", "value": 5, "color": "green"},
+                ],
+            },
+        },
                 ],
             },
         },
