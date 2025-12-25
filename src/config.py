@@ -278,6 +278,53 @@ class Config:
         """Home Assistant refresh interval."""
         return cls._get_feature("home_assistant").get("refresh_seconds", 30)
     
+    # ==================== Traffic Configuration ====================
+    
+    @classmethod
+    @property
+    def TRAFFIC_ENABLED(cls) -> bool:
+        """Whether traffic monitoring is enabled."""
+        return cls._get_feature("traffic").get("enabled", False)
+    
+    @classmethod
+    @property
+    def GOOGLE_ROUTES_API_KEY(cls) -> str:
+        """Google Routes API key."""
+        return cls._get_feature("traffic").get("api_key", "")
+    
+    @classmethod
+    @property
+    def TRAFFIC_ORIGIN(cls) -> str:
+        """Traffic route origin (address or lat,lng)."""
+        return cls._get_feature("traffic").get("origin", "")
+    
+    @classmethod
+    @property
+    def TRAFFIC_DESTINATION(cls) -> str:
+        """Traffic route destination (address or lat,lng)."""
+        return cls._get_feature("traffic").get("destination", "")
+    
+    @classmethod
+    @property
+    def TRAFFIC_DESTINATION_NAME(cls) -> str:
+        """Display name for traffic destination."""
+        return cls._get_feature("traffic").get("destination_name", "DOWNTOWN")
+    
+    @classmethod
+    @property
+    def TRAFFIC_REFRESH_SECONDS(cls) -> int:
+        """Traffic data refresh interval in seconds."""
+        return cls._get_feature("traffic").get("refresh_seconds", 300)
+    
+    # ==================== Legacy/Unused Configuration ====================
+    
+    # These are kept for backward compatibility but not actively used
+    BAYWHEELS_ENABLED: bool = False
+    USER_LATITUDE: float = 37.7749
+    USER_LONGITUDE: float = -122.4194
+    MAX_DISTANCE_MILES: float = 2.0
+    WAYMO_ENABLED: bool = False
+    
     # ==================== Helper Methods ====================
     
     @classmethod
@@ -333,6 +380,7 @@ class Config:
             "guest_wifi_enabled": cls.GUEST_WIFI_ENABLED,
             "home_assistant_enabled": cls.HOME_ASSISTANT_ENABLED,
             "star_trek_quotes_enabled": cls.STAR_TREK_QUOTES_ENABLED,
+            "traffic_enabled": cls.TRAFFIC_ENABLED,
             # Vestaboard config
             "vb_api_mode": cls.VB_API_MODE,
             "vb_host": cls.VB_HOST if cls.VB_API_MODE.lower() == "local" else "cloud",
