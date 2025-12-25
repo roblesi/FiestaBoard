@@ -1,14 +1,18 @@
 """REST API server for Vestaboard Display Service."""
 
 import logging
+import logging.handlers
 import threading
 import time
+import os
+import json
 from typing import Optional, Dict, Any, List
 from contextlib import contextmanager
 from collections import deque
 from datetime import datetime
+from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -26,6 +30,12 @@ from .text_to_board import text_to_board_array
 
 logger = logging.getLogger(__name__)
 
+# Log file configuration
+LOG_DIR = Path("/app/data/logs")
+LOG_FILE = LOG_DIR / "app.log"
+LOG_MAX_BYTES = 5 * 1024 * 1024  # 5MB per file
+LOG_BACKUP_COUNT = 5  # Keep 5 backup files (25MB total max)
+
 # Global service instance
 _service: Optional[VestaboardDisplayService] = None
 _service_lock = threading.Lock()
@@ -33,9 +43,19 @@ _service_thread: Optional[threading.Thread] = None
 _service_running = False
 _dev_mode = False  # When True, preview only - don't send to Vestaboard
 
-# In-memory log buffer (last 200 log entries)
-_log_buffer: deque = deque(maxlen=200)
+# In-memory log buffer (last 500 log entries for quick access)
+_log_buffer: deque = deque(maxlen=500)
 _log_lock = threading.Lock()
+
+
+def _create_log_entry(record: logging.LogRecord, formatted_message: str) -> Dict[str, Any]:
+    """Create a structured log entry from a log record."""
+    return {
+        "timestamp": datetime.fromtimestamp(record.created).isoformat(),
+        "level": record.levelname,
+        "logger": record.name,
+        "message": formatted_message
+    }
 
 
 class LogBufferHandler(logging.Handler):
@@ -43,16 +63,148 @@ class LogBufferHandler(logging.Handler):
     
     def emit(self, record):
         try:
-            log_entry = {
-                "timestamp": datetime.fromtimestamp(record.created).isoformat(),
-                "level": record.levelname,
-                "logger": record.name,
-                "message": self.format(record)
-            }
+            log_entry = _create_log_entry(record, self.format(record))
             with _log_lock:
                 _log_buffer.append(log_entry)
         except Exception:
             self.handleError(record)
+
+
+class JSONFileHandler(logging.handlers.RotatingFileHandler):
+    """Rotating file handler that writes logs as JSON lines."""
+    
+    def emit(self, record):
+        try:
+            log_entry = _create_log_entry(record, self.format(record))
+            # Write as JSON line
+            msg = json.dumps(log_entry) + '\n'
+            stream = self.stream
+            stream.write(msg)
+            self.flush()
+            # Handle rotation
+            if self.shouldRollover(record):
+                self.doRollover()
+        except Exception:
+            self.handleError(record)
+    
+    def shouldRollover(self, record):
+        """Check if we should rollover based on file size."""
+        if self.stream is None:
+            self.stream = self._open()
+        if self.maxBytes > 0:
+            self.stream.seek(0, 2)  # Seek to end
+            if self.stream.tell() >= self.maxBytes:
+                return True
+        return False
+
+
+def _setup_file_logging():
+    """Set up file-based logging with rotation."""
+    try:
+        # Create logs directory if it doesn't exist
+        LOG_DIR.mkdir(parents=True, exist_ok=True)
+        
+        # Create JSON file handler with rotation
+        file_handler = JSONFileHandler(
+            str(LOG_FILE),
+            maxBytes=LOG_MAX_BYTES,
+            backupCount=LOG_BACKUP_COUNT,
+            encoding='utf-8'
+        )
+        file_handler.setFormatter(logging.Formatter('%(message)s'))
+        file_handler.setLevel(logging.INFO)
+        
+        # Add to root logger
+        logging.getLogger().addHandler(file_handler)
+        logger.info(f"File logging initialized: {LOG_FILE}")
+    except Exception as e:
+        logger.warning(f"Failed to set up file logging: {e}")
+
+
+def _read_logs_from_files(
+    limit: int = 100,
+    offset: int = 0,
+    level: Optional[str] = None,
+    search: Optional[str] = None
+) -> tuple[List[Dict[str, Any]], int, bool]:
+    """
+    Read logs from log files with filtering and pagination.
+    
+    Returns: (logs, total_matching, has_more)
+    """
+    all_logs = []
+    
+    # Read from current log file and backups
+    log_files = [LOG_FILE]
+    for i in range(1, LOG_BACKUP_COUNT + 1):
+        backup_file = Path(f"{LOG_FILE}.{i}")
+        if backup_file.exists():
+            log_files.append(backup_file)
+    
+    # Read all log entries from files (newest first)
+    for log_file in log_files:
+        if not log_file.exists():
+            continue
+        try:
+            with open(log_file, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+                for line in reversed(lines):
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        entry = json.loads(line)
+                        all_logs.append(entry)
+                    except json.JSONDecodeError:
+                        continue
+        except Exception:
+            continue
+    
+    # Also include in-memory buffer (most recent)
+    with _log_lock:
+        memory_logs = list(_log_buffer)
+    
+    # Merge: memory logs are most recent, then file logs
+    # Deduplicate by timestamp + message
+    seen = set()
+    merged_logs = []
+    
+    for log in reversed(memory_logs):
+        key = (log.get('timestamp'), log.get('message'))
+        if key not in seen:
+            seen.add(key)
+            merged_logs.append(log)
+    
+    for log in all_logs:
+        key = (log.get('timestamp'), log.get('message'))
+        if key not in seen:
+            seen.add(key)
+            merged_logs.append(log)
+    
+    # Apply filters
+    filtered_logs = merged_logs
+    
+    if level:
+        level_upper = level.upper()
+        filtered_logs = [log for log in filtered_logs if log.get('level') == level_upper]
+    
+    if search:
+        search_lower = search.lower()
+        filtered_logs = [
+            log for log in filtered_logs
+            if search_lower in log.get('message', '').lower() or
+               search_lower in log.get('logger', '').lower()
+        ]
+    
+    total_matching = len(filtered_logs)
+    
+    # Apply pagination
+    start = offset
+    end = offset + limit
+    paginated = filtered_logs[start:end]
+    has_more = end < total_matching
+    
+    return paginated, total_matching, has_more
 
 
 class MessageRequest(BaseModel):
@@ -130,9 +282,11 @@ async def startup_event():
     global _dev_mode, _service_thread
     logger.info("API server starting up...")
     
+    # Set up file-based logging
+    _setup_file_logging()
+    
     # Auto-enable dev mode in local development (when not in production)
     # Check if we're in a development environment
-    import os
     is_production = os.getenv("PRODUCTION", "false").lower() == "true"
     if not is_production:
         _dev_mode = True
@@ -179,23 +333,48 @@ async def health():
 
 
 @app.get("/logs")
-async def get_logs(limit: int = 100):
-    """Get recent application logs.
+async def get_logs(
+    limit: int = Query(default=50, ge=1, le=500, description="Number of log entries to return"),
+    offset: int = Query(default=0, ge=0, description="Offset for pagination"),
+    level: Optional[str] = Query(default=None, description="Filter by log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)"),
+    search: Optional[str] = Query(default=None, description="Search in log message or logger name")
+):
+    """Get application logs with pagination, filtering, and search.
     
     Args:
-        limit: Maximum number of log entries to return (default 100, max 200)
+        limit: Maximum number of log entries to return (default 50, max 500)
+        offset: Number of entries to skip for pagination
+        level: Filter by log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+        search: Search text in log message or logger name
     
     Returns:
-        List of log entries with timestamp, level, logger, and message
+        List of log entries with pagination info
     """
-    limit = min(limit, 200)  # Cap at buffer size
-    with _log_lock:
-        logs = list(_log_buffer)
+    # Validate level if provided
+    valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+    if level and level.upper() not in valid_levels:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Invalid log level: {level}. Valid levels: {valid_levels}"
+        )
     
-    # Return most recent logs first
+    logs, total, has_more = _read_logs_from_files(
+        limit=limit,
+        offset=offset,
+        level=level,
+        search=search
+    )
+    
     return {
-        "logs": logs[-limit:] if len(logs) > limit else logs,
-        "total": len(logs)
+        "logs": logs,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "has_more": has_more,
+        "filters": {
+            "level": level.upper() if level else None,
+            "search": search
+        }
     }
 
 
