@@ -12,6 +12,7 @@ import {
   Wifi,
   Sparkles,
   RotateCw,
+  Car,
 } from "lucide-react";
 
 // Output parameter definition
@@ -230,6 +231,61 @@ const FEATURE_DEFINITIONS: Record<
       { name: "quote", description: "The quote text", example: "Make it so.", maxChars: 120, typical: "20-120 chars (multi-line)" },
       { name: "character", description: "Character name", example: "Picard", maxChars: 15, typical: "4-15 chars" },
       { name: "series", description: "Series name", example: "TNG", maxChars: 3, typical: "3 chars" },
+    ],
+  },
+  traffic: {
+    title: "Traffic",
+    description: "Drive time to destination",
+    icon: Car,
+    hasRefreshInterval: true,
+    defaultRefreshSeconds: 300,
+    fields: [
+      {
+        key: "google_routes_api_key",
+        label: "Google Routes API Key",
+        type: "password",
+        placeholder: "Enter Google Routes API key",
+        required: true,
+        description: "API key with Routes API enabled",
+      },
+      {
+        key: "origin",
+        label: "Origin",
+        type: "text",
+        placeholder: "123 Main St, SF, CA or 37.7749,-122.4194",
+        required: true,
+        description: "Starting address or lat,lng",
+      },
+      {
+        key: "destination",
+        label: "Destination",
+        type: "text",
+        placeholder: "456 Market St, SF, CA or 37.7899,-122.4001",
+        required: true,
+        description: "Destination address or lat,lng",
+      },
+      {
+        key: "destination_name",
+        label: "Destination Name",
+        type: "text",
+        placeholder: "DOWNTOWN",
+        description: "Short name for display (e.g., WORK, DOWNTOWN)",
+      },
+      {
+        key: "refresh_seconds",
+        label: "Refresh Interval (seconds)",
+        type: "number",
+        placeholder: "300",
+        description: "How often to fetch traffic data (default: 5 min)",
+      },
+    ],
+    outputs: [
+      { name: "duration_minutes", description: "Travel time in minutes", example: "25", maxChars: 3, typical: "1-3 digits" },
+      { name: "delay_minutes", description: "Delay due to traffic", example: "+5", maxChars: 3, typical: "1-3 chars" },
+      { name: "traffic_status", description: "Traffic status", example: "MODERATE", maxChars: 8, typical: "LIGHT/MODERATE/HEAVY" },
+      { name: "traffic_color", description: "Traffic color tile", example: "{66}", maxChars: 4, typical: "Color tile" },
+      { name: "destination_name", description: "Destination name", example: "DOWNTOWN", maxChars: 10, typical: "4-10 chars" },
+      { name: "formatted", description: "Pre-formatted message", example: "DOWNTOWN: 25m (+5m)", maxChars: 22, typical: "12-22 chars" },
     ],
   },
   rotation: {

@@ -64,6 +64,7 @@ AVAILABLE_VARIABLES = {
     "apple_music": ["track", "artist", "album", "playing"],
     "star_trek": ["quote", "character", "series", "series_color"],
     "guest_wifi": ["ssid", "password"],
+    "traffic": ["duration_minutes", "delay_minutes", "traffic_status", "traffic_color", "destination_name", "formatted"],
 }
 
 # Maximum character lengths for each variable (for validation)
@@ -96,6 +97,12 @@ VARIABLE_MAX_LENGTHS = {
     "home_assistant.state": 10,
     "home_assistant.state_color": 4,  # Color tile
     "home_assistant.friendly_name": 15,
+    "traffic.duration_minutes": 3,  # e.g., "45"
+    "traffic.delay_minutes": 3,  # e.g., "+12"
+    "traffic.traffic_status": 8,  # LIGHT, MODERATE, HEAVY
+    "traffic.traffic_color": 4,  # Color tile
+    "traffic.destination_name": 10,  # e.g., "DOWNTOWN"
+    "traffic.formatted": 22,  # Pre-formatted message
 }
 
 # Regex patterns

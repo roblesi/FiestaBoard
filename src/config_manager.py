@@ -95,6 +95,21 @@ DEFAULT_CONFIG: Dict[str, Any] = {
                 ],
             },
         },
+        "traffic": {
+            "enabled": False,
+            "google_routes_api_key": "",  # Google Routes API key
+            "origin": "",  # Origin address or lat,lng
+            "destination": "",  # Destination address or lat,lng
+            "destination_name": "DOWNTOWN",  # Display name for destination
+            "refresh_seconds": 300,  # 5 minutes
+            "color_rules": {
+                "traffic_status": [
+                    {"condition": "==", "value": "LIGHT", "color": "green"},
+                    {"condition": "==", "value": "MODERATE", "color": "yellow"},
+                    {"condition": "==", "value": "HEAVY", "color": "red"},
+                ],
+            },
+        },
         "rotation": {
             "enabled": True,
             "default_duration": 300,

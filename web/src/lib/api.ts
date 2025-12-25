@@ -308,6 +308,15 @@ export interface StarTrekQuotesFeatureConfig {
   ratio: string;
 }
 
+export interface TrafficFeatureConfig {
+  enabled: boolean;
+  google_routes_api_key: string;
+  origin: string;
+  destination: string;
+  destination_name: string;
+  refresh_seconds: number;
+}
+
 export interface RotationFeatureConfig {
   enabled: boolean;
   default_duration: number;
@@ -320,6 +329,7 @@ export interface FeaturesConfig {
   apple_music: AppleMusicFeatureConfig;
   guest_wifi: GuestWifiFeatureConfig;
   star_trek_quotes: StarTrekQuotesFeatureConfig;
+  traffic: TrafficFeatureConfig;
   rotation: RotationFeatureConfig;
 }
 

@@ -14,6 +14,7 @@ from ..data_sources.datetime import get_datetime_source
 from ..data_sources.apple_music import get_apple_music_source
 from ..data_sources.home_assistant import get_home_assistant_source
 from ..data_sources.star_trek_quotes import get_star_trek_quotes_source
+from ..data_sources.traffic import get_traffic_source
 from ..formatters.message_formatter import get_message_formatter
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,7 @@ DISPLAY_TYPES = [
     "apple_music",
     "star_trek",
     "guest_wifi",
+    "traffic",
 ]
 
 
@@ -59,6 +61,7 @@ class DisplayService:
         self.apple_music_source = get_apple_music_source()
         self.home_assistant_source = get_home_assistant_source()
         self.star_trek_quotes_source = get_star_trek_quotes_source()
+        self.traffic_source = get_traffic_source()
         
         logger.info("DisplayService initialized")
     
@@ -107,6 +110,11 @@ class DisplayService:
                 "available": Config.GUEST_WIFI_ENABLED and bool(Config.GUEST_WIFI_SSID),
                 "description": "Guest WiFi credentials",
             },
+            {
+                "type": "traffic",
+                "available": self.traffic_source is not None and Config.TRAFFIC_ENABLED,
+                "description": "Traffic conditions to destination",
+            },
         ]
         return displays
     
@@ -143,6 +151,8 @@ class DisplayService:
                 return self._get_star_trek()
             elif display_type == "guest_wifi":
                 return self._get_guest_wifi()
+            elif display_type == "traffic":
+                return self._get_traffic()
             else:
                 return DisplayResult(
                     display_type=display_type,
@@ -374,6 +384,42 @@ class DisplayService:
         
         return DisplayResult(
             display_type="guest_wifi",
+            formatted=formatted,
+            raw=raw_data,
+            available=True
+        )
+    
+    def _get_traffic(self) -> DisplayResult:
+        """Get traffic conditions display."""
+        if not self.traffic_source or not Config.TRAFFIC_ENABLED:
+            return DisplayResult(
+                display_type="traffic",
+                formatted="",
+                raw={},
+                available=False,
+                error="Traffic source not configured or not enabled"
+            )
+        
+        raw_data = self.traffic_source.fetch_traffic_data()
+        if not raw_data:
+            return DisplayResult(
+                display_type="traffic",
+                formatted="Traffic: Unavailable",
+                raw={},
+                available=True,
+                error="Failed to fetch traffic data"
+            )
+        
+        formatted = raw_data.get("formatted_message", "")
+        if not formatted:
+            # Build a simple formatted message if not provided
+            destination = raw_data.get("destination_name", "?")
+            duration = raw_data.get("duration_minutes", "?")
+            status = raw_data.get("traffic_status", "UNKNOWN")
+            formatted = f"{destination}: {duration}m {status}"
+        
+        return DisplayResult(
+            display_type="traffic",
             formatted=formatted,
             raw=raw_data,
             available=True
