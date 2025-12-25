@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, FileText, Settings, Menu, X } from "lucide-react";
@@ -31,18 +31,37 @@ export function NavigationSidebar() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileMenuOpen]);
+
   return (
     <>
       {/* Mobile Header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 border-b bg-background">
-        <div className="flex items-center justify-between px-4 py-3">
-          <h1 className="text-lg font-semibold tracking-tight">SiestaBoard</h1>
-          <div className="flex items-center gap-3">
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="flex items-center justify-between px-4 h-14">
+          <h1 className="text-lg font-semibold tracking-tight">FiestaBoard</h1>
+          <div className="flex items-center gap-2">
             <ServiceStatus />
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
+              className="h-10 w-10"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
             >
               {mobileMenuOpen ? (
                 <X className="h-5 w-5" />
@@ -52,42 +71,51 @@ export function NavigationSidebar() {
             </Button>
           </div>
         </div>
-
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="border-t bg-background">
-            <nav className="space-y-1 px-3 py-4">
-              {navigation.map((item) => {
-                const isActive = pathname === item.href;
-                const Icon = item.icon;
-
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                      isActive
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                    )}
-                  >
-                    <Icon className="h-5 w-5" />
-                    {item.name}
-                  </Link>
-                );
-              })}
-            </nav>
-            <div className="border-t px-6 py-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Theme</span>
-                <ThemeToggle />
-              </div>
-            </div>
-          </div>
-        )}
       </header>
+
+      {/* Mobile Menu Backdrop */}
+      {mobileMenuOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 z-40 bg-background/80 backdrop-blur-sm"
+          onClick={() => setMobileMenuOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Mobile Menu */}
+      <div 
+        className={cn(
+          "lg:hidden fixed top-14 left-0 right-0 z-50 bg-background border-b shadow-lg transform transition-transform duration-200 ease-in-out",
+          mobileMenuOpen ? "translate-y-0" : "-translate-y-full pointer-events-none"
+        )}
+      >
+        <nav className="space-y-1 px-3 py-4">
+          {navigation.map((item) => {
+            const isActive = pathname === item.href;
+            const Icon = item.icon;
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-4 py-3 text-base font-medium transition-colors min-h-[48px]",
+                  isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground active:bg-accent"
+                )}
+              >
+                <Icon className="h-5 w-5" />
+                {item.name}
+              </Link>
+            );
+          })}
+        </nav>
+        <div className="border-t px-4 py-3 flex justify-end">
+          <ThemeToggle />
+        </div>
+      </div>
 
       {/* Desktop Sidebar */}
       <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:block lg:w-64 lg:border-r lg:bg-background">
@@ -95,7 +123,7 @@ export function NavigationSidebar() {
           {/* Header */}
           <div className="flex items-center justify-between border-b px-6 py-4">
             <div>
-              <h1 className="text-xl font-semibold tracking-tight">SiestaBoard</h1>
+              <h1 className="text-xl font-semibold tracking-tight">FiestaBoard</h1>
               <div className="mt-1">
                 <ServiceStatus />
               </div>
@@ -127,11 +155,8 @@ export function NavigationSidebar() {
           </nav>
 
           {/* Footer */}
-          <div className="border-t px-6 py-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Theme</span>
-              <ThemeToggle />
-            </div>
+          <div className="border-t px-6 py-4 flex justify-end">
+            <ThemeToggle />
           </div>
         </div>
       </aside>

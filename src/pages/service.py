@@ -206,12 +206,14 @@ class PageService:
             template_engine = get_template_engine()
             
             # Render the template lines with variable substitution
+            # The template engine already handles tile-aware truncation in render_lines()
+            # via _truncate_to_tiles() - color codes like {63} count as 1 tile each
             formatted = template_engine.render_lines(page.template)
             
-            # Pad each line to 22 characters
-            lines = formatted.split('\n')
-            lines = [line[:22].ljust(22) for line in lines]
-            formatted = '\n'.join(lines)
+            # Note: We do NOT truncate/pad by character count here because:
+            # - Color codes like {63} are 4 characters but represent 1 tile
+            # - The template engine already handles proper tile-aware truncation
+            # - Truncating by character count would break color codes mid-syntax
             
             return DisplayResult(
                 display_type="page:template",

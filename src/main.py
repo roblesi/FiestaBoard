@@ -17,6 +17,8 @@ from .data_sources.home_assistant import get_home_assistant_source
 from .data_sources.star_trek_quotes import get_star_trek_quotes_source
 from .formatters.message_formatter import get_message_formatter
 from .text_to_board import text_to_board_array, format_board_array_preview
+from .settings.service import get_settings_service
+from .pages.service import get_page_service
 
 # Configure logging
 logging.basicConfig(
@@ -46,6 +48,10 @@ class VestaboardDisplayService:
         self.last_home_assistant_check = 0.0
         self.last_rotation_change = 0.0
         self.current_rotation_screen = None
+        
+        # Active page polling state
+        self._last_active_page_content: Optional[str] = None
+        self._last_active_page_id: Optional[str] = None
         
         # Setup signal handlers for graceful shutdown
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -458,40 +464,100 @@ class VestaboardDisplayService:
         self.last_rotation_change = current_time
         return available_screens[0]
     
+    def check_and_send_active_page(self, dev_mode: bool = False) -> bool:
+        """Check the active page and send to board if content changed.
+        
+        Args:
+            dev_mode: If True, don't actually send to board
+            
+        Returns:
+            True if content was sent to board, False otherwise
+        """
+        try:
+            settings_service = get_settings_service()
+            page_service = get_page_service()
+            
+            active_page_id = settings_service.get_active_page_id()
+            
+            # No active page set - try to default to first page
+            if not active_page_id:
+                pages = page_service.list_pages()
+                if pages:
+                    active_page_id = pages[0].id
+                    settings_service.set_active_page_id(active_page_id)
+                    logger.info(f"No active page set, defaulting to first page: {active_page_id}")
+                else:
+                    logger.debug("No active page and no pages available")
+                    return False
+            
+            # Render the page
+            result = page_service.preview_page(active_page_id)
+            if not result or not result.available:
+                logger.warning(f"Failed to render active page: {active_page_id}")
+                return False
+            
+            # Check if content changed
+            current_content = result.formatted
+            if (current_content == self._last_active_page_content and 
+                active_page_id == self._last_active_page_id):
+                logger.debug("Active page content unchanged, skipping send")
+                return False
+            
+            # Content changed, send to board
+            logger.info(f"Active page content changed, sending to board: {active_page_id}")
+            
+            if dev_mode:
+                logger.info("[DEV MODE] Would send active page (not actually sending)")
+                self._last_active_page_content = current_content
+                self._last_active_page_id = active_page_id
+                return False
+            
+            if not self.vb_client:
+                logger.warning("Vestaboard client not initialized")
+                return False
+            
+            # Get transition settings
+            transition = settings_service.get_transition_settings()
+            
+            # Send to board
+            board_array = text_to_board_array(current_content)
+            success, was_sent = self.vb_client.send_characters(
+                board_array,
+                strategy=transition.strategy,
+                step_interval_ms=transition.step_interval_ms,
+                step_size=transition.step_size
+            )
+            
+            if success:
+                self._last_active_page_content = current_content
+                self._last_active_page_id = active_page_id
+                if was_sent:
+                    logger.info(f"Active page sent to board: {active_page_id}")
+                else:
+                    logger.debug("Active page unchanged at board level")
+                return was_sent
+            else:
+                logger.error(f"Failed to send active page to board: {active_page_id}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error checking active page: {e}")
+            return False
+    
     def run(self):
         """Run the main service loop."""
         if not self.initialize():
             logger.error("Initialization failed, exiting")
             sys.exit(1)
         
-        # Send initial update
-        logger.info("Sending initial update...")
-        self.fetch_and_display()
+        # Schedule active page polling every 1 minute
+        # This is the ONLY way content gets sent to the board - via configured pages
+        schedule.every(1).minutes.do(lambda: self.check_and_send_active_page(dev_mode=False))
+        logger.info("Active page polling scheduled every 1 minute")
         
-        # Schedule periodic updates
-        interval_minutes = Config.REFRESH_INTERVAL_SECONDS / 60
-        schedule.every(interval_minutes).minutes.do(lambda: self.fetch_and_display(dev_mode=False))
-        logger.info(f"Scheduled updates every {interval_minutes} minutes")
-        
-        # Schedule Apple Music checks more frequently (if enabled)
-        if self.apple_music_source:
-            apple_music_interval = Config.APPLE_MUSIC_REFRESH_SECONDS
-            schedule.every(apple_music_interval).seconds.do(
-                lambda: self.fetch_and_display(force_apple_music=False, dev_mode=False)
-            )
-            logger.info(f"Apple Music checks every {apple_music_interval} seconds")
-        
-        # Schedule Guest WiFi refresh (if enabled)
-        if Config.GUEST_WIFI_ENABLED:
-            guest_wifi_interval = Config.GUEST_WIFI_REFRESH_SECONDS
-            schedule.every(guest_wifi_interval).seconds.do(lambda: self.fetch_and_display(dev_mode=False))
-            logger.info(f"Guest WiFi refresh every {guest_wifi_interval} seconds")
-        
-        # Schedule Home Assistant checks (if enabled)
-        if self.home_assistant_source:
-            ha_interval = Config.HOME_ASSISTANT_REFRESH_SECONDS
-            schedule.every(ha_interval).seconds.do(lambda: self.fetch_and_display(dev_mode=False))
-            logger.info(f"Home Assistant checks every {ha_interval} seconds")
+        # Send initial active page on startup
+        logger.info("Sending initial active page...")
+        self.check_and_send_active_page(dev_mode=False)
         
         # Main loop
         logger.info("Service started, waiting for scheduled updates...")

@@ -2,13 +2,14 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { useConfigOverrides, ServiceKey } from "@/hooks/use-config-overrides";
 
 // Query keys for cache management
 export const queryKeys = {
   status: ["status"] as const,
-  preview: (overrides: Partial<Record<ServiceKey, boolean>>) => ["preview", overrides] as const,
   config: ["config"] as const,
+  activePage: ["activePage"] as const,
+  pages: ["pages"] as const,
+  pagePreview: (pageId: string) => ["pagePreview", pageId] as const,
 };
 
 // Status query - refetches every 5 seconds
@@ -17,19 +18,6 @@ export function useStatus() {
     queryKey: queryKeys.status,
     queryFn: api.getStatus,
     refetchInterval: 5000,
-    retry: 1,
-  });
-}
-
-// Preview query - refetches when config overrides change
-export function usePreview(enabled = true) {
-  const { getActiveOverrides } = useConfigOverrides();
-  const overrides = getActiveOverrides();
-  
-  return useQuery({
-    queryKey: queryKeys.preview(overrides),
-    queryFn: () => api.getPreview(overrides),
-    enabled,
     retry: 1,
   });
 }
@@ -76,10 +64,43 @@ export function useToggleDevMode() {
   });
 }
 
-// Publish preview mutation - accepts overrides to publish exactly what's shown in UI
-export function usePublishPreview() {
-  return useMutation({
-    mutationFn: (overrides?: Partial<Record<string, boolean>>) => api.publishPreview(overrides),
+// Active page query
+export function useActivePage() {
+  return useQuery({
+    queryKey: queryKeys.activePage,
+    queryFn: api.getActivePage,
+    retry: 1,
   });
 }
 
+// Set active page mutation - backend handles immediate send to board
+export function useSetActivePage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (pageId: string | null) => api.setActivePage(pageId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.activePage });
+      queryClient.invalidateQueries({ queryKey: queryKeys.status });
+    },
+  });
+}
+
+// Pages list query
+export function usePages() {
+  return useQuery({
+    queryKey: queryKeys.pages,
+    queryFn: api.getPages,
+    retry: 1,
+  });
+}
+
+// Page preview query - for displaying a specific page
+export function usePagePreview(pageId: string | null, options?: { enabled?: boolean; refetchInterval?: number }) {
+  return useQuery({
+    queryKey: queryKeys.pagePreview(pageId || ""),
+    queryFn: () => (pageId ? api.previewPage(pageId) : Promise.reject("No page ID")),
+    enabled: !!pageId && (options?.enabled !== false),
+    retry: 1,
+    refetchInterval: options?.refetchInterval,
+  });
+}

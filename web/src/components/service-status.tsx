@@ -8,7 +8,7 @@ export function ServiceStatus() {
   const { data, isLoading, isError } = useStatus();
 
   if (isLoading) {
-    return <Skeleton className="h-6 w-32" />;
+    return <Skeleton className="h-5 w-20" />;
   }
 
   if (isError || !data) {

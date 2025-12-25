@@ -149,8 +149,8 @@ export const mockTemplateVariables: TemplateVariables = {
   symbols: ["sun", "cloud", "rain", "star", "heart"],
   filters: ["pad:N", "upper", "lower", "truncate:N", "capitalize"],
   syntax_examples: {
-    variable: "{{weather.temp}}",
-    variable_with_filter: "{{weather.temp|pad:3}}",
+    variable: "{{weather.temperature}}",
+    variable_with_filter: "{{weather.temperature|pad:3}}",
     color_inline: "{red}Warning{/}",
     color_code: "{63}",
     symbol: "{sun}",
@@ -314,6 +314,23 @@ export const handlers = [
     return HttpResponse.json({
       status: "success",
       settings: { target: body.target },
+    });
+  }),
+
+  // Active page settings
+  http.get(`${API_BASE}/settings/active-page`, () => {
+    return HttpResponse.json({
+      page_id: "page-1",
+    });
+  }),
+
+  http.put(`${API_BASE}/settings/active-page`, async ({ request }) => {
+    const body = await request.json() as { page_id: string | null };
+    return HttpResponse.json({
+      status: "success",
+      page_id: body.page_id,
+      sent_to_board: true,
+      dev_mode: false,
     });
   }),
 

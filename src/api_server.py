@@ -200,6 +200,8 @@ async def get_status():
     if not service:
         raise HTTPException(status_code=503, detail="Service not initialized")
     
+    settings_service = get_settings_service()
+    
     status = StatusResponse(
         running=_service_running,
         initialized=service is not None,
@@ -207,6 +209,8 @@ async def get_status():
     )
     # Add dev mode to config summary for UI
     status.config_summary["dev_mode"] = _dev_mode
+    # Add active page ID to config summary
+    status.config_summary["active_page_id"] = settings_service.get_active_page_id()
     return status
 
 
@@ -727,6 +731,69 @@ async def update_output_settings(request: dict):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@app.get("/settings/active-page")
+async def get_active_page():
+    """Get the currently active page ID."""
+    settings_service = get_settings_service()
+    page_id = settings_service.get_active_page_id()
+    return {
+        "page_id": page_id
+    }
+
+
+@app.put("/settings/active-page")
+async def set_active_page(request: dict):
+    """
+    Set the active page ID.
+    
+    Body should include:
+    - page_id: Page ID to set as active, or null to clear
+    
+    When a page is set, it will be immediately rendered and sent to the board
+    (unless dev_mode is enabled).
+    """
+    global _dev_mode
+    
+    settings_service = get_settings_service()
+    page_service = get_page_service()
+    service = get_service()
+    
+    page_id = request.get("page_id")
+    
+    # Validate page exists if not clearing
+    if page_id is not None:
+        page = page_service.get_page(page_id)
+        if not page:
+            raise HTTPException(status_code=404, detail=f"Page not found: {page_id}")
+    
+    # Set the active page
+    settings_service.set_active_page_id(page_id)
+    
+    # Immediately send to board if a page is set
+    sent_to_board = False
+    if page_id and service and service.vb_client and not _dev_mode:
+        result = page_service.preview_page(page_id)
+        if result and result.available:
+            transition = settings_service.get_transition_settings()
+            board_array = text_to_board_array(result.formatted)
+            success, was_sent = service.vb_client.send_characters(
+                board_array,
+                strategy=transition.strategy,
+                step_interval_ms=transition.step_interval_ms,
+                step_size=transition.step_size
+            )
+            sent_to_board = was_sent
+            if not success:
+                logger.warning(f"Failed to send active page to board: {page_id}")
+    
+    return {
+        "status": "success",
+        "page_id": page_id,
+        "sent_to_board": sent_to_board,
+        "dev_mode": _dev_mode
+    }
+
+
 # =============================================================================
 # Pages Endpoints
 # =============================================================================
@@ -906,11 +973,13 @@ async def get_template_variables():
     Get available template variables by source.
     
     Returns a dictionary mapping source names to available field names.
-    Use these in templates as {{source.field}}, e.g., {{weather.temp}}.
+    Use these in templates as {{source.field}}, e.g., {{weather.temperature}}.
+    Also includes max character lengths for validation.
     """
     template_engine = get_template_engine()
     return {
         "variables": template_engine.get_available_variables(),
+        "max_lengths": template_engine.get_variable_max_lengths(),
         "colors": {
             "red": 63,
             "orange": 64,
@@ -922,13 +991,14 @@ async def get_template_variables():
             "black": 70,
         },
         "symbols": ["sun", "star", "cloud", "rain", "snow", "storm", "fog", "partly", "heart", "check", "x"],
-        "filters": ["pad:N", "upper", "lower", "truncate:N", "capitalize"],
+        "filters": ["pad:N", "upper", "lower", "truncate:N", "capitalize", "wrap"],
         "syntax_examples": {
-            "variable": "{{weather.temp}}",
-            "variable_with_filter": "{{weather.temp|pad:3}}",
+            "variable": "{{weather.temperature}}",
+            "variable_with_filter": "{{weather.temperature|pad:3}}",
             "color_inline": "{red}Warning{/}",
             "color_code": "{63}",
             "symbol": "{sun}",
+            "wrap": "{{star_trek.quote|wrap}}",
         }
     }
 
@@ -1205,360 +1275,9 @@ async def force_refresh():
         raise HTTPException(status_code=500, detail=f"Failed to force refresh: {str(e)}")
 
 
-@app.post("/publish-preview")
-async def publish_preview(
-    datetime_enabled: Optional[bool] = None,
-    weather_enabled: Optional[bool] = None,
-    home_assistant_enabled: Optional[bool] = None,
-    apple_music_enabled: Optional[bool] = None,
-    guest_wifi_enabled: Optional[bool] = None,
-    star_trek_quotes_enabled: Optional[bool] = None,
-    rotation_enabled: Optional[bool] = None,
-):
-    """
-    Publish the current preview to the actual Vestaboard.
-    This bypasses dev mode and sends the message.
-    
-    Accepts the same override parameters as /preview to publish exactly what's shown in the UI.
-    """
-    global _dev_mode
-    service = get_service()
-    if not service:
-        raise HTTPException(status_code=503, detail="Service not initialized")
-    
-    if not service.vb_client:
-        raise HTTPException(status_code=503, detail="Vestaboard client not initialized")
-    
-    # Build effective config (backend config with UI overrides) - same logic as /preview
-    eff_datetime = datetime_enabled if datetime_enabled is not None else True
-    eff_weather = weather_enabled if weather_enabled is not None else bool(Config.WEATHER_API_KEY)
-    eff_home_assistant = home_assistant_enabled if home_assistant_enabled is not None else Config.HOME_ASSISTANT_ENABLED
-    eff_apple_music = apple_music_enabled if apple_music_enabled is not None else Config.APPLE_MUSIC_ENABLED
-    eff_guest_wifi = guest_wifi_enabled if guest_wifi_enabled is not None else Config.GUEST_WIFI_ENABLED
-    eff_star_trek = star_trek_quotes_enabled if star_trek_quotes_enabled is not None else Config.STAR_TREK_QUOTES_ENABLED
-    eff_rotation = rotation_enabled if rotation_enabled is not None else Config.ROTATION_ENABLED
-    
-    try:
-        import time as time_module
-        current_time = time_module.time()
-        
-        # Check Home Assistant status (if enabled by override)
-        check_home_assistant = (
-            eff_home_assistant and
-            service.home_assistant_source and
-            current_time - service.last_home_assistant_check >= Config.HOME_ASSISTANT_REFRESH_SECONDS
-        )
-        
-        home_assistant_data = None
-        if check_home_assistant and service.home_assistant_source:
-            try:
-                entities = Config.get_ha_entities()
-                home_assistant_data = service.home_assistant_source.get_house_status(entities)
-            except Exception as e:
-                logger.error(f"Error fetching Home Assistant data: {e}")
-        
-        # Check Apple Music (if enabled by override)
-        check_apple_music = (
-            eff_apple_music and
-            service.apple_music_source and 
-            current_time - service.last_apple_music_check >= Config.APPLE_MUSIC_REFRESH_SECONDS
-        )
-        
-        apple_music_data = None
-        if check_apple_music and service.apple_music_source:
-            try:
-                apple_music_data = service.apple_music_source.fetch_now_playing()
-            except Exception as e:
-                logger.error(f"Error fetching Apple Music: {e}")
-        
-        # Determine what would be displayed (following priority) - using effective overrides
-        message = None
-        display_type = "unknown"
-        
-        # PRIORITY 1: Guest WiFi (if enabled by override)
-        if eff_guest_wifi:
-            if Config.GUEST_WIFI_SSID and Config.GUEST_WIFI_PASSWORD:
-                message = service.formatter.format_guest_wifi(
-                    Config.GUEST_WIFI_SSID,
-                    Config.GUEST_WIFI_PASSWORD
-                )
-                display_type = "guest_wifi"
-        
-        # PRIORITY 2: Apple Music (when playing and enabled by override)
-        if not message and eff_apple_music and apple_music_data and apple_music_data.get("playing"):
-            message = service.formatter.format_apple_music(apple_music_data)
-            display_type = "apple_music"
-        
-        # PRIORITY 3: Rotation or Weather
-        if not message:
-            # Build available screens based on effective config
-            available_screens = []
-            if eff_weather or eff_datetime:
-                available_screens.append("weather")
-            if eff_home_assistant and home_assistant_data:
-                available_screens.append("home_assistant")
-            if eff_star_trek and service.star_trek_quotes_source:
-                available_screens.append("star_trek")
-            
-            # If rotation disabled or only one screen, use first available
-            if not eff_rotation or len(available_screens) <= 1:
-                rotation_screen = available_screens[0] if available_screens else "weather"
-            else:
-                rotation_screen = service._get_rotation_screen(
-                    current_time,
-                    home_assistant_data is not None,
-                    service.star_trek_quotes_source is not None and eff_star_trek
-                )
-            
-            if rotation_screen == "star_trek" and service.star_trek_quotes_source and eff_star_trek:
-                try:
-                    quote_data = service.star_trek_quotes_source.get_random_quote()
-                    if quote_data:
-                        message = service.formatter.format_star_trek_quote(quote_data)
-                        display_type = "star_trek"
-                except Exception as e:
-                    logger.error(f"Error getting Star Trek quote: {e}")
-            
-            elif rotation_screen == "home_assistant" and home_assistant_data:
-                message = service.formatter.format_house_status(home_assistant_data)
-                display_type = "home_assistant"
-            
-            elif rotation_screen == "weather" or not message:
-                # Fetch weather data
-                weather_data = None
-                if service.weather_source and eff_weather:
-                    try:
-                        weather_data = service.weather_source.fetch_current_weather()
-                    except Exception as e:
-                        logger.error(f"Error fetching weather: {e}")
-                
-                # Fetch datetime data
-                datetime_data = None
-                if service.datetime_source and eff_datetime:
-                    try:
-                        datetime_data = service.datetime_source.get_current_datetime()
-                    except Exception as e:
-                        logger.error(f"Error fetching datetime: {e}")
-                
-                if weather_data or datetime_data:
-                    message = service.formatter.format_combined(weather_data, datetime_data)
-                    display_type = "weather"
-        
-        if not message:
-            raise HTTPException(status_code=400, detail="No message available to publish")
-        
-        # Temporarily disable dev mode to send
-        old_dev_mode = _dev_mode
-        _dev_mode = False
-        
-        try:
-            # Get transition settings
-            settings_service = get_settings_service()
-            transition = settings_service.get_transition_settings()
-            
-            # Convert to board array for proper character/color support
-            board_array = text_to_board_array(message)
-            
-            # Force send since user explicitly wants to publish
-            success, was_sent = service.vb_client.send_characters(
-                board_array,
-                strategy=transition.strategy,
-                step_interval_ms=transition.step_interval_ms,
-                step_size=transition.step_size,
-                force=True
-            )
-            if success:
-                if was_sent:
-                    logger.info(f"Preview published to Vestaboard ({display_type}): {message[:50]}...")
-                else:
-                    logger.info(f"Preview skipped (unchanged): {message[:50]}...")
-                return {
-                    "status": "success",
-                    "message": f"Preview {'published' if was_sent else 'unchanged (not sent)'} to Vestaboard",
-                    "display_type": display_type,
-                    "preview_message": message,
-                    "was_sent": was_sent
-                }
-            else:
-                raise HTTPException(status_code=500, detail="Failed to publish to Vestaboard")
-        finally:
-            _dev_mode = old_dev_mode  # Restore dev mode state
-            
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error publishing preview: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to publish preview: {str(e)}")
-
-
-@app.get("/preview")
-async def preview_message(
-    datetime_enabled: Optional[bool] = None,
-    weather_enabled: Optional[bool] = None,
-    home_assistant_enabled: Optional[bool] = None,
-    apple_music_enabled: Optional[bool] = None,
-    guest_wifi_enabled: Optional[bool] = None,
-    star_trek_quotes_enabled: Optional[bool] = None,
-    rotation_enabled: Optional[bool] = None,
-):
-    """
-    Preview what would be sent to the Vestaboard without actually sending it.
-    Perfect for development/testing!
-    
-    Query params allow overriding enabled states for preview purposes.
-    """
-    service = get_service()
-    if not service:
-        raise HTTPException(status_code=503, detail="Service not initialized")
-    
-    # Build effective config (backend config with UI overrides)
-    eff_datetime = datetime_enabled if datetime_enabled is not None else True  # Always on by default
-    eff_weather = weather_enabled if weather_enabled is not None else bool(Config.WEATHER_API_KEY)
-    eff_home_assistant = home_assistant_enabled if home_assistant_enabled is not None else Config.HOME_ASSISTANT_ENABLED
-    eff_apple_music = apple_music_enabled if apple_music_enabled is not None else Config.APPLE_MUSIC_ENABLED
-    eff_guest_wifi = guest_wifi_enabled if guest_wifi_enabled is not None else Config.GUEST_WIFI_ENABLED
-    eff_star_trek = star_trek_quotes_enabled if star_trek_quotes_enabled is not None else Config.STAR_TREK_QUOTES_ENABLED
-    eff_rotation = rotation_enabled if rotation_enabled is not None else Config.ROTATION_ENABLED
-    
-    try:
-        import time as time_module
-        
-        # Get current time
-        current_time = time_module.time()
-        
-        # Check Home Assistant status (if enabled)
-        check_home_assistant = (
-            eff_home_assistant and
-            service.home_assistant_source and
-            current_time - service.last_home_assistant_check >= Config.HOME_ASSISTANT_REFRESH_SECONDS
-        )
-        
-        # Fetch Home Assistant data (if it's time)
-        home_assistant_data = None
-        if check_home_assistant and service.home_assistant_source:
-            try:
-                entities = Config.get_ha_entities()
-                home_assistant_data = service.home_assistant_source.get_house_status(entities)
-                if home_assistant_data:
-                    logger.debug(f"Home Assistant data: {list(home_assistant_data.keys())}")
-            except Exception as e:
-                logger.error(f"Error fetching Home Assistant data: {e}")
-        
-        # Check Apple Music
-        check_apple_music = (
-            eff_apple_music and
-            service.apple_music_source and 
-            current_time - service.last_apple_music_check >= Config.APPLE_MUSIC_REFRESH_SECONDS
-        )
-        
-        apple_music_data = None
-        if check_apple_music and service.apple_music_source:
-            try:
-                apple_music_data = service.apple_music_source.fetch_now_playing()
-                if apple_music_data:
-                    logger.debug(f"Apple Music data: {apple_music_data}")
-            except Exception as e:
-                logger.error(f"Error fetching Apple Music: {e}")
-        
-        # Determine what would be displayed (following priority)
-        message = None
-        display_type = "unknown"
-        
-        # PRIORITY 1: Guest WiFi
-        if eff_guest_wifi:
-            if Config.GUEST_WIFI_SSID and Config.GUEST_WIFI_PASSWORD:
-                message = service.formatter.format_guest_wifi(
-                    Config.GUEST_WIFI_SSID,
-                    Config.GUEST_WIFI_PASSWORD
-                )
-                display_type = "guest_wifi"
-        
-        # PRIORITY 2: Apple Music (when playing)
-        if not message and eff_apple_music and apple_music_data and apple_music_data.get("playing"):
-            message = service.formatter.format_apple_music(apple_music_data)
-            display_type = "apple_music"
-        
-        # PRIORITY 3: Rotation or Weather
-        if not message:
-            # Build available screens based on effective config
-            available_screens = []
-            if eff_weather or eff_datetime:
-                available_screens.append("weather")  # "weather" screen shows both weather and datetime
-            if eff_home_assistant and home_assistant_data:
-                available_screens.append("home_assistant")
-            if eff_star_trek and service.star_trek_quotes_source:
-                available_screens.append("star_trek")
-            
-            rotation_screen = None
-            if eff_rotation and available_screens:
-                rotation_screen = service._get_rotation_screen(
-                    current_time,
-                    "home_assistant" in available_screens,
-                    "star_trek" in available_screens
-                )
-                # Only use if it's in our available screens
-                if rotation_screen not in available_screens:
-                    rotation_screen = available_screens[0] if available_screens else None
-            elif available_screens:
-                rotation_screen = available_screens[0]
-            
-            if rotation_screen == "star_trek" and service.star_trek_quotes_source:
-                try:
-                    quote_data = service.star_trek_quotes_source.get_random_quote()
-                    if quote_data:
-                        message = service.formatter.format_star_trek_quote(quote_data)
-                        display_type = "star_trek"
-                except Exception as e:
-                    logger.error(f"Error getting Star Trek quote: {e}")
-            
-            elif rotation_screen == "home_assistant" and home_assistant_data:
-                message = service.formatter.format_house_status(home_assistant_data)
-                display_type = "home_assistant"
-            
-            elif rotation_screen == "weather" and (eff_weather or eff_datetime):
-                # Fetch weather data
-                weather_data = None
-                if eff_weather and service.weather_source:
-                    try:
-                        weather_data = service.weather_source.fetch_current_weather()
-                    except Exception as e:
-                        logger.error(f"Error fetching weather: {e}")
-                
-                # Fetch datetime data
-                datetime_data = None
-                if eff_datetime and service.datetime_source:
-                    try:
-                        datetime_data = service.datetime_source.get_current_datetime()
-                    except Exception as e:
-                        logger.error(f"Error fetching datetime: {e}")
-                
-                if weather_data or datetime_data:
-                    message = service.formatter.format_combined(weather_data, datetime_data)
-                    if weather_data and datetime_data:
-                        display_type = "weather_datetime"
-                    elif weather_data:
-                        display_type = "weather"
-                    else:
-                        display_type = "datetime"
-        
-        if not message:
-            message = "No data available to display"
-            display_type = "empty"
-        
-        # Split message into lines for display
-        lines = message.split('\n')
-        
-        return {
-            "message": message,
-            "lines": lines,
-            "display_type": display_type,
-            "line_count": len(lines),
-            "preview": True
-        }
-        
-    except Exception as e:
-        logger.error(f"Error generating preview: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to generate preview: {str(e)}")
+# Legacy endpoints /preview and /publish-preview have been removed.
+# Use /pages/{page_id}/preview and /pages/{page_id}/send instead.
+# Set the active page with PUT /settings/active-page for automatic board updates.
 
 
 if __name__ == "__main__":

@@ -47,10 +47,15 @@ The only code that may run locally:
 
 ### Available Cursor Commands
 
+- `/setup` - Check and install prerequisites (Homebrew, Docker) and configure environment
 - `/start` - Start all Docker containers
 - `/stop` - Stop all Docker containers
 - `/restart` - Stop, rebuild with --no-cache, and restart all containers
+- `/redeploy` - Full rebuild with --no-cache and restart (alias for restart)
+- `/redeploy-quick` - Quick rebuild (with cache) and restart
 - `/build` - Rebuild Docker images without restarting
+- `/status` - Show status of all Docker containers
+- `/logs` - View Docker container logs
 - `/test-api` - Run API tests in Docker
 - `/test-web` - Run web tests in Docker
 

@@ -169,13 +169,13 @@ export function ServiceControls() {
   if (isLoading) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Service Control</CardTitle>
+        <CardHeader className="px-4 sm:px-6">
+          <CardTitle className="text-base sm:text-lg">Service Control</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 px-4 sm:px-6">
           <div className="flex gap-2">
-            <Skeleton className="h-8 w-20" />
-            <Skeleton className="h-8 w-20" />
+            <Skeleton className="h-10 sm:h-8 flex-1 sm:w-20 sm:flex-none" />
+            <Skeleton className="h-10 sm:h-8 flex-1 sm:w-20 sm:flex-none" />
           </div>
           <Skeleton className="h-5 w-full max-w-[200px]" />
         </CardContent>
@@ -185,39 +185,39 @@ export function ServiceControls() {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="px-4 sm:px-6">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Service Control</CardTitle>
+          <CardTitle className="text-base sm:text-lg">Service Control</CardTitle>
           <Badge variant={isRunning ? "default" : "secondary"} className="text-xs">
             {isRunning ? "● Running" : "○ Stopped"}
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 px-4 sm:px-6">
         <div className="flex gap-2">
           <Button
             onClick={handleStart}
             disabled={isRunning || startMutation.isPending}
             variant={isRunning ? "outline" : "default"}
-            size="sm"
-            className="gap-1.5"
+            size="default"
+            className="gap-1.5 h-10 sm:h-9 flex-1 sm:flex-none"
           >
-            <Play className="h-3.5 w-3.5" />
+            <Play className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
             Start
           </Button>
           <Button
             onClick={handleStop}
             disabled={!isRunning || stopMutation.isPending}
             variant={!isRunning ? "outline" : "destructive"}
-            size="sm"
-            className="gap-1.5"
+            size="default"
+            className="gap-1.5 h-10 sm:h-9 flex-1 sm:flex-none"
           >
-            <Square className="h-3.5 w-3.5" />
+            <Square className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
             Stop
           </Button>
         </div>
 
-        <div className="flex items-center gap-2 pt-2">
+        <div className="flex items-center gap-3 pt-2">
           <FlaskConical className="h-4 w-4 text-muted-foreground shrink-0" />
           <Switch
             checked={devMode}
@@ -225,7 +225,7 @@ export function ServiceControls() {
             disabled={devModeMutation.isPending}
             id="dev-mode"
           />
-          <label htmlFor="dev-mode" className="text-xs cursor-pointer">
+          <label htmlFor="dev-mode" className="text-xs sm:text-sm cursor-pointer">
             Dev Mode
             <span className="text-muted-foreground ml-1">
               {devMode ? "(preview)" : "(live)"}
@@ -235,24 +235,24 @@ export function ServiceControls() {
 
         {/* Output Target Settings */}
         <div className="pt-2 border-t">
-          <label className="text-xs font-medium">Output Target</label>
-          <div className="flex gap-1 mt-1.5">
+          <label className="text-xs sm:text-sm font-medium">Output Target</label>
+          <div className="flex flex-col sm:flex-row gap-1.5 sm:gap-1 mt-2">
             {OUTPUT_TARGETS.map(({ value, label, icon: Icon }) => (
               <Button
                 key={value}
                 size="sm"
                 variant={outputSettings?.target === value ? "default" : "outline"}
-                className="flex-1 h-7 text-xs gap-1"
+                className="flex-1 h-9 sm:h-8 text-xs gap-1.5"
                 onClick={() => handleOutputChange(value)}
                 disabled={updateOutputMutation.isPending || devModeMutation.isPending}
               >
-                {Icon && <Icon className="h-3 w-3" />}
+                {Icon && <Icon className="h-4 w-4 sm:h-3 sm:w-3" />}
                 {label}
               </Button>
             ))}
           </div>
           {outputSettings && (
-            <p className="text-[10px] text-muted-foreground mt-1">
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1.5">
               Effective: {outputSettings.effective_target}
             </p>
           )}
@@ -260,8 +260,8 @@ export function ServiceControls() {
 
         {/* Cache Status */}
         <div className="pt-2 border-t">
-          <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs font-medium">Message Cache</label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs sm:text-sm font-medium">Message Cache</label>
             {cacheStatus?.cached && (
               <Badge variant="secondary" className="text-[10px]">
                 Cached
@@ -269,32 +269,32 @@ export function ServiceControls() {
             )}
           </div>
           {cacheStatus && (
-            <div className="text-[10px] text-muted-foreground space-y-0.5">
+            <div className="text-[10px] sm:text-xs text-muted-foreground space-y-0.5">
               <p>Hits: {cacheStatus.cache_hits} / {cacheStatus.total_sends} sends</p>
               {cacheStatus.last_sent_at && (
                 <p>Last sent: {new Date(cacheStatus.last_sent_at).toLocaleTimeString()}</p>
               )}
             </div>
           )}
-          <div className="flex gap-1 mt-2">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-1 mt-3">
             <Button
               size="sm"
               variant="outline"
-              className="flex-1 h-7 text-xs gap-1"
+              className="flex-1 h-9 sm:h-8 text-xs gap-1.5"
               onClick={() => clearCacheMutation.mutate()}
               disabled={clearCacheMutation.isPending || !cacheStatus?.cached}
             >
-              <Trash2 className="h-3 w-3" />
+              <Trash2 className="h-4 w-4 sm:h-3 sm:w-3" />
               Clear Cache
             </Button>
             <Button
               size="sm"
               variant="outline"
-              className="flex-1 h-7 text-xs gap-1"
+              className="flex-1 h-9 sm:h-8 text-xs gap-1.5"
               onClick={() => forceRefreshMutation.mutate()}
               disabled={forceRefreshMutation.isPending}
             >
-              <RefreshCw className="h-3 w-3" />
+              <RefreshCw className="h-4 w-4 sm:h-3 sm:w-3" />
               Force Refresh
             </Button>
           </div>

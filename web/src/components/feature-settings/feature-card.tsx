@@ -8,14 +8,14 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { ChevronDown, ChevronUp, Save, Eye, EyeOff, AlertCircle, Copy, Check } from "lucide-react";
+import { ChevronDown, ChevronUp, Save, Eye, EyeOff, AlertCircle, Copy, Check, Plus, Trash2, ArrowUp, ArrowDown, MapPin, Loader2 } from "lucide-react";
 import { api, FeatureName } from "@/lib/api";
 import { LucideIcon } from "lucide-react";
 
 export interface FeatureField {
   key: string;
   label: string;
-  type: "text" | "password" | "select" | "number";
+  type: "text" | "password" | "select" | "number" | "location";
   placeholder?: string;
   options?: { value: string; label: string }[];
   required?: boolean;
@@ -30,6 +30,41 @@ export interface OutputParameter {
   typical?: string;
 }
 
+export interface ColorRule {
+  condition: string;
+  value: string | number;
+  color: string;
+}
+
+export interface ColorRulesConfig {
+  [fieldName: string]: ColorRule[];
+}
+
+// Color display helpers
+const COLOR_DISPLAY: Record<string, { bg: string; text: string }> = {
+  red: { bg: "bg-red-500", text: "text-white" },
+  orange: { bg: "bg-orange-500", text: "text-white" },
+  yellow: { bg: "bg-yellow-400", text: "text-black" },
+  green: { bg: "bg-green-500", text: "text-white" },
+  blue: { bg: "bg-blue-500", text: "text-white" },
+  violet: { bg: "bg-violet-500", text: "text-white" },
+  white: { bg: "bg-white border", text: "text-black" },
+  black: { bg: "bg-black", text: "text-white" },
+};
+
+// Available colors for picker
+const AVAILABLE_COLORS = ["red", "orange", "yellow", "green", "blue", "violet", "white", "black"];
+
+// Available conditions
+const AVAILABLE_CONDITIONS = [
+  { value: ">=", label: ">= (greater or equal)" },
+  { value: "<=", label: "<= (less or equal)" },
+  { value: ">", label: "> (greater than)" },
+  { value: "<", label: "< (less than)" },
+  { value: "==", label: "== (equals)" },
+  { value: "!=", label: "!= (not equals)" },
+];
+
 interface FeatureCardProps {
   featureName: FeatureName;
   title: string;
@@ -39,6 +74,255 @@ interface FeatureCardProps {
   outputs?: OutputParameter[];
   initialConfig?: Record<string, unknown>;
   isLoading?: boolean;
+}
+
+// Color Rules Editor Component
+function ColorRulesEditor({
+  featureName,
+  colorRules,
+  onChange,
+  onCopyVar,
+  copiedVar,
+}: {
+  featureName: string;
+  colorRules: ColorRulesConfig;
+  onChange: (rules: ColorRulesConfig) => void;
+  onCopyVar: (varName: string) => void;
+  copiedVar: string | null;
+}) {
+  const [newFieldName, setNewFieldName] = useState("");
+  const [showAddField, setShowAddField] = useState(false);
+
+  const handleUpdateRule = (fieldName: string, ruleIndex: number, updates: Partial<ColorRule>) => {
+    const newRules = { ...colorRules };
+    newRules[fieldName] = [...newRules[fieldName]];
+    newRules[fieldName][ruleIndex] = { ...newRules[fieldName][ruleIndex], ...updates };
+    onChange(newRules);
+  };
+
+  const handleDeleteRule = (fieldName: string, ruleIndex: number) => {
+    const newRules = { ...colorRules };
+    newRules[fieldName] = newRules[fieldName].filter((_, i) => i !== ruleIndex);
+    if (newRules[fieldName].length === 0) {
+      delete newRules[fieldName];
+    }
+    onChange(newRules);
+  };
+
+  const handleAddRule = (fieldName: string) => {
+    const newRules = { ...colorRules };
+    if (!newRules[fieldName]) {
+      newRules[fieldName] = [];
+    }
+    newRules[fieldName] = [...newRules[fieldName], { condition: ">=", value: 0, color: "green" }];
+    onChange(newRules);
+  };
+
+  const handleMoveRule = (fieldName: string, ruleIndex: number, direction: "up" | "down") => {
+    const newRules = { ...colorRules };
+    const rules = [...newRules[fieldName]];
+    const newIndex = direction === "up" ? ruleIndex - 1 : ruleIndex + 1;
+    if (newIndex < 0 || newIndex >= rules.length) return;
+    [rules[ruleIndex], rules[newIndex]] = [rules[newIndex], rules[ruleIndex]];
+    newRules[fieldName] = rules;
+    onChange(newRules);
+  };
+
+  const handleAddField = () => {
+    if (!newFieldName.trim()) return;
+    const newRules = { ...colorRules };
+    newRules[newFieldName.trim()] = [{ condition: ">=", value: 0, color: "green" }];
+    onChange(newRules);
+    setNewFieldName("");
+    setShowAddField(false);
+  };
+
+  const handleDeleteField = (fieldName: string) => {
+    const newRules = { ...colorRules };
+    delete newRules[fieldName];
+    onChange(newRules);
+  };
+
+  const fieldNames = Object.keys(colorRules);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-medium text-muted-foreground">
+          Dynamic Colors
+          <span className="ml-2 text-xs font-normal">(first match wins)</span>
+        </h4>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 text-xs"
+          onClick={() => setShowAddField(!showAddField)}
+        >
+          <Plus className="h-3 w-3 mr-1" />
+          Add Field
+        </Button>
+      </div>
+
+      {/* Add new field input */}
+      {showAddField && (
+        <div className="flex gap-2 p-2 rounded-md border bg-muted/30">
+          <input
+            type="text"
+            value={newFieldName}
+            onChange={(e) => setNewFieldName(e.target.value)}
+            placeholder="Field name (e.g., temp)"
+            className="flex-1 h-8 px-2 text-xs rounded border bg-background"
+          />
+          <Button size="sm" className="h-8 text-xs" onClick={handleAddField}>
+            Add
+          </Button>
+          <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setShowAddField(false)}>
+            Cancel
+          </Button>
+        </div>
+      )}
+
+      {fieldNames.length === 0 ? (
+        <p className="text-xs text-muted-foreground py-2">
+          No color rules configured. Add a field to create dynamic colors.
+        </p>
+      ) : (
+        <div className="space-y-3">
+          {fieldNames.map((fieldName) => {
+            const rules = colorRules[fieldName];
+            return (
+              <div key={fieldName} className="rounded-md border overflow-hidden">
+                {/* Field header */}
+                <div className="bg-muted/50 px-3 py-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <code className="text-xs font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                      {featureName}.{fieldName}
+                    </code>
+                    <span className="text-xs text-muted-foreground">→ color based on value</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => onCopyVar(`${fieldName}_color`)}
+                      className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 px-2 py-1 rounded hover:bg-muted"
+                    >
+                      {copiedVar === `${fieldName}_color` ? (
+                        <Check className="h-3 w-3 text-emerald-500" />
+                      ) : (
+                        <Copy className="h-3 w-3" />
+                      )}
+                      <code className="font-mono text-[10px]">{fieldName}_color</code>
+                    </button>
+                    <button
+                      onClick={() => handleDeleteField(fieldName)}
+                      className="p-1 text-destructive hover:bg-destructive/10 rounded"
+                      title="Delete all rules for this field"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Rules */}
+                <div className="divide-y">
+                  {rules.map((rule, idx) => {
+                    const colorStyle = COLOR_DISPLAY[rule.color] || { bg: "bg-gray-500", text: "text-white" };
+                    return (
+                      <div key={idx} className="px-3 py-2 flex items-center gap-2 text-xs">
+                        {/* Reorder buttons */}
+                        <div className="flex flex-col gap-0.5">
+                          <button
+                            onClick={() => handleMoveRule(fieldName, idx, "up")}
+                            disabled={idx === 0}
+                            className="p-0.5 hover:bg-muted rounded disabled:opacity-30"
+                          >
+                            <ArrowUp className="h-3 w-3" />
+                          </button>
+                          <button
+                            onClick={() => handleMoveRule(fieldName, idx, "down")}
+                            disabled={idx === rules.length - 1}
+                            className="p-0.5 hover:bg-muted rounded disabled:opacity-30"
+                          >
+                            <ArrowDown className="h-3 w-3" />
+                          </button>
+                        </div>
+
+                        {/* Color picker */}
+                        <select
+                          value={rule.color}
+                          onChange={(e) => handleUpdateRule(fieldName, idx, { color: e.target.value })}
+                          className={`h-7 px-2 rounded border text-xs font-medium ${colorStyle.bg} ${colorStyle.text}`}
+                        >
+                          {AVAILABLE_COLORS.map((color) => (
+                            <option key={color} value={color} className="bg-background text-foreground">
+                              {color}
+                            </option>
+                          ))}
+                        </select>
+
+                        <span className="text-muted-foreground shrink-0">when</span>
+
+                        {/* Condition picker */}
+                        <select
+                          value={rule.condition}
+                          onChange={(e) => handleUpdateRule(fieldName, idx, { condition: e.target.value })}
+                          className="h-7 px-2 rounded border bg-background text-xs font-mono"
+                        >
+                          {AVAILABLE_CONDITIONS.map((cond) => (
+                            <option key={cond.value} value={cond.value}>
+                              {cond.value}
+                            </option>
+                          ))}
+                        </select>
+
+                        {/* Value input */}
+                        <input
+                          type="text"
+                          value={rule.value}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            // Try to parse as number, otherwise keep as string
+                            const numVal = parseFloat(val);
+                            handleUpdateRule(fieldName, idx, { 
+                              value: isNaN(numVal) ? val : numVal 
+                            });
+                          }}
+                          className="w-20 h-7 px-2 rounded border bg-background text-xs font-mono"
+                          placeholder="value"
+                        />
+
+                        {/* Delete button */}
+                        <button
+                          onClick={() => handleDeleteRule(fieldName, idx)}
+                          className="p-1 text-destructive hover:bg-destructive/10 rounded ml-auto"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Add rule button */}
+                <div className="px-3 py-2 border-t bg-muted/20">
+                  <button
+                    onClick={() => handleAddRule(fieldName)}
+                    className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                  >
+                    <Plus className="h-3 w-3" />
+                    Add rule
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <p className="text-xs text-muted-foreground">
+        Rules are evaluated in order (first match wins). Use <code className="bg-muted px-1 rounded">{`{{${featureName}.field_color}}`}</code> for just the color tile.
+      </p>
+    </div>
+  );
 }
 
 export function FeatureCard({
@@ -57,6 +341,7 @@ export function FeatureCard({
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const [hasChanges, setHasChanges] = useState(false);
   const [copiedVar, setCopiedVar] = useState<string | null>(null);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
 
   // Initialize form data from config
   useEffect(() => {
@@ -110,6 +395,47 @@ export function FeatureCard({
     setCopiedVar(varName);
     setTimeout(() => setCopiedVar(null), 2000);
     toast.success(`Copied ${templateVar}`);
+  };
+
+  // Get current location using browser geolocation
+  const handleGetCurrentLocation = (fieldKey: string) => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser");
+      return;
+    }
+
+    setIsGettingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        // Format as "lat,lon" which works with both WeatherAPI and OpenWeatherMap
+        const locationString = `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+        handleChange(fieldKey, locationString);
+        setIsGettingLocation(false);
+        toast.success("Location updated to your current position");
+      },
+      (error) => {
+        setIsGettingLocation(false);
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            toast.error("Location permission denied. Please enable location access in your browser.");
+            break;
+          case error.POSITION_UNAVAILABLE:
+            toast.error("Location information is unavailable.");
+            break;
+          case error.TIMEOUT:
+            toast.error("Location request timed out.");
+            break;
+          default:
+            toast.error("Failed to get your location.");
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
   };
 
   // Check if secret field has value (masked as ***)
@@ -245,6 +571,34 @@ export function FeatureCard({
                       placeholder={field.placeholder}
                       className="w-full h-9 px-3 text-sm rounded-md border bg-background"
                     />
+                  ) : field.type === "location" ? (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={(formData[field.key] as string) ?? ""}
+                          onChange={(e) => handleChange(field.key, e.target.value)}
+                          placeholder={field.placeholder}
+                          className="flex-1 h-9 px-3 text-sm rounded-md border bg-background"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleGetCurrentLocation(field.key)}
+                          disabled={isGettingLocation}
+                          className="h-9 px-3 shrink-0"
+                          title="Use your current location"
+                        >
+                          {isGettingLocation ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <MapPin className="h-4 w-4" />
+                          )}
+                          <span className="ml-1.5 hidden sm:inline">Current Location</span>
+                        </Button>
+                      </div>
+                    </div>
                   ) : (
                     <input
                       type="text"
@@ -323,13 +677,33 @@ export function FeatureCard({
             </div>
           )}
 
+          {/* Color Rules Section */}
+          <ColorRulesEditor
+            featureName={featureName}
+            colorRules={(formData.color_rules as ColorRulesConfig) || {}}
+            onChange={(newRules) => {
+              handleChange("color_rules", newRules);
+            }}
+            onCopyVar={handleCopyVar}
+            copiedVar={copiedVar}
+          />
+
           {/* No config needed message */}
           {fields.length === 0 && outputs.length === 0 && (
             <p className="text-sm text-muted-foreground">No additional configuration required.</p>
           )}
 
           {/* Warning for enabled but missing required fields */}
-          {enabled && fields.some((f) => f.required && !formData[f.key]) && (
+          {enabled && fields.some((f) => {
+            if (!f.required) return false;
+            const value = formData[f.key];
+            // For password fields, "***" indicates a value is set
+            if (f.type === "password") {
+              return !hasSecretValue(f.key);
+            }
+            // For other fields, check if value is empty
+            return !value || (typeof value === "string" && value.trim() === "");
+          }) && (
             <div className="flex items-center gap-2 p-2 rounded-md bg-destructive/10 text-destructive text-xs">
               <AlertCircle className="h-4 w-4" />
               <span>Some required fields are empty</span>

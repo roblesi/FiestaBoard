@@ -54,13 +54,13 @@ export function OutputTargetSelector() {
   if (isLoading) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>Output Target</CardTitle>
-          <CardDescription>
+        <CardHeader className="px-4 sm:px-6">
+          <CardTitle className="text-base sm:text-lg">Output Target</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
             Choose where content should be displayed
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 sm:px-6">
           <Skeleton className="h-32 w-full" />
         </CardContent>
       </Card>
@@ -71,13 +71,13 @@ export function OutputTargetSelector() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Output Target</CardTitle>
-        <CardDescription>
+      <CardHeader className="px-4 sm:px-6">
+        <CardTitle className="text-base sm:text-lg">Output Target</CardTitle>
+        <CardDescription className="text-xs sm:text-sm">
           Choose where content should be displayed
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 px-4 sm:px-6">
         {OUTPUT_OPTIONS.map((option) => {
           const Icon = option.icon;
           const isActive = currentTarget === option.value;
@@ -88,30 +88,30 @@ export function OutputTargetSelector() {
               key={option.value}
               onClick={() => updateMutation.mutate(option.value)}
               disabled={updateMutation.isPending}
-              className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
+              className={`w-full p-4 rounded-lg border-2 text-left transition-all active:scale-[0.98] min-h-[64px] ${
                 isActive
                   ? "border-primary bg-primary/5"
-                  : "border-muted hover:border-primary/50"
+                  : "border-muted hover:border-primary/50 active:bg-muted/50"
               }`}
             >
               <div className="flex items-start gap-3">
                 <div
-                  className={`p-2 rounded-md ${
+                  className={`p-2 rounded-md shrink-0 ${
                     isActive ? "bg-primary text-primary-foreground" : "bg-muted"
                   }`}
                 >
                   <Icon className="h-5 w-5" />
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{option.label}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium text-sm sm:text-base">{option.label}</span>
                     {isActive && (
-                      <Badge variant="default" className="text-xs">
+                      <Badge variant="default" className="text-[10px] sm:text-xs">
                         Active
                       </Badge>
                     )}
                     {isEffective && !isActive && (
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge variant="secondary" className="text-[10px] sm:text-xs">
                         Effective
                       </Badge>
                     )}

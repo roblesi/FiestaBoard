@@ -42,8 +42,8 @@ class TestVariableSubstitution:
     
     def test_simple_variable(self, engine):
         """Test simple variable substitution."""
-        context = {"weather": {"temp": 72}}
-        result = engine.render("Temp: {{weather.temp}}", context)
+        context = {"weather": {"temperature": 72}}
+        result = engine.render("Temp: {{weather.temperature}}", context)
         assert result == "Temp: 72"
     
     def test_nested_variable(self, engine):
@@ -59,7 +59,7 @@ class TestVariableSubstitution:
     
     def test_missing_field(self, engine):
         """Test missing field returns marker."""
-        context = {"weather": {"temp": 72}}
+        context = {"weather": {"temperature": 72}}
         result = engine.render("{{weather.missing}}", context)
         assert "?" in result
     
@@ -75,12 +75,12 @@ class TestVariableSubstitution:
     
     def test_numeric_value(self, engine):
         """Test numeric values are formatted correctly."""
-        context = {"weather": {"temp": 72.5}}
-        result = engine.render("{{weather.temp}}", context)
+        context = {"weather": {"temperature": 72.5}}
+        result = engine.render("{{weather.temperature}}", context)
         assert result == "72.5"
         
-        context = {"weather": {"temp": 72.0}}
-        result = engine.render("{{weather.temp}}", context)
+        context = {"weather": {"temperature": 72.0}}
+        result = engine.render("{{weather.temperature}}", context)
         assert result == "72"  # No decimal for whole numbers
 
 
@@ -93,8 +93,8 @@ class TestFilters:
     
     def test_pad_filter(self, engine):
         """Test |pad:N filter."""
-        context = {"weather": {"temp": 72}}
-        result = engine.render("{{weather.temp|pad:5}}", context)
+        context = {"weather": {"temperature": 72}}
+        result = engine.render("{{weather.temperature|pad:5}}", context)
         assert result == "72   "  # Padded to 5 chars
     
     def test_upper_filter(self, engine):
@@ -189,12 +189,12 @@ class TestValidation:
     
     def test_valid_template(self, engine):
         """Test valid template has no errors."""
-        errors = engine.validate_template("{{weather.temp}} degrees")
+        errors = engine.validate_template("{{weather.temperature}} degrees")
         assert len(errors) == 0
     
     def test_mismatched_braces(self, engine):
         """Test mismatched braces are detected."""
-        errors = engine.validate_template("{{weather.temp} degrees")
+        errors = engine.validate_template("{{weather.temperature} degrees")
         assert any("brace" in e.message.lower() for e in errors)
     
     def test_unknown_source(self, engine):
@@ -281,7 +281,7 @@ class TestTemplateAPIEndpoints:
     def test_validate_template_valid(self, client):
         """Test POST /templates/validate with valid template."""
         response = client.post("/templates/validate", json={
-            "template": "{{weather.temp}}"
+            "template": "{{weather.temperature}}"
         })
         
         assert response.status_code == 200
@@ -291,7 +291,7 @@ class TestTemplateAPIEndpoints:
     def test_validate_template_invalid(self, client):
         """Test POST /templates/validate with invalid template."""
         response = client.post("/templates/validate", json={
-            "template": "{{weather.temp"  # Missing closing
+            "template": "{{weather.temperature"  # Missing closing
         })
         
         assert response.status_code == 200
@@ -307,7 +307,7 @@ class TestTemplateAPIEndpoints:
         mock_get_engine.return_value = mock_engine
         
         response = client.post("/templates/render", json={
-            "template": "{{weather.temp}} degrees"
+            "template": "{{weather.temperature}} degrees"
         })
         
         assert response.status_code == 200

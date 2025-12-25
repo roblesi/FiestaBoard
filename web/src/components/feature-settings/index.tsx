@@ -63,10 +63,10 @@ const FEATURE_DEFINITIONS: Record<
       {
         key: "location",
         label: "Location",
-        type: "text",
-        placeholder: "San Francisco, CA",
+        type: "location",
+        placeholder: "San Francisco, CA or 37.7749,-122.4194",
         required: true,
-        description: "City name or coordinates",
+        description: "City name or coordinates (use button to auto-detect)",
       },
       {
         key: "refresh_seconds",
@@ -77,8 +77,7 @@ const FEATURE_DEFINITIONS: Record<
       },
     ],
     outputs: [
-      { name: "temp", description: "Temperature in °F", example: "72", maxChars: 3, typical: "2-3 digits" },
-      { name: "temperature", description: "Temperature (alias)", example: "72", maxChars: 3 },
+      { name: "temperature", description: "Temperature in °F", example: "72", maxChars: 3, typical: "2-3 digits" },
       { name: "condition", description: "Weather condition", example: "Sunny", maxChars: 12, typical: "4-12 chars" },
       { name: "humidity", description: "Humidity percentage", example: "65", maxChars: 3, typical: "2-3 digits" },
       { name: "location", description: "Location name", example: "San Francisco", maxChars: 15, typical: "5-15 chars" },

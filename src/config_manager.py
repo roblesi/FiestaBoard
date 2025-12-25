@@ -31,11 +31,23 @@ DEFAULT_CONFIG: Dict[str, Any] = {
             "provider": "weatherapi",
             "location": "San Francisco, CA",
             "refresh_seconds": 300,  # 5 minutes - weather doesn't change fast
+            "color_rules": {
+                # Temperature color rules: prepend color tile based on value
+                "temp": [
+                    {"condition": ">=", "value": 90, "color": "red"},
+                    {"condition": ">=", "value": 80, "color": "orange"},
+                    {"condition": ">=", "value": 70, "color": "yellow"},
+                    {"condition": ">=", "value": 60, "color": "green"},
+                    {"condition": ">=", "value": 45, "color": "blue"},
+                    {"condition": "<", "value": 45, "color": "violet"},
+                ],
+            },
         },
         "datetime": {
             "enabled": True,
             "timezone": "America/Los_Angeles",
             # No refresh_seconds - always current
+            "color_rules": {},
         },
         "home_assistant": {
             "enabled": False,
@@ -44,23 +56,44 @@ DEFAULT_CONFIG: Dict[str, Any] = {
             "entities": [],
             "timeout": 5,
             "refresh_seconds": 30,  # 30 seconds for home status
+            "color_rules": {
+                # Entity state colors: shows status at a glance
+                "state": [
+                    {"condition": "==", "value": "on", "color": "red"},
+                    {"condition": "==", "value": "open", "color": "red"},
+                    {"condition": "==", "value": "unlocked", "color": "red"},
+                    {"condition": "==", "value": "off", "color": "green"},
+                    {"condition": "==", "value": "closed", "color": "green"},
+                    {"condition": "==", "value": "locked", "color": "green"},
+                ],
+            },
         },
         "apple_music": {
             "enabled": False,
             "service_url": "",
             "timeout": 5,
             "refresh_seconds": 10,  # 10 seconds to catch song changes
+            "color_rules": {},
         },
         "guest_wifi": {
             "enabled": False,
             "ssid": "",
             "password": "",
             # No refresh_seconds - static data
+            "color_rules": {},
         },
         "star_trek_quotes": {
             "enabled": False,
             "ratio": "3:5:9",
             # No refresh_seconds - changes per rotation
+            "color_rules": {
+                # Series colors match the show themes
+                "series": [
+                    {"condition": "==", "value": "TNG", "color": "yellow"},
+                    {"condition": "==", "value": "VOY", "color": "blue"},
+                    {"condition": "==", "value": "DS9", "color": "red"},
+                ],
+            },
         },
         "rotation": {
             "enabled": True,
@@ -113,8 +146,10 @@ class ConfigManager:
         if config_path:
             self._config_path = Path(config_path)
         else:
-            # Default to project root
-            self._config_path = Path(__file__).parent.parent / "config.json"
+            # Default to data directory
+            data_dir = Path(__file__).parent.parent / "data"
+            data_dir.mkdir(exist_ok=True)
+            self._config_path = data_dir / "config.json"
         
         self._config: Dict[str, Any] = {}
         self._load_or_create()
@@ -268,8 +303,8 @@ class ConfigManager:
             
             # Only update provided fields
             for key, value in settings.items():
-                # Allow any key that exists in defaults or is 'enabled'
-                if key in DEFAULT_CONFIG["features"].get(feature_name, {}) or key == "enabled":
+                # Allow any key that exists in defaults, 'enabled', or 'color_rules'
+                if key in DEFAULT_CONFIG["features"].get(feature_name, {}) or key in ("enabled", "color_rules"):
                     self._config["features"][feature_name][key] = value
             
             self._save_internal()
@@ -315,6 +350,23 @@ class ConfigManager:
     def get_feature_list(self) -> list:
         """Get list of all available features."""
         return list(DEFAULT_CONFIG.get("features", {}).keys())
+
+    def get_color_rules(self, feature_name: str, field_name: str) -> list:
+        """Get color rules for a specific feature field.
+        
+        Args:
+            feature_name: Name of the feature (e.g., 'weather').
+            field_name: Name of the field (e.g., 'temp').
+            
+        Returns:
+            List of color rule dicts, or empty list if none defined.
+        """
+        feature = self.get_feature(feature_name)
+        if not feature:
+            return []
+        
+        color_rules = feature.get("color_rules", {})
+        return color_rules.get(field_name, [])
 
     def validate(self) -> tuple[bool, list[str]]:
         """Validate the current configuration.

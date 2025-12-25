@@ -112,21 +112,21 @@ function RotationForm({
     <div className="space-y-4">
       {/* Name */}
       <div className="space-y-1.5">
-        <label className="text-xs font-medium">Rotation Name</label>
+        <label className="text-xs sm:text-sm font-medium">Rotation Name</label>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="My Rotation"
-          className="w-full h-8 px-2 text-sm rounded-md border bg-background"
+          className="w-full h-10 sm:h-9 px-3 text-sm rounded-md border bg-background"
         />
       </div>
 
       {/* Default Duration */}
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         <div className="flex justify-between">
-          <label className="text-xs font-medium">Default Page Duration</label>
-          <span className="text-xs text-muted-foreground">
+          <label className="text-xs sm:text-sm font-medium">Default Page Duration</label>
+          <span className="text-xs sm:text-sm text-muted-foreground">
             {Math.floor(defaultDuration / 60)}m {defaultDuration % 60}s
           </span>
         </div>
@@ -142,50 +142,50 @@ function RotationForm({
       </div>
 
       {/* Enabled */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3 py-1">
         <Switch checked={enabled} onCheckedChange={setEnabled} id="rotation-enabled" />
-        <label htmlFor="rotation-enabled" className="text-xs cursor-pointer">
+        <label htmlFor="rotation-enabled" className="text-xs sm:text-sm cursor-pointer">
           Enabled
         </label>
       </div>
 
       {/* Pages in Rotation */}
       <div className="space-y-2">
-        <label className="text-xs font-medium">Pages in Rotation</label>
+        <label className="text-xs sm:text-sm font-medium">Pages in Rotation</label>
         {entries.length === 0 ? (
-          <p className="text-xs text-muted-foreground py-2">
+          <p className="text-xs sm:text-sm text-muted-foreground py-2">
             No pages added yet. Add pages below.
           </p>
         ) : (
-          <div className="space-y-1">
+          <div className="space-y-2">
             {entries.map((entry, index) => (
               <div
                 key={`${entry.page_id}-${index}`}
-                className="flex items-center gap-2 p-2 rounded-md border bg-muted/30"
+                className="flex items-center gap-2 p-2 sm:p-2 rounded-md border bg-muted/30"
               >
                 <div className="flex flex-col gap-0.5">
                   <button
-                    className="p-0.5 hover:bg-muted rounded"
+                    className="p-1.5 sm:p-1 hover:bg-muted rounded active:bg-muted"
                     onClick={() => moveEntry(index, index - 1)}
                     disabled={index === 0}
                   >
                     <ChevronRight className="h-3 w-3 -rotate-90" />
                   </button>
                   <button
-                    className="p-0.5 hover:bg-muted rounded"
+                    className="p-1.5 sm:p-1 hover:bg-muted rounded active:bg-muted"
                     onClick={() => moveEntry(index, index + 1)}
                     disabled={index === entries.length - 1}
                   >
                     <ChevronRight className="h-3 w-3 rotate-90" />
                   </button>
                 </div>
-                <GripVertical className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs font-medium flex-1 truncate">
+                <GripVertical className="h-4 w-4 text-muted-foreground hidden sm:block" />
+                <span className="text-xs sm:text-sm font-medium flex-1 truncate">
                   {getPageName(entry.page_id)}
                 </span>
                 <input
                   type="number"
-                  placeholder="Duration"
+                  placeholder="Sec"
                   value={entry.duration_override || ""}
                   onChange={(e) =>
                     updateDurationOverride(
@@ -193,14 +193,14 @@ function RotationForm({
                       e.target.value ? parseInt(e.target.value) : undefined
                     )
                   }
-                  className="w-16 h-6 px-1 text-xs rounded border bg-background"
+                  className="w-14 sm:w-16 h-8 sm:h-7 px-1.5 text-xs rounded border bg-background"
                   title="Duration override (seconds)"
                 />
                 <button
                   onClick={() => removePage(index)}
-                  className="p-1 text-destructive hover:bg-destructive/10 rounded"
+                  className="p-2 sm:p-1.5 text-destructive hover:bg-destructive/10 active:bg-destructive/10 rounded min-h-[32px] min-w-[32px] flex items-center justify-center"
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-4 w-4 sm:h-3 sm:w-3" />
                 </button>
               </div>
             ))}
@@ -214,7 +214,7 @@ function RotationForm({
             onChange={(e) => {
               if (e.target.value) addPage(e.target.value);
             }}
-            className="w-full h-8 px-2 text-sm rounded-md border bg-background"
+            className="w-full h-10 sm:h-9 px-3 text-sm rounded-md border bg-background"
           >
             <option value="">Add a page...</option>
             {availablePages.map((page) => (
@@ -228,11 +228,11 @@ function RotationForm({
 
       {/* Actions */}
       <div className="flex gap-2 pt-2">
-        <Button size="sm" className="flex-1" onClick={handleSubmit}>
-          <Save className="h-3.5 w-3.5 mr-1" />
-          {rotation ? "Update" : "Create"} Rotation
+        <Button size="default" className="flex-1 h-10 sm:h-9" onClick={handleSubmit}>
+          <Save className="h-4 w-4 mr-1.5" />
+          {rotation ? "Update" : "Create"}
         </Button>
-        <Button size="sm" variant="outline" onClick={onCancel}>
+        <Button size="default" variant="outline" className="h-10 sm:h-9" onClick={onCancel}>
           Cancel
         </Button>
       </div>
@@ -403,13 +403,13 @@ export function RotationManager({ onClose }: RotationManagerProps) {
   if (loadingRotations) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
+        <CardHeader className="px-4 sm:px-6">
+          <CardTitle className="text-base sm:text-lg flex items-center gap-2">
             <RotateCw className="h-4 w-4" />
             Rotations
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent className="space-y-2 px-4 sm:px-6">
           <Skeleton className="h-12 w-full" />
           <Skeleton className="h-12 w-full" />
         </CardContent>
@@ -419,9 +419,9 @@ export function RotationManager({ onClose }: RotationManagerProps) {
 
   return (
     <Card>
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-3 px-4 sm:px-6">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg flex items-center gap-2">
+          <CardTitle className="text-base sm:text-lg flex items-center gap-2">
             <RotateCw className="h-4 w-4" />
             Rotations
           </CardTitle>
@@ -431,14 +431,14 @@ export function RotationManager({ onClose }: RotationManagerProps) {
                 size="sm"
                 variant="outline"
                 onClick={() => setShowForm(true)}
-                className="h-7 px-2 text-xs"
+                className="h-9 sm:h-8 px-3 text-xs"
               >
-                <Plus className="h-3 w-3 mr-1" />
+                <Plus className="h-4 w-4 sm:h-3 sm:w-3 mr-1" />
                 New
               </Button>
             )}
             {onClose && (
-              <Button size="sm" variant="ghost" onClick={onClose}>
+              <Button size="icon" variant="ghost" className="h-9 w-9 sm:h-8 sm:w-8" onClick={onClose}>
                 <X className="h-4 w-4" />
               </Button>
             )}
@@ -446,13 +446,13 @@ export function RotationManager({ onClose }: RotationManagerProps) {
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 px-4 sm:px-6">
         {/* Active Rotation Status */}
         <ActiveRotationStatus />
 
         {/* Create/Edit Form */}
         {showForm && (
-          <div className="border rounded-lg p-3 bg-muted/20">
+          <div className="border rounded-lg p-3 sm:p-4 bg-muted/20">
             <h4 className="text-sm font-medium mb-3">
               {editingRotation ? "Edit Rotation" : "Create Rotation"}
             </h4>
@@ -488,7 +488,7 @@ export function RotationManager({ onClose }: RotationManagerProps) {
                   >
                     {/* Rotation header */}
                     <div
-                      className="flex items-center gap-2 p-2 cursor-pointer hover:bg-muted/50 transition-colors"
+                      className="flex items-center gap-2 p-3 sm:p-2 cursor-pointer hover:bg-muted/50 active:bg-muted/50 transition-colors min-h-[48px]"
                       onClick={() => setExpandedId(isExpanded ? null : rotation.id)}
                     >
                       <span className="text-sm font-medium flex-1 truncate">
@@ -514,9 +514,9 @@ export function RotationManager({ onClose }: RotationManagerProps) {
 
                     {/* Expanded actions */}
                     {isExpanded && (
-                      <div className="border-t p-2 bg-muted/30 space-y-2">
+                      <div className="border-t p-3 sm:p-2 bg-muted/30 space-y-3 sm:space-y-2">
                         {/* Page list */}
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-xs text-muted-foreground break-words">
                           <span className="font-medium">Pages:</span>{" "}
                           {rotation.pages
                             .map((e) => pages.find((p) => p.id === e.page_id)?.name || e.page_id)
@@ -528,51 +528,51 @@ export function RotationManager({ onClose }: RotationManagerProps) {
                         </div>
 
                         {/* Actions */}
-                        <div className="flex gap-2 pt-1">
+                        <div className="flex flex-wrap gap-2 pt-1">
                           {isActive ? (
                             <Button
                               size="sm"
                               variant="outline"
-                              className="flex-1 h-7 text-xs"
+                              className="flex-1 h-9 sm:h-8 text-xs min-w-[100px]"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 deactivateMutation.mutate();
                               }}
                               disabled={deactivateMutation.isPending}
                             >
-                              <Pause className="h-3 w-3 mr-1" />
-                              Deactivate
+                              <Pause className="h-4 w-4 sm:h-3 sm:w-3 mr-1" />
+                              Stop
                             </Button>
                           ) : (
                             <Button
                               size="sm"
                               variant="default"
-                              className="flex-1 h-7 text-xs"
+                              className="flex-1 h-9 sm:h-8 text-xs min-w-[100px]"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 activateMutation.mutate(rotation.id);
                               }}
                               disabled={activateMutation.isPending}
                             >
-                              <Play className="h-3 w-3 mr-1" />
-                              Activate
+                              <Play className="h-4 w-4 sm:h-3 sm:w-3 mr-1" />
+                              Start
                             </Button>
                           )}
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-7 text-xs"
+                            className="h-9 sm:h-8 px-3 text-xs"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleEdit(rotation);
                             }}
                           >
-                            <Edit2 className="h-3 w-3" />
+                            <Edit2 className="h-4 w-4 sm:h-3 sm:w-3" />
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-7 px-2 text-destructive hover:text-destructive"
+                            className="h-9 sm:h-8 px-3 text-destructive hover:text-destructive"
                             onClick={(e) => {
                               e.stopPropagation();
                               if (confirm(`Delete "${rotation.name}"?`)) {
@@ -581,7 +581,7 @@ export function RotationManager({ onClose }: RotationManagerProps) {
                             }}
                             disabled={deleteMutation.isPending || isActive}
                           >
-                            <Trash2 className="h-3 w-3" />
+                            <Trash2 className="h-4 w-4 sm:h-3 sm:w-3" />
                           </Button>
                         </div>
                       </div>

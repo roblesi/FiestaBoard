@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SiestaBoard Control",
-  description: "Home hub for your SiestaBoard display",
+  title: "FiestaBoard Control",
+  description: "Home hub for your FiestaBoard display",
 };
 
 export default function RootLayout({
@@ -27,12 +27,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}
       >
         <Providers>
           <NavigationSidebar />
-          <main className="lg:pl-64 pt-16 lg:pt-0">
+          <main className="min-h-screen pt-14 lg:pt-0 lg:pl-64">
             {children}
           </main>
           <Toaster />

@@ -12,6 +12,9 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
+    volumes:
+      # Persist data (including config) to local filesystem
+      - ./data:/app/data
     logging:
       driver: "json-file"
       options:

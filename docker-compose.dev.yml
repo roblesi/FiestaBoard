@@ -11,6 +11,9 @@ services:
       - "8000:8000"
     environment:
       - PRODUCTION=false
+    volumes:
+      # Persist data (including config) to local filesystem
+      - ./data:/app/data
 
   # Web UI - Development mode with HMR
   vestaboard-ui-dev:

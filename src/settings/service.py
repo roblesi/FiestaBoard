@@ -62,6 +62,19 @@ class OutputSettings:
         return cls(target=target)
 
 
+@dataclass
+class ActivePageSettings:
+    """Active page settings for display."""
+    page_id: Optional[str] = None
+    
+    def to_dict(self) -> dict:
+        return asdict(self)
+    
+    @classmethod
+    def from_dict(cls, data: dict) -> "ActivePageSettings":
+        return cls(page_id=data.get("page_id"))
+
+
 class SettingsService:
     """Service for managing runtime settings.
     
@@ -87,6 +100,7 @@ class SettingsService:
         # Load initial settings from env/file
         self._transition = self._load_transition_settings()
         self._output = self._load_output_settings()
+        self._active_page = self._load_active_page_settings()
         
         logger.info(f"SettingsService initialized (file: {self.settings_file})")
     
@@ -105,7 +119,8 @@ class SettingsService:
         try:
             data = {
                 "transitions": self._transition.to_dict(),
-                "output": self._output.to_dict()
+                "output": self._output.to_dict(),
+                "active_page": self._active_page.to_dict()
             }
             with open(self.settings_file, 'w') as f:
                 json.dump(data, f, indent=2)
@@ -138,6 +153,13 @@ class SettingsService:
         # Fall back to env
         from ..config import Config
         return OutputSettings(target=Config.OUTPUT_TARGET)
+    
+    def _load_active_page_settings(self) -> ActivePageSettings:
+        """Load active page settings from file."""
+        file_data = self._load_from_file()
+        if "active_page" in file_data:
+            return ActivePageSettings.from_dict(file_data["active_page"])
+        return ActivePageSettings()
     
     # Transition settings
     def get_transition_settings(self) -> TransitionSettings:
@@ -226,6 +248,37 @@ class SettingsService:
         """
         # UI preview is always available
         return True
+    
+    # Active page settings
+    def get_active_page_id(self) -> Optional[str]:
+        """Get the currently active page ID.
+        
+        Returns:
+            Active page ID or None if not set
+        """
+        return self._active_page.page_id
+    
+    def set_active_page_id(self, page_id: Optional[str]) -> ActivePageSettings:
+        """Set the active page ID.
+        
+        Args:
+            page_id: Page ID to set as active, or None to clear
+            
+        Returns:
+            Updated ActivePageSettings
+        """
+        self._active_page.page_id = page_id
+        self._save_to_file()
+        logger.info(f"Active page set to: {page_id}")
+        return self._active_page
+    
+    def get_active_page_settings(self) -> ActivePageSettings:
+        """Get current active page settings.
+        
+        Returns:
+            ActivePageSettings instance
+        """
+        return self._active_page
 
 
 # Singleton instance

@@ -63,13 +63,13 @@ export function LogsViewer() {
   if (isLoading) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
+        <CardHeader className="px-4 sm:px-6">
+          <CardTitle className="text-base sm:text-lg flex items-center gap-2">
             <Terminal className="h-4 w-4" />
             Application Logs
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 sm:px-6">
           <Skeleton className="h-64 w-full" />
         </CardContent>
       </Card>
@@ -78,23 +78,23 @@ export function LogsViewer() {
 
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg flex items-center gap-2">
+      <CardHeader className="px-4 sm:px-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <CardTitle className="text-base sm:text-lg flex items-center gap-2">
             <Terminal className="h-4 w-4" />
-            Application Logs
+            <span>Logs</span>
             {logsData && (
               <Badge variant="secondary" className="text-xs">
-                {logsData.total} entries
+                {logsData.total}
               </Badge>
             )}
           </CardTitle>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button
               size="sm"
               variant={autoRefresh ? "default" : "outline"}
               onClick={() => setAutoRefresh(!autoRefresh)}
-              className="h-7 text-xs gap-1"
+              className="h-9 sm:h-7 text-xs gap-1 flex-1 sm:flex-none min-w-[80px]"
             >
               <RefreshCw className={`h-3 w-3 ${autoRefresh ? "animate-spin" : ""}`} />
               {autoRefresh ? "Auto" : "Manual"}
@@ -103,43 +103,43 @@ export function LogsViewer() {
               size="sm"
               variant="outline"
               onClick={() => refetch()}
-              className="h-7 text-xs gap-1"
+              className="h-9 sm:h-7 text-xs gap-1"
             >
               <RefreshCw className="h-3 w-3" />
-              Refresh
+              <span className="hidden sm:inline">Refresh</span>
             </Button>
             <Button
               size="sm"
               variant="outline"
               onClick={handleCopyLogs}
-              className="h-7 text-xs gap-1"
+              className="h-9 sm:h-7 text-xs gap-1"
               disabled={!logsData?.logs?.length}
             >
               <Copy className="h-3 w-3" />
-              Copy
+              <span className="hidden sm:inline">Copy</span>
             </Button>
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-96 w-full rounded-md border bg-muted/30 p-3">
-          <div className="space-y-1 font-mono text-xs">
+      <CardContent className="px-4 sm:px-6">
+        <ScrollArea className="h-64 sm:h-96 w-full rounded-md border bg-muted/30 p-2 sm:p-3">
+          <div className="space-y-1 font-mono text-[10px] sm:text-xs">
             {logsData?.logs && logsData.logs.length > 0 ? (
               logsData.logs.map((log, idx) => (
-                <div key={idx} className="flex gap-2 hover:bg-muted/50 px-1 py-0.5 rounded">
+                <div key={idx} className="flex flex-wrap sm:flex-nowrap gap-1 sm:gap-2 hover:bg-muted/50 px-1 py-1 sm:py-0.5 rounded">
                   <span className="text-muted-foreground shrink-0">
                     {new Date(log.timestamp).toLocaleTimeString()}
                   </span>
                   <Badge
-                    variant={LOG_LEVEL_COLORS[log.level] as any || "secondary"}
+                    variant={LOG_LEVEL_COLORS[log.level] as "default" | "secondary" | "destructive" | "outline" || "secondary"}
                     className="h-4 text-[10px] shrink-0"
                   >
                     {log.level}
                   </Badge>
-                  <span className="text-muted-foreground shrink-0 truncate max-w-[150px]">
+                  <span className="text-muted-foreground shrink-0 truncate max-w-[100px] sm:max-w-[150px] hidden sm:inline">
                     {log.logger}
                   </span>
-                  <span className="break-all">{log.message}</span>
+                  <span className="break-all w-full sm:w-auto">{log.message}</span>
                 </div>
               ))
             ) : (

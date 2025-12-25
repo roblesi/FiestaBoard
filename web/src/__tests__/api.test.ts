@@ -135,7 +135,7 @@ describe("API Contract Tests", () => {
         name: "Custom Template",
         type: "template",
         template: [
-          "{{weather.temp}}",
+          "{{weather.temperature}}",
           "{{datetime.time}}",
           "{red}Alert{/}",
           "",
@@ -150,7 +150,7 @@ describe("API Contract Tests", () => {
       expect(result.status).toBe("success");
       expect(requestStore.lastPageCreate?.type).toBe("template");
       expect(requestStore.lastPageCreate?.template).toHaveLength(6);
-      expect(requestStore.lastPageCreate?.template?.[0]).toBe("{{weather.temp}}");
+      expect(requestStore.lastPageCreate?.template?.[0]).toBe("{{weather.temperature}}");
     });
 
     it("getPages returns correct structure", async () => {
@@ -259,7 +259,7 @@ describe("API Contract Tests", () => {
     });
 
     it("validateTemplate returns validation result", async () => {
-      const result = await api.validateTemplate("{{weather.temp}}");
+      const result = await api.validateTemplate("{{weather.temperature}}");
 
       expect(typeof result.valid).toBe("boolean");
       expect(Array.isArray(result.errors)).toBe(true);

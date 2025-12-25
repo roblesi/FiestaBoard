@@ -17,10 +17,10 @@ export function RotationStatus() {
   if (isLoading) {
     return (
       <Card>
-        <CardHeader>
+        <CardHeader className="px-4 sm:px-6">
           <CardTitle className="text-base">Rotation Status</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 sm:px-6">
           <Skeleton className="h-20 w-full" />
         </CardContent>
       </Card>
@@ -30,13 +30,13 @@ export function RotationStatus() {
   if (!rotationState?.active) {
     return (
       <Card>
-        <CardHeader>
+        <CardHeader className="px-4 sm:px-6">
           <CardTitle className="text-base flex items-center gap-2">
             <Pause className="h-4 w-4" />
             Rotation Status
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 sm:px-6">
           <p className="text-sm text-muted-foreground">No rotation active</p>
         </CardContent>
       </Card>
@@ -49,17 +49,17 @@ export function RotationStatus() {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="px-4 sm:px-6">
         <CardTitle className="text-base flex items-center gap-2">
           <Play className="h-4 w-4 text-green-500" />
           Rotation Active
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 px-4 sm:px-6">
         <div>
-          <div className="flex items-center justify-between text-sm mb-1">
-            <span className="font-medium">{rotationState.rotation_name}</span>
-            <Badge variant="secondary" className="text-xs">
+          <div className="flex items-center justify-between text-sm mb-1 gap-2">
+            <span className="font-medium truncate">{rotationState.rotation_name}</span>
+            <Badge variant="secondary" className="text-xs shrink-0">
               {rotationState.current_page_index !== null && rotationState.total_pages
                 ? `${rotationState.current_page_index + 1}/${rotationState.total_pages}`
                 : "—"}
@@ -67,7 +67,7 @@ export function RotationStatus() {
           </div>
           
           {rotationState.current_page_id && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground truncate">
               Page: {rotationState.current_page_id}
             </p>
           )}
@@ -82,7 +82,7 @@ export function RotationStatus() {
               </span>
               <span>{Math.round(progress)}%</span>
             </div>
-            <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
+            <div className="w-full bg-secondary rounded-full h-2.5 sm:h-2 overflow-hidden">
               <div
                 className="bg-primary h-full transition-all duration-300"
                 style={{ width: `${Math.min(progress, 100)}%` }}

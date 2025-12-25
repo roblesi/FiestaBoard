@@ -94,16 +94,16 @@ export function TransitionSettingsComponent() {
   if (isLoading) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
+        <CardHeader className="px-4 sm:px-6">
+          <CardTitle className="text-base sm:text-lg flex items-center gap-2">
             <Wand2 className="h-4 w-4" />
             Transitions
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <Skeleton className="h-8 w-full" />
-          <Skeleton className="h-8 w-full" />
-          <Skeleton className="h-8 w-full" />
+        <CardContent className="space-y-4 px-4 sm:px-6">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
         </CardContent>
       </Card>
     );
@@ -111,23 +111,23 @@ export function TransitionSettingsComponent() {
 
   return (
     <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
+      <CardHeader className="pb-3 px-4 sm:px-6">
+        <CardTitle className="text-base sm:text-lg flex items-center gap-2">
           <Wand2 className="h-4 w-4" />
           Transitions
         </CardTitle>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Control how the board animates when displaying new messages
         </p>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 px-4 sm:px-6">
         {/* Strategy selector */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium">Animation Style</label>
+        <div className="space-y-2">
+          <label className="text-xs sm:text-sm font-medium">Animation Style</label>
           <select
             value={strategy || ""}
             onChange={(e) => setStrategy(e.target.value || null)}
-            className="w-full h-8 px-2 text-sm rounded-md border bg-background"
+            className="w-full h-10 sm:h-9 px-3 text-sm rounded-md border bg-background"
           >
             <option value="">None (Instant)</option>
             {settings?.available_strategies?.map((s) => (
@@ -139,10 +139,10 @@ export function TransitionSettingsComponent() {
         </div>
 
         {/* Interval slider */}
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <div className="flex justify-between">
-            <label className="text-xs font-medium">Step Interval</label>
-            <span className="text-xs text-muted-foreground">
+            <label className="text-xs sm:text-sm font-medium">Step Interval</label>
+            <span className="text-xs sm:text-sm text-muted-foreground">
               {intervalMs ? `${intervalMs}ms` : "Fast"}
             </span>
           </div>
@@ -159,16 +159,16 @@ export function TransitionSettingsComponent() {
             className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-muted"
             disabled={!strategy}
           />
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-[10px] sm:text-xs text-muted-foreground">
             Delay between animation steps
           </p>
         </div>
 
         {/* Step size */}
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <div className="flex justify-between">
-            <label className="text-xs font-medium">Step Size</label>
-            <span className="text-xs text-muted-foreground">
+            <label className="text-xs sm:text-sm font-medium">Step Size</label>
+            <span className="text-xs sm:text-sm text-muted-foreground">
               {stepSize || 1} {stepSize === 1 || !stepSize ? "column" : "columns"}
             </span>
           </div>
@@ -185,7 +185,7 @@ export function TransitionSettingsComponent() {
             className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-muted"
             disabled={!strategy}
           />
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-[10px] sm:text-xs text-muted-foreground">
             Columns/rows animated at once
           </p>
         </div>
@@ -193,29 +193,31 @@ export function TransitionSettingsComponent() {
         {/* Action buttons */}
         <div className="flex gap-2 pt-2">
           <Button
-            size="sm"
+            size="default"
             onClick={handleSave}
             disabled={!hasChanges || updateMutation.isPending}
-            className="flex-1"
+            className="flex-1 h-10 sm:h-9"
           >
             {updateMutation.isPending ? "Saving..." : "Save"}
           </Button>
           <Button
-            size="sm"
+            size="default"
             variant="outline"
             onClick={handleReset}
             disabled={updateMutation.isPending}
+            className="h-10 sm:h-9 w-10 sm:w-9 p-0"
           >
-            <RotateCcw className="h-3.5 w-3.5" />
+            <RotateCcw className="h-4 w-4" />
           </Button>
           <Button
-            size="sm"
+            size="default"
             variant="secondary"
             onClick={() => testMutation.mutate()}
             disabled={testMutation.isPending}
             title="Test transition on board"
+            className="h-10 sm:h-9 w-10 sm:w-9 p-0"
           >
-            <Play className="h-3.5 w-3.5" />
+            <Play className="h-4 w-4" />
           </Button>
         </div>
       </CardContent>
