@@ -14,7 +14,6 @@ from ..data_sources.datetime import get_datetime_source
 from ..data_sources.apple_music import get_apple_music_source
 from ..data_sources.home_assistant import get_home_assistant_source
 from ..data_sources.star_trek_quotes import get_star_trek_quotes_source
-<<<<<<< HEAD
 from ..data_sources.air_fog import get_air_fog_source
 from ..data_sources.muni import get_muni_source
 from ..data_sources.surf import get_surf_source
@@ -33,7 +32,6 @@ DISPLAY_TYPES = [
     "apple_music",
     "star_trek",
     "guest_wifi",
-<<<<<<< HEAD
     "air_fog",
     "muni",
     "surf",
@@ -71,7 +69,6 @@ class DisplayService:
         self.apple_music_source = get_apple_music_source()
         self.home_assistant_source = get_home_assistant_source()
         self.star_trek_quotes_source = get_star_trek_quotes_source()
-<<<<<<< HEAD
         self.air_fog_source = get_air_fog_source()
         self.muni_source = get_muni_source()
         self.surf_source = get_surf_source()
@@ -126,8 +123,6 @@ class DisplayService:
                 "description": "Guest WiFi credentials",
             },
             {
-<<<<<<< HEAD
-<<<<<<< HEAD
                 "type": "air_fog",
                 "available": self.air_fog_source is not None and Config.AIR_FOG_ENABLED,
                 "description": "Air quality and fog conditions",
@@ -188,8 +183,6 @@ class DisplayService:
                 return self._get_star_trek()
             elif display_type == "guest_wifi":
                 return self._get_guest_wifi()
-<<<<<<< HEAD
-<<<<<<< HEAD
             elif display_type == "air_fog":
                 return self._get_air_fog()
             elif display_type == "muni":
@@ -471,7 +464,6 @@ class DisplayService:
             available=True
         )
     
-<<<<<<< HEAD
     def _get_air_fog(self) -> DisplayResult:
         """Get air quality and fog conditions display."""
         if not self.air_fog_source or not Config.AIR_FOG_ENABLED:
@@ -491,33 +483,11 @@ class DisplayService:
                 raw={},
                 available=True,
                 error="Failed to fetch air/fog data"
-=======
-    def _get_traffic(self) -> DisplayResult:
-        """Get traffic conditions display."""
-        if not self.traffic_source or not Config.TRAFFIC_ENABLED:
-            return DisplayResult(
-                display_type="traffic",
-                formatted="",
-                raw={},
-                available=False,
-                error="Traffic source not configured or not enabled"
-            )
-        
-        raw_data = self.traffic_source.fetch_traffic_data()
-        if not raw_data:
-            return DisplayResult(
-                display_type="traffic",
-                formatted="Traffic: Unavailable",
-                raw={},
-                available=True,
-                error="Failed to fetch traffic data"
->>>>>>> origin/feature/traffic-integration
             )
         
         formatted = raw_data.get("formatted_message", "")
         if not formatted:
             # Build a simple formatted message if not provided
-<<<<<<< HEAD
             aqi = raw_data.get("pm2_5_aqi", "?")
             fog_status = raw_data.get("fog_status", "UNKNOWN")
             formatted = f"AQI:{aqi} {fog_status}"

@@ -95,8 +95,6 @@ DEFAULT_CONFIG: Dict[str, Any] = {
                 ],
             },
         },
-<<<<<<< HEAD
-<<<<<<< HEAD
         "air_fog": {
             "enabled": False,
             "purpleair_api_key": "",  # PurpleAir API key

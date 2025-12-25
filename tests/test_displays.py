@@ -58,8 +58,6 @@ class TestDisplayService:
         assert "weather" in display_types
         assert "datetime" in display_types
         assert "guest_wifi" in display_types
-<<<<<<< HEAD
-<<<<<<< HEAD
         assert "air_fog" in display_types
         assert "muni" in display_types
         assert "surf" in display_types

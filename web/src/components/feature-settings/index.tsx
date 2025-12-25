@@ -237,8 +237,6 @@ const FEATURE_DEFINITIONS: Record<
       { name: "series", description: "Series name", example: "TNG", maxChars: 3, typical: "3 chars" },
     ],
   },
-<<<<<<< HEAD
-<<<<<<< HEAD
   air_fog: {
     title: "Air Quality & Fog",
     description: "AQI and fog conditions",
@@ -273,27 +271,11 @@ const FEATURE_DEFINITIONS: Record<
         type: "number",
         placeholder: "37.7749",
         description: "Location latitude (default: San Francisco)",
-=======
-  surf: {
-    title: "Surf Conditions",
-    description: "Ocean Beach wave conditions",
-    icon: Waves,
-    hasRefreshInterval: true,
-    defaultRefreshSeconds: 1800,
-    fields: [
-      {
-        key: "latitude",
-        label: "Latitude",
-        type: "number",
-        placeholder: "37.7599",
-        description: "Location latitude (default: Ocean Beach, SF)",
->>>>>>> origin/feature/surf-integration
       },
       {
         key: "longitude",
         label: "Longitude",
         type: "number",
-<<<<<<< HEAD
         placeholder: "-122.4194",
         description: "Location longitude (default: San Francisco)",
       },
@@ -301,7 +283,6 @@ const FEATURE_DEFINITIONS: Record<
         key: "refresh_seconds",
         label: "Refresh Interval (seconds)",
         type: "number",
-<<<<<<< HEAD
         placeholder: "600",
         description: "How often to fetch data (default: 10 min)",
       },
@@ -489,48 +470,6 @@ const FEATURE_DEFINITIONS: Record<
       { name: "traffic_color", description: "Traffic color tile", example: "{66}", maxChars: 4, typical: "Color tile" },
       { name: "destination_name", description: "Destination name", example: "DOWNTOWN", maxChars: 10, typical: "4-10 chars" },
       { name: "formatted", description: "Pre-formatted message", example: "DOWNTOWN: 25m (+5m)", maxChars: 22, typical: "12-22 chars" },
-    ],
-  },
-      {
-        key: "refresh_seconds",
-        label: "Refresh Interval (seconds)",
-        type: "number",
-<<<<<<< HEAD
-        placeholder: "60",
-        description: "How often to check availability (min: 30)",
-      },
-    ],
-    outputs: [
-      { name: "electric_bikes", description: "Electric bikes available", example: "5", maxChars: 2, typical: "1-2 digits" },
-      { name: "classic_bikes", description: "Classic bikes available", example: "8", maxChars: 2, typical: "1-2 digits" },
-      { name: "num_bikes_available", description: "Total bikes", example: "13", maxChars: 2, typical: "1-2 digits" },
-      { name: "station_name", description: "Station name", example: "19TH", maxChars: 10, typical: "4-10 chars" },
-      { name: "status_color", description: "Availability color", example: "{66}", maxChars: 4, typical: "Color tile" },
-=======
-        placeholder: "1800",
-        description: "How often to fetch surf data (default: 30 min)",
-      },
-    ],
-    outputs: [
-      { name: "wave_height", description: "Wave height in feet", example: "4.2", maxChars: 4, typical: "1-4 chars" },
-      { name: "swell_period", description: "Swell period in seconds", example: "12.5", maxChars: 4, typical: "2-4 chars" },
-      { name: "quality", description: "Surf quality rating", example: "GOOD", maxChars: 9, typical: "POOR/FAIR/GOOD/EXCELLENT" },
-      { name: "quality_color", description: "Quality color tile", example: "{66}", maxChars: 4, typical: "Color tile" },
-      { name: "formatted", description: "Pre-formatted message", example: "4FT GOOD", maxChars: 22, typical: "10-22 chars" },
->>>>>>> origin/feature/surf-integration
-=======
-        placeholder: "300",
-        description: "How often to fetch traffic data (default: 5 min)",
-      },
-    ],
-    outputs: [
-      { name: "duration_minutes", description: "Travel time in minutes", example: "25", maxChars: 3, typical: "1-3 digits" },
-      { name: "delay_minutes", description: "Delay due to traffic", example: "+5", maxChars: 3, typical: "1-3 chars" },
-      { name: "traffic_status", description: "Traffic status", example: "MODERATE", maxChars: 8, typical: "LIGHT/MODERATE/HEAVY" },
-      { name: "traffic_color", description: "Traffic color tile", example: "{66}", maxChars: 4, typical: "Color tile" },
-      { name: "destination_name", description: "Destination name", example: "DOWNTOWN", maxChars: 10, typical: "4-10 chars" },
-      { name: "formatted", description: "Pre-formatted message", example: "DOWNTOWN: 25m (+5m)", maxChars: 22, typical: "12-22 chars" },
->>>>>>> origin/feature/traffic-integration
     ],
   },
   rotation: {
