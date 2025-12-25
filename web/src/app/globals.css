@@ -44,6 +44,16 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+
+  /* Vestaboard Official Colors - use these for all status/tile colors */
+  --color-vesta-red: #eb4034;
+  --color-vesta-orange: #f5a623;
+  --color-vesta-yellow: #f8e71c;
+  --color-vesta-green: #7ed321;
+  --color-vesta-blue: #4a90d9;
+  --color-vesta-violet: #9b59b6;
+  --color-vesta-white: #ffffff;
+  --color-vesta-black: #1a1a1a;
 }
 
 :root {

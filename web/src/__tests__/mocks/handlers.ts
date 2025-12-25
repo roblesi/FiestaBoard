@@ -142,18 +142,33 @@ export const mockPages: PagesResponse = {
 
 export const mockTemplateVariables: TemplateVariables = {
   variables: {
-    weather: ["temp", "condition", "location"],
+    weather: ["temperature", "condition", "location"],
     datetime: ["time", "date", "day"],
+  },
+  max_lengths: {
+    "weather.temperature": 3,
+    "weather.condition": 12,
+    "weather.location": 15,
+    "datetime.time": 5,
+    "datetime.date": 10,
+    "datetime.day": 2,
   },
   colors: { red: 63, orange: 64, yellow: 65, green: 66, blue: 67, violet: 68, white: 69, black: 70 },
   symbols: ["sun", "cloud", "rain", "star", "heart"],
-  filters: ["pad:N", "upper", "lower", "truncate:N", "capitalize"],
+  filters: ["pad:N", "upper", "lower", "truncate:N", "capitalize", "wrap"],
+  formatting: {
+    fill_space: {
+      syntax: "{{fill_space}}",
+      description: "Expands to fill remaining space on the line. Use multiple for multi-column layouts.",
+    },
+  },
   syntax_examples: {
     variable: "{{weather.temperature}}",
     variable_with_filter: "{{weather.temperature|pad:3}}",
     color_inline: "{red}Warning{/}",
     color_code: "{63}",
     symbol: "{sun}",
+    fill_space: "Left{{fill_space}}Right",
   },
 };
 

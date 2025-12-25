@@ -1,29 +1,9 @@
 "use client";
 
+import { ALL_COLOR_CODES, VESTABOARD_COLORS } from "@/lib/vestaboard-colors";
+
 const ROWS = 6;
 const COLS = 22;
-
-// Vestaboard color codes mapping
-const COLOR_CODES: Record<string, string> = {
-  "63": "#eb4034", // Red
-  "64": "#f5a623", // Orange
-  "65": "#f8e71c", // Yellow
-  "66": "#7ed321", // Green
-  "67": "#4a90d9", // Blue
-  "68": "#9b59b6", // Violet
-  "69": "#ffffff", // White
-  "70": "#1a1a1a", // Black (same as tile bg)
-  // Named color aliases
-  "red": "#eb4034",
-  "orange": "#f5a623",
-  "yellow": "#f8e71c",
-  "green": "#7ed321",
-  "blue": "#4a90d9",
-  "violet": "#9b59b6",
-  "purple": "#9b59b6",
-  "white": "#ffffff",
-  "black": "#1a1a1a",
-};
 
 // Parse a line into tokens (characters and color codes)
 type Token = { type: "char"; value: string } | { type: "color"; code: string };
@@ -50,9 +30,9 @@ function parseLine(line: string): Token[] {
         const contentLower = content.toLowerCase();
         // Try exact match first (for numeric codes like "66"), then lowercase (for named colors)
         let colorCode: string | null = null;
-        if (COLOR_CODES[content]) {
+        if (ALL_COLOR_CODES[content]) {
           colorCode = content;
-        } else if (COLOR_CODES[contentLower]) {
+        } else if (ALL_COLOR_CODES[contentLower]) {
           colorCode = contentLower;
         }
         
@@ -111,7 +91,7 @@ function CharTile({ token, size = "md" }: { token: Token; size?: "sm" | "md" | "
   };
   
   if (token.type === "color") {
-    const bgColor = COLOR_CODES[token.code] || "#1a1a1a";
+    const bgColor = ALL_COLOR_CODES[token.code] || VESTABOARD_COLORS.black;
     return (
       <div 
         className={`relative ${sizeClasses[size]} rounded-[2px] shadow-[inset_0_1px_2px_rgba(0,0,0,0.3),inset_0_-1px_1px_rgba(255,255,255,0.1)]`}
@@ -121,7 +101,7 @@ function CharTile({ token, size = "md" }: { token: Token; size?: "sm" | "md" | "
   }
   
   return (
-    <div className={`relative ${sizeClasses[size]} rounded-[2px] bg-[#1a1a1a] flex items-center justify-center shadow-[inset_0_1px_2px_rgba(0,0,0,0.6),inset_0_-1px_1px_rgba(255,255,255,0.05)]`}>
+    <div className={`relative ${sizeClasses[size]} rounded-[2px] bg-vesta-black flex items-center justify-center shadow-[inset_0_1px_2px_rgba(0,0,0,0.6),inset_0_-1px_1px_rgba(255,255,255,0.05)]`}>
       <span className={`${textSizeClasses[size]} font-mono font-medium text-[#f0f0e8] select-none leading-none`}>
         {token.value}
       </span>
@@ -138,7 +118,7 @@ function SkeletonTile({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
   };
   
   return (
-    <div className={`${sizeClasses[size]} rounded-[2px] bg-[#1a1a1a] animate-pulse`} />
+    <div className={`${sizeClasses[size]} rounded-[2px] bg-vesta-black animate-pulse`} />
   );
 }
 

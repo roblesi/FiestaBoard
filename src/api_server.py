@@ -1022,6 +1022,12 @@ async def get_template_variables():
         },
         "symbols": ["sun", "star", "cloud", "rain", "snow", "storm", "fog", "partly", "heart", "check", "x"],
         "filters": ["pad:N", "upper", "lower", "truncate:N", "capitalize", "wrap"],
+        "formatting": {
+            "fill_space": {
+                "syntax": "{{fill_space}}",
+                "description": "Expands to fill remaining space on the line. Use multiple for multi-column layouts."
+            }
+        },
         "syntax_examples": {
             "variable": "{{weather.temperature}}",
             "variable_with_filter": "{{weather.temperature|pad:3}}",
@@ -1029,6 +1035,8 @@ async def get_template_variables():
             "color_code": "{63}",
             "symbol": "{sun}",
             "wrap": "{{star_trek.quote|wrap}}",
+            "fill_space": "Left{{fill_space}}Right",
+            "fill_space_three_columns": "A{{fill_space}}B{{fill_space}}C",
         }
     }
 

@@ -92,7 +92,7 @@ export function VestaboardSettings() {
               <CardTitle className="text-base flex items-center gap-2">
                 Vestaboard Connection
                 {isConfigValid ? (
-                  <Badge variant="default" className="text-xs bg-emerald-600">
+                  <Badge variant="default" className="text-xs bg-vesta-green">
                     <Check className="h-3 w-3 mr-1" />
                     Configured
                   </Badge>

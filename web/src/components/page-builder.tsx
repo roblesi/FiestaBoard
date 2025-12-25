@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { VariablePicker } from "@/components/variable-picker";
 import { VestaboardDisplay } from "@/components/vestaboard-display";
+import { TemplateLineEditor } from "@/components/template-line-editor";
 import {
   Sheet,
   SheetContent,
@@ -23,6 +24,9 @@ import {
   Code2,
   AlertTriangle,
   Trash2,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -36,6 +40,40 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { api, PageCreate, PageUpdate, PageType } from "@/lib/api";
+
+// Alignment type for template lines
+type LineAlignment = "left" | "center" | "right";
+
+// Extract alignment prefix from a template line
+function extractAlignment(line: string): { alignment: LineAlignment; content: string } {
+  if (line.startsWith("{center}")) {
+    return { alignment: "center", content: line.slice(8) };
+  }
+  if (line.startsWith("{right}")) {
+    return { alignment: "right", content: line.slice(7) };
+  }
+  // Default to left (no prefix needed)
+  return { alignment: "left", content: line.startsWith("{left}") ? line.slice(6) : line };
+}
+
+// Apply alignment prefix to content
+function applyAlignment(alignment: LineAlignment, content: string): string {
+  // Remove any existing alignment prefix first
+  let cleanContent = content;
+  if (content.startsWith("{center}")) cleanContent = content.slice(8);
+  else if (content.startsWith("{right}")) cleanContent = content.slice(7);
+  else if (content.startsWith("{left}")) cleanContent = content.slice(6);
+  
+  switch (alignment) {
+    case "center":
+      return `{center}${cleanContent}`;
+    case "right":
+      return `{right}${cleanContent}`;
+    case "left":
+    default:
+      return cleanContent; // Left is default, no prefix needed
+  }
+}
 
 // Calculate max possible rendered length of a template line
 function calculateMaxLineLength(line: string, maxLengths: Record<string, number>): number {
@@ -84,10 +122,10 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
   // Form state
   const [name, setName] = useState("");
   const [templateLines, setTemplateLines] = useState<string[]>(["", "", "", "", "", ""]);
+  const [lineAlignments, setLineAlignments] = useState<LineAlignment[]>(["left", "left", "left", "left", "left", "left"]);
   const [preview, setPreview] = useState<string | null>(null);
   const [showMobileVariablePicker, setShowMobileVariablePicker] = useState(false);
   const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null);
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Fetch existing page if editing
   const { data: existingPage, isLoading: loadingPage } = useQuery({
@@ -106,18 +144,34 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
   useEffect(() => {
     if (existingPage) {
       setName(existingPage.name);
-      setTemplateLines(existingPage.template || ["", "", "", "", "", ""]);
+      const rawLines = existingPage.template || ["", "", "", "", "", ""];
+      // Extract alignments and clean content from stored lines
+      const alignments: LineAlignment[] = [];
+      const contents: string[] = [];
+      for (let i = 0; i < 6; i++) {
+        const { alignment, content } = extractAlignment(rawLines[i] || "");
+        alignments.push(alignment);
+        contents.push(content);
+      }
+      setLineAlignments(alignments);
+      setTemplateLines(contents);
     }
   }, [existingPage]);
+
+  // Build template lines with alignment prefixes applied
+  const getTemplateWithAlignments = (): string[] => {
+    return templateLines.map((content, i) => applyAlignment(lineAlignments[i], content));
+  };
 
   // Save mutation
   const saveMutation = useMutation({
     mutationFn: async () => {
+      const linesWithAlignments = getTemplateWithAlignments();
       if (pageId) {
         // Update existing page
         const payload: PageUpdate = {
           name,
-          template: templateLines,
+          template: linesWithAlignments,
         };
         return api.updatePage(pageId, payload);
       } else {
@@ -125,7 +179,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
         const payload: PageCreate = {
           name,
           type: "template" as PageType,
-          template: templateLines,
+          template: linesWithAlignments,
         };
         return api.createPage(payload);
       }
@@ -169,7 +223,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
 
   // Preview mutation
   const previewMutation = useMutation({
-    mutationFn: () => api.renderTemplate(templateLines),
+    mutationFn: () => api.renderTemplate(getTemplateWithAlignments()),
     onSuccess: (data) => {
       setPreview(data.rendered);
     },
@@ -178,7 +232,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
     },
   });
 
-  // Auto-preview when template lines change (debounced)
+  // Auto-preview when template lines or alignments change (debounced)
   useEffect(() => {
     // Only preview if at least one line has content
     const hasContent = templateLines.some(line => line.trim().length > 0);
@@ -193,32 +247,15 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
     }, 500); // 500ms debounce
 
     return () => clearTimeout(timeoutId);
-  }, [templateLines]);
+  }, [templateLines, lineAlignments]);
 
-  // Insert variable/text at cursor position
-  const insertAtCursor = (text: string) => {
+  // Insert variable/text - appends to the active line
+  // Note: Drag-and-drop insertion is handled by TemplateLineEditor directly
+  const insertAtEnd = (text: string) => {
     const lineIndex = activeLineIndex ?? 0;
-    const input = inputRefs.current[lineIndex];
-    
-    if (input) {
-      const start = input.selectionStart ?? templateLines[lineIndex].length;
-      const end = input.selectionEnd ?? templateLines[lineIndex].length;
-      const newLines = [...templateLines];
-      const currentLine = newLines[lineIndex];
-      newLines[lineIndex] = currentLine.substring(0, start) + text + currentLine.substring(end);
-      setTemplateLines(newLines);
-      
-      // Focus and set cursor position after inserted text
-      setTimeout(() => {
-        input.focus();
-        input.setSelectionRange(start + text.length, start + text.length);
-      }, 0);
-    } else {
-      // Fallback: append to active line
-      const newLines = [...templateLines];
-      newLines[lineIndex] = newLines[lineIndex] + text;
-      setTemplateLines(newLines);
-    }
+    const newLines = [...templateLines];
+    newLines[lineIndex] = newLines[lineIndex] + text;
+    setTemplateLines(newLines);
   };
 
   if (pageId && loadingPage) {
@@ -233,9 +270,9 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
 
   return (
     <>
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 sm:gap-6 flex-1 min-h-0">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-3 sm:gap-4 md:gap-6 flex-1 min-h-0 w-full max-w-full overflow-x-hidden">
         {/* Main Editor */}
-        <Card className="flex flex-col min-h-0">
+        <Card className="flex flex-col min-h-0 w-full max-w-full overflow-x-hidden">
           <CardHeader className="pb-3 flex-shrink-0 px-4 sm:px-6">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base sm:text-lg flex items-center gap-2">
@@ -291,7 +328,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
             </div>
           </CardHeader>
 
-          <CardContent className="flex flex-col flex-1 min-h-0 space-y-4 overflow-y-auto px-4 sm:px-6">
+          <CardContent className="flex flex-col flex-1 min-h-0 space-y-4 overflow-y-auto overflow-x-hidden px-3 sm:px-4 md:px-6">
             {/* Page name */}
             <div className="space-y-1.5">
               <label className="text-xs sm:text-sm font-medium">Page Name</label>
@@ -314,43 +351,95 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
               <div className="p-2 sm:p-3 bg-muted/50 rounded-md text-xs space-y-1">
                 <div className="flex items-start gap-2 text-muted-foreground">
                   <Info className="h-3 w-3 mt-0.5 shrink-0" />
-                  <span className="hidden sm:inline">Click variables in the sidebar to insert them. Mix static text with {"{{variables}}"}.</span>
+                  <span className="hidden sm:inline">Click or drag variables from the sidebar. Badges can be reordered by dragging.</span>
                   <span className="sm:hidden">Tap &quot;Variables&quot; button to insert template variables.</span>
                 </div>
               </div>
 
               {/* 6 template lines */}
-              <div className="flex flex-col gap-2 sm:gap-2">
+              <div className="flex flex-col gap-2 sm:gap-2 w-full">
                 {templateLines.map((line, i) => {
                   const maxLengths = variablesData?.max_lengths || {};
                   const warning = getLineLengthWarning(line, maxLengths);
+                  const alignment = lineAlignments[i];
                   
                   return (
-                    <div key={i} className="flex gap-2">
-                      <span className="text-xs text-muted-foreground w-4 shrink-0 pt-3 sm:pt-2.5">
+                    <div key={i} className="flex items-stretch w-full min-w-0">
+                      <span className="text-xs text-muted-foreground w-5 shrink-0 flex items-center justify-end pr-1.5">
                         {i + 1}
                       </span>
-                      <div className="flex-1 relative">
-                        <input
-                          ref={(el) => { inputRefs.current[i] = el; }}
-                          type="text"
-                          value={line}
-                          onChange={(e) => {
-                            const newLines = [...templateLines];
-                            newLines[i] = e.target.value;
-                            setTemplateLines(newLines);
-                          }}
-                          onFocus={() => setActiveLineIndex(i)}
-                          placeholder={`Line ${i + 1}`}
-                          className={`w-full h-10 sm:h-9 px-3 text-sm font-mono rounded border bg-background transition-colors ${
-                            activeLineIndex === i ? "border-primary ring-1 ring-primary" : ""
-                          } ${warning.hasWarning ? "border-yellow-500" : ""}`}
-                        />
-                        {warning.hasWarning && (
-                          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1" title={`Line may render up to ${warning.maxLength} chars (max 22)`}>
-                            <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                          </div>
-                        )}
+                      {/* Combined input + alignment buttons container */}
+                      <div className="flex flex-1 min-w-0">
+                        <div className="flex-1 relative min-w-0">
+                          <TemplateLineEditor
+                            value={line}
+                            onChange={(newValue) => {
+                              const newLines = [...templateLines];
+                              newLines[i] = newValue;
+                              setTemplateLines(newLines);
+                            }}
+                            onFocus={() => setActiveLineIndex(i)}
+                            placeholder={`Line ${i + 1}`}
+                            isActive={activeLineIndex === i}
+                            hasWarning={warning.hasWarning}
+                          />
+                          {warning.hasWarning && (
+                            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none" title={`Line may render up to ${warning.maxLength} chars (max 22)`}>
+                              <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-vesta-yellow" />
+                            </div>
+                          )}
+                        </div>
+                        {/* Alignment toggle - joined to input */}
+                        <div className="flex rounded-r border-y border-r bg-muted/30 overflow-hidden shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newAlignments = [...lineAlignments];
+                              newAlignments[i] = "left";
+                              setLineAlignments(newAlignments);
+                            }}
+                            className={`px-2 flex items-center justify-center transition-colors ${
+                              alignment === "left" 
+                                ? "bg-primary text-primary-foreground" 
+                                : "hover:bg-muted text-muted-foreground"
+                            }`}
+                            title="Align left"
+                          >
+                            <AlignLeft className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newAlignments = [...lineAlignments];
+                              newAlignments[i] = "center";
+                              setLineAlignments(newAlignments);
+                            }}
+                            className={`px-2 flex items-center justify-center border-x transition-colors ${
+                              alignment === "center" 
+                                ? "bg-primary text-primary-foreground border-primary" 
+                                : "hover:bg-muted text-muted-foreground"
+                            }`}
+                            title="Align center"
+                          >
+                            <AlignCenter className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newAlignments = [...lineAlignments];
+                              newAlignments[i] = "right";
+                              setLineAlignments(newAlignments);
+                            }}
+                            className={`px-2 flex items-center justify-center transition-colors ${
+                              alignment === "right" 
+                                ? "bg-primary text-primary-foreground" 
+                                : "hover:bg-muted text-muted-foreground"
+                            }`}
+                            title="Align right"
+                          >
+                            <AlignRight className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -389,7 +478,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
         {/* Desktop Variable Picker Sidebar */}
         <div className="hidden lg:flex flex-col min-h-0">
           <VariablePicker 
-            onInsert={insertAtCursor}
+            onInsert={insertAtEnd}
             showColors={true}
             showSymbols={false}
           />
@@ -408,7 +497,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
           <div className="flex-1 overflow-y-auto p-4">
             <VariablePicker 
               onInsert={(text) => {
-                insertAtCursor(text);
+                insertAtEnd(text);
                 setShowMobileVariablePicker(false);
               }}
               showColors={true}

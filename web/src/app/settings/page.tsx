@@ -7,8 +7,8 @@ import { VestaboardSettings } from "@/components/feature-settings/vestaboard-set
 
 export default function SettingsPage() {
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    <div className="min-h-screen bg-background overflow-x-hidden">
+      <div className="container mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 max-w-full">
         <div className="mb-4 sm:mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Settings</h1>
           <p className="text-muted-foreground mt-1 text-sm sm:text-base">
@@ -16,7 +16,7 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-6 sm:gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-4 sm:gap-6 md:gap-8 w-full max-w-full">
           {/* Main Settings */}
           <div className="space-y-6 sm:space-y-8">
             {/* Vestaboard Connection */}

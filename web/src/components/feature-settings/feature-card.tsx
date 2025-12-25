@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { ChevronDown, ChevronUp, Save, Eye, EyeOff, AlertCircle, Copy, Check, Plus, Trash2, ArrowUp, ArrowDown, MapPin, Loader2 } from "lucide-react";
 import { api, FeatureName } from "@/lib/api";
 import { LucideIcon } from "lucide-react";
+import { VESTABOARD_COLORS, AVAILABLE_COLORS as VESTA_AVAILABLE_COLORS, VestaboardColorName } from "@/lib/vestaboard-colors";
 
 export interface FeatureField {
   key: string;
@@ -40,20 +41,20 @@ export interface ColorRulesConfig {
   [fieldName: string]: ColorRule[];
 }
 
-// Color display helpers
-const COLOR_DISPLAY: Record<string, { bg: string; text: string }> = {
-  red: { bg: "bg-red-500", text: "text-white" },
-  orange: { bg: "bg-orange-500", text: "text-white" },
-  yellow: { bg: "bg-yellow-400", text: "text-black" },
-  green: { bg: "bg-green-500", text: "text-white" },
-  blue: { bg: "bg-blue-500", text: "text-white" },
-  violet: { bg: "bg-violet-500", text: "text-white" },
-  white: { bg: "bg-white border", text: "text-black" },
-  black: { bg: "bg-black", text: "text-white" },
+// Color display helpers - using Vestaboard's official colors
+const COLOR_DISPLAY: Record<VestaboardColorName, { bg: string; text: string; hex: string }> = {
+  red: { bg: "bg-vesta-red", text: "text-white", hex: VESTABOARD_COLORS.red },
+  orange: { bg: "bg-vesta-orange", text: "text-white", hex: VESTABOARD_COLORS.orange },
+  yellow: { bg: "bg-vesta-yellow", text: "text-black", hex: VESTABOARD_COLORS.yellow },
+  green: { bg: "bg-vesta-green", text: "text-white", hex: VESTABOARD_COLORS.green },
+  blue: { bg: "bg-vesta-blue", text: "text-white", hex: VESTABOARD_COLORS.blue },
+  violet: { bg: "bg-vesta-violet", text: "text-white", hex: VESTABOARD_COLORS.violet },
+  white: { bg: "bg-vesta-white border", text: "text-black", hex: VESTABOARD_COLORS.white },
+  black: { bg: "bg-vesta-black", text: "text-white", hex: VESTABOARD_COLORS.black },
 };
 
 // Available colors for picker
-const AVAILABLE_COLORS = ["red", "orange", "yellow", "green", "blue", "violet", "white", "black"];
+const AVAILABLE_COLORS = VESTA_AVAILABLE_COLORS;
 
 // Available conditions
 const AVAILABLE_CONDITIONS = [
@@ -225,7 +226,7 @@ function ColorRulesEditor({
                 {/* Rules */}
                 <div className="divide-y">
                   {rules.map((rule, idx) => {
-                    const colorStyle = COLOR_DISPLAY[rule.color] || { bg: "bg-gray-500", text: "text-white" };
+                    const colorStyle = COLOR_DISPLAY[rule.color as VestaboardColorName] || { bg: "bg-gray-500", text: "text-white", hex: "#6b7280" };
                     return (
                       <div key={idx} className="px-3 py-2 flex items-center gap-2 text-xs">
                         {/* Reorder buttons */}
@@ -250,7 +251,8 @@ function ColorRulesEditor({
                         <select
                           value={rule.color}
                           onChange={(e) => handleUpdateRule(fieldName, idx, { color: e.target.value })}
-                          className={`h-7 px-2 rounded border text-xs font-medium ${colorStyle.bg} ${colorStyle.text}`}
+                          className="h-7 px-2 rounded border text-xs font-medium"
+                          style={{ backgroundColor: colorStyle.hex, color: colorStyle.text === "text-black" ? "#000" : "#fff" }}
                         >
                           {AVAILABLE_COLORS.map((color) => (
                             <option key={color} value={color} className="bg-background text-foreground">
@@ -470,7 +472,7 @@ export function FeatureCard({
               <CardTitle className="text-base flex items-center gap-2">
                 {title}
                 {enabled && (
-                  <Badge variant="default" className="text-xs bg-emerald-600">
+                  <Badge variant="default" className="text-xs bg-vesta-green">
                     Enabled
                   </Badge>
                 )}

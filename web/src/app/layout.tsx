@@ -31,11 +31,11 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen overflow-x-hidden`}
       >
         <Providers>
           <NavigationSidebar />
-          <main className="min-h-screen pt-14 lg:pt-0 lg:pl-64">
+          <main className="min-h-screen pt-14 lg:pt-0 lg:pl-64 overflow-x-hidden w-full max-w-full">
             {children}
           </main>
           <Toaster />

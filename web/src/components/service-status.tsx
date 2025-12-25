@@ -23,9 +23,9 @@ export function ServiceStatus() {
     : "Stopped";
 
   const statusColor = isError || !data
-    ? "bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)] animate-pulse"
+    ? "bg-vesta-red shadow-[0_0_6px_rgba(235,64,52,0.5)] animate-pulse"
     : data.running
-    ? "bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.5)]"
+    ? "bg-vesta-green shadow-[0_0_6px_rgba(126,211,33,0.5)]"
     : "bg-gray-400";
 
   return (

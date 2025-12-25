@@ -501,7 +501,7 @@ export function RotationManager({ onClose }: RotationManagerProps) {
                         {rotation.pages.length} pages
                       </Badge>
                       {isActive && (
-                        <Badge variant="default" className="text-[10px] bg-green-600">
+                        <Badge variant="default" className="text-[10px] bg-vesta-green">
                           Active
                         </Badge>
                       )}
