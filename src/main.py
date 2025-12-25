@@ -107,6 +107,12 @@ class VestaboardDisplayService:
                     logger.debug("No active page and no pages available")
                     return False
             
+            # Get the page for transition settings
+            page = page_service.get_page(active_page_id)
+            if not page:
+                logger.warning(f"Active page not found: {active_page_id}")
+                return False
+            
             # Render the page
             result = page_service.preview_page(active_page_id)
             if not result or not result.available:
@@ -133,16 +139,19 @@ class VestaboardDisplayService:
                 logger.warning("Vestaboard client not initialized")
                 return False
             
-            # Get transition settings
-            transition = settings_service.get_transition_settings()
+            # Get transition settings - use page-level if set, otherwise system defaults
+            system_transition = settings_service.get_transition_settings()
+            strategy = page.transition_strategy if page.transition_strategy else system_transition.strategy
+            interval_ms = page.transition_interval_ms if page.transition_interval_ms is not None else system_transition.step_interval_ms
+            step_size = page.transition_step_size if page.transition_step_size is not None else system_transition.step_size
             
             # Send to board
             board_array = text_to_board_array(current_content)
             success, was_sent = self.vb_client.send_characters(
                 board_array,
-                strategy=transition.strategy,
-                step_interval_ms=transition.step_interval_ms,
-                step_size=transition.step_size
+                strategy=strategy,
+                step_interval_ms=interval_ms,
+                step_size=step_size
             )
             
             if success:

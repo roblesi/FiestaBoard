@@ -1,7 +1,6 @@
 "use client";
 
 import { ServiceControls } from "@/components/service-controls";
-import { TransitionSettingsComponent } from "@/components/transition-settings";
 import { FeatureSettings } from "@/components/feature-settings";
 import { VestaboardSettings } from "@/components/feature-settings/vestaboard-settings";
 
@@ -36,16 +35,11 @@ export default function SettingsPage() {
             </section>
           </div>
 
-          {/* Sidebar - Service & Display Settings */}
+          {/* Sidebar - Service Control */}
           <div className="space-y-4 sm:space-y-6">
             <section>
               <h2 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">Service Control</h2>
               <ServiceControls />
-            </section>
-
-            <section>
-              <h2 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">Transitions</h2>
-              <TransitionSettingsComponent />
             </section>
           </div>
         </div>

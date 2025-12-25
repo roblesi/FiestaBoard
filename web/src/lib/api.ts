@@ -124,6 +124,10 @@ export interface Page {
   rows?: RowConfig[];
   template?: string[];
   duration_seconds: number;
+  // Transition settings (per-page override)
+  transition_strategy?: string | null;
+  transition_interval_ms?: number | null;
+  transition_step_size?: number | null;
   created_at: string;
   updated_at?: string;
 }
@@ -135,6 +139,10 @@ export interface PageCreate {
   rows?: RowConfig[];
   template?: string[];
   duration_seconds?: number;
+  // Transition settings (per-page override)
+  transition_strategy?: string | null;
+  transition_interval_ms?: number | null;
+  transition_step_size?: number | null;
 }
 
 export interface PageUpdate {
@@ -143,6 +151,10 @@ export interface PageUpdate {
   rows?: RowConfig[];
   template?: string[];
   duration_seconds?: number;
+  // Transition settings (per-page override)
+  transition_strategy?: string | null;
+  transition_interval_ms?: number | null;
+  transition_step_size?: number | null;
 }
 
 export interface PagesResponse {
