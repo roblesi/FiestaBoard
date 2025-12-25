@@ -212,6 +212,32 @@ class Config:
         """Apple Music refresh interval."""
         return cls._get_feature("apple_music").get("refresh_seconds", 10)
     
+    # ==================== Surf Configuration ====================
+    
+    @classmethod
+    @property
+    def SURF_ENABLED(cls) -> bool:
+        """Whether surf data is enabled."""
+        return cls._get_feature("surf").get("enabled", False)
+    
+    @classmethod
+    @property
+    def SURF_LATITUDE(cls) -> float:
+        """Surf location latitude (default: Ocean Beach, SF)."""
+        return cls._get_feature("surf").get("latitude", 37.7599)
+    
+    @classmethod
+    @property
+    def SURF_LONGITUDE(cls) -> float:
+        """Surf location longitude (default: Ocean Beach, SF)."""
+        return cls._get_feature("surf").get("longitude", -122.5121)
+    
+    @classmethod
+    @property
+    def SURF_REFRESH_SECONDS(cls) -> int:
+        """Surf data refresh interval in seconds."""
+        return cls._get_feature("surf").get("refresh_seconds", 600)
+    
     # ==================== Guest WiFi Configuration ====================
     
     @classmethod
@@ -333,6 +359,7 @@ class Config:
             "guest_wifi_enabled": cls.GUEST_WIFI_ENABLED,
             "home_assistant_enabled": cls.HOME_ASSISTANT_ENABLED,
             "star_trek_quotes_enabled": cls.STAR_TREK_QUOTES_ENABLED,
+            "surf_enabled": cls.SURF_ENABLED,
             # Vestaboard config
             "vb_api_mode": cls.VB_API_MODE,
             "vb_host": cls.VB_HOST if cls.VB_API_MODE.lower() == "local" else "cloud",
