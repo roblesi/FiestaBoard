@@ -95,6 +95,23 @@ DEFAULT_CONFIG: Dict[str, Any] = {
                 ],
             },
         },
+        "air_fog": {
+            "enabled": False,
+            "purpleair_api_key": "",  # PurpleAir API key
+            "openweathermap_api_key": "",  # OpenWeatherMap API key
+            "purpleair_sensor_id": "",  # Optional specific sensor ID
+            "latitude": 37.7749,  # San Francisco
+            "longitude": -122.4194,  # San Francisco
+            "refresh_seconds": 600,  # 10 minutes
+            "color_rules": {
+                "air_status": [
+                    {"condition": "==", "value": "GOOD", "color": "green"},
+                    {"condition": "==", "value": "MODERATE", "color": "yellow"},
+                    {"condition": "==", "value": "UNHEALTHY_SENSITIVE", "color": "orange"},
+                    {"condition": "==", "value": "UNHEALTHY", "color": "red"},
+                ],
+            },
+        },
         "rotation": {
             "enabled": True,
             "default_duration": 300,

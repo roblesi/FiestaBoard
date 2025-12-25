@@ -64,6 +64,7 @@ AVAILABLE_VARIABLES = {
     "apple_music": ["track", "artist", "album", "playing"],
     "star_trek": ["quote", "character", "series", "series_color"],
     "guest_wifi": ["ssid", "password"],
+    "air_fog": ["aqi", "air_status", "air_color", "fog_status", "fog_color", "is_foggy", "visibility", "formatted"],
 }
 
 # Maximum character lengths for each variable (for validation)
@@ -96,6 +97,14 @@ VARIABLE_MAX_LENGTHS = {
     "home_assistant.state": 10,
     "home_assistant.state_color": 4,  # Color tile
     "home_assistant.friendly_name": 15,
+    "air_fog.aqi": 3,  # 0-500
+    "air_fog.air_status": 18,  # UNHEALTHY_SENSITIVE
+    "air_fog.air_color": 4,  # Color tile
+    "air_fog.fog_status": 10,  # FOG, HAZE, MIST, CLEAR
+    "air_fog.fog_color": 4,  # Color tile
+    "air_fog.is_foggy": 3,  # Yes/No
+    "air_fog.visibility": 5,  # e.g., "1.2mi"
+    "air_fog.formatted": 22,  # Pre-formatted message
 }
 
 # Regex patterns

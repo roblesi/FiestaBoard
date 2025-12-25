@@ -278,6 +278,59 @@ class Config:
         """Home Assistant refresh interval."""
         return cls._get_feature("home_assistant").get("refresh_seconds", 30)
     
+    # ==================== Air Quality / Fog Configuration ====================
+    
+    @classmethod
+    @property
+    def AIR_FOG_ENABLED(cls) -> bool:
+        """Whether air quality/fog monitoring is enabled."""
+        return cls._get_feature("air_fog").get("enabled", False)
+    
+    @classmethod
+    @property
+    def PURPLEAIR_API_KEY(cls) -> str:
+        """PurpleAir API key for air quality data."""
+        return cls._get_feature("air_fog").get("purpleair_api_key", "")
+    
+    @classmethod
+    @property
+    def PURPLEAIR_SENSOR_ID(cls) -> Optional[str]:
+        """Optional specific PurpleAir sensor ID."""
+        return cls._get_feature("air_fog").get("purpleair_sensor_id")
+    
+    @classmethod
+    @property
+    def OPENWEATHERMAP_API_KEY(cls) -> str:
+        """OpenWeatherMap API key for visibility/fog data."""
+        return cls._get_feature("air_fog").get("openweathermap_api_key", "")
+    
+    @classmethod
+    @property
+    def AIR_FOG_LATITUDE(cls) -> float:
+        """Latitude for air/fog monitoring."""
+        return cls._get_feature("air_fog").get("latitude", 37.7749)
+    
+    @classmethod
+    @property
+    def AIR_FOG_LONGITUDE(cls) -> float:
+        """Longitude for air/fog monitoring."""
+        return cls._get_feature("air_fog").get("longitude", -122.4194)
+    
+    @classmethod
+    @property
+    def AIR_FOG_REFRESH_SECONDS(cls) -> int:
+        """Air/fog data refresh interval in seconds."""
+        return cls._get_feature("air_fog").get("refresh_seconds", 300)
+    
+    # ==================== Legacy/Unused Configuration ====================
+    
+    # These are kept for backward compatibility but not actively used
+    BAYWHEELS_ENABLED: bool = False
+    USER_LATITUDE: float = 37.7749
+    USER_LONGITUDE: float = -122.4194
+    MAX_DISTANCE_MILES: float = 2.0
+    WAYMO_ENABLED: bool = False
+    
     # ==================== Helper Methods ====================
     
     @classmethod
@@ -333,6 +386,7 @@ class Config:
             "guest_wifi_enabled": cls.GUEST_WIFI_ENABLED,
             "home_assistant_enabled": cls.HOME_ASSISTANT_ENABLED,
             "star_trek_quotes_enabled": cls.STAR_TREK_QUOTES_ENABLED,
+            "air_fog_enabled": cls.AIR_FOG_ENABLED,
             # Vestaboard config
             "vb_api_mode": cls.VB_API_MODE,
             "vb_host": cls.VB_HOST if cls.VB_API_MODE.lower() == "local" else "cloud",
