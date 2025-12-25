@@ -163,9 +163,6 @@ DEFAULT_CONFIG: Dict[str, Any] = {
                 ],
             },
         },
-                ],
-            },
-        },
         "rotation": {
             "enabled": True,
             "default_duration": 300,
