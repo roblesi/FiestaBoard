@@ -2,7 +2,6 @@
 
 import { ServiceControls } from "@/components/service-controls";
 import { TransitionSettingsComponent } from "@/components/transition-settings";
-import { OutputTargetSelector } from "@/components/output-target-selector";
 import { FeatureSettings } from "@/components/feature-settings";
 import { VestaboardSettings } from "@/components/feature-settings/vestaboard-settings";
 
@@ -42,11 +41,6 @@ export default function SettingsPage() {
             <section>
               <h2 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">Service Control</h2>
               <ServiceControls />
-            </section>
-
-            <section>
-              <h2 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">Display Output</h2>
-              <OutputTargetSelector />
             </section>
 
             <section>

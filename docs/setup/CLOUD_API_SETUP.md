@@ -45,13 +45,20 @@ VB_READ_WRITE_KEY=your_read_write_key_here
 
 ### 3. Test the Cloud API
 
-Run the test script to verify your key works:
+Test your key by starting the service and checking the health endpoint:
 
 ```bash
-python test_cloud_api.py
+# Start the service
+docker-compose -f docker-compose.dev.yml up -d
+
+# Check the health endpoint
+curl http://localhost:8000/health
+
+# Check the logs for any connection errors
+docker-compose -f docker-compose.dev.yml logs -f vestaboard-api
 ```
 
-If successful, you should see "Cloud API Test - Success!" on your Vestaboard.
+If successful, the API should connect to your Vestaboard without errors.
 
 ### 4. Restart Your Docker Containers
 

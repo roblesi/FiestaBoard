@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 
 from src.pages.models import Page, PageCreate, PageUpdate, RowConfig, PageType
 from src.pages.storage import PageStorage
-from src.pages.service import PageService
+from src.pages.service import PageService, DeleteResult
 from src.displays.service import DisplayResult
 
 
@@ -238,12 +238,50 @@ class TestPageService:
         assert updated.name == "Updated"
     
     def test_delete_page(self, service):
-        """Test deleting a page via service."""
-        page = service.create_page(PageCreate(name="Test", type="single", display_type="weather"))
+        """Test deleting a page via service (when multiple pages exist)."""
+        # Create two pages so we're not deleting the last one
+        page1 = service.create_page(PageCreate(name="Page 1", type="single", display_type="weather"))
+        page2 = service.create_page(PageCreate(name="Page 2", type="single", display_type="datetime"))
         
+        result = service.delete_page(page1.id)
+        assert result.deleted is True
+        assert result.default_page_created is False
+        assert result.new_page_id is None
+        assert service.get_page(page1.id) is None
+        # page2 should still exist
+        assert service.get_page(page2.id) is not None
+    
+    def test_delete_last_page_creates_default(self, service):
+        """Test deleting the last page creates a default welcome page."""
+        # Create a single page
+        page = service.create_page(PageCreate(name="Only Page", type="single", display_type="weather"))
+        
+        # Delete it - should create a default page
         result = service.delete_page(page.id)
-        assert result is True
+        
+        assert result.deleted is True
+        assert result.default_page_created is True
+        assert result.new_page_id is not None
+        
+        # Original page should be gone
         assert service.get_page(page.id) is None
+        
+        # Default page should exist
+        default_page = service.get_page(result.new_page_id)
+        assert default_page is not None
+        assert default_page.name == "Welcome"
+        assert default_page.type == "template"
+        assert default_page.template is not None
+        
+        # There should be exactly 1 page
+        pages = service.list_pages()
+        assert len(pages) == 1
+    
+    def test_delete_nonexistent_page(self, service):
+        """Test deleting a page that doesn't exist."""
+        result = service.delete_page("nonexistent-id")
+        assert result.deleted is False
+        assert result.default_page_created is False
     
     @patch('src.pages.service.get_display_service')
     def test_render_single_page(self, mock_get_display, service):
@@ -408,12 +446,38 @@ class TestPagesAPIEndpoints:
     
     def test_delete_page(self, client, mock_page_service):
         """Test DELETE /pages/{id}."""
-        mock_page_service.delete_page.return_value = True
+        mock_page_service.delete_page.return_value = DeleteResult(deleted=True)
         
         response = client.delete("/pages/test-id")
         
         assert response.status_code == 200
-        assert "deleted" in response.json()["message"]
+        data = response.json()
+        assert "deleted" in data["message"]
+        assert data["default_page_created"] is False
+    
+    def test_delete_last_page_creates_default(self, client, mock_page_service):
+        """Test DELETE /pages/{id} when it's the last page."""
+        mock_page_service.delete_page.return_value = DeleteResult(
+            deleted=True,
+            default_page_created=True,
+            new_page_id="new-default-id"
+        )
+        
+        response = client.delete("/pages/test-id")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["default_page_created"] is True
+        assert data["new_page_id"] == "new-default-id"
+        assert "welcome" in data["message"].lower()
+    
+    def test_delete_page_not_found(self, client, mock_page_service):
+        """Test DELETE /pages/{id} with nonexistent ID."""
+        mock_page_service.delete_page.return_value = DeleteResult(deleted=False)
+        
+        response = client.delete("/pages/nonexistent-id")
+        
+        assert response.status_code == 404
     
     def test_preview_page(self, client, mock_page_service):
         """Test POST /pages/{id}/preview."""

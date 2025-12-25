@@ -35,7 +35,7 @@ That's it! 🎉
 docker-compose down
 ```
 
-**For development/testing:** Just run `docker-compose up` - it works great for local dev! See [LOCAL_DEVELOPMENT.md](./LOCAL_DEVELOPMENT.md) for more options.
+**For development/testing:** Just run `docker-compose up` - it works great for local dev! See [LOCAL_DEVELOPMENT.md](./docs/setup/LOCAL_DEVELOPMENT.md) for more options.
 
 ---
 
@@ -50,8 +50,7 @@ docker-compose down
 - 📶 **Guest WiFi**: Display WiFi credentials for guests (easily toggled on/off)
 
 ### System Features
-- 🔄 **Smart Rotation**: Time-based rotation between screens with configurable durations
-- 🎯 **Priority System**: Guest WiFi > Apple Music > Rotation > Weather
+- 📄 **Page-Based Display**: Create and select pages via the web UI
 - 🐳 **Docker Ready**: Containerized for easy deployment on any system
 - ⚙️ **Highly Configurable**: Environment-based configuration for all features
 - 🔒 **Secure**: API token support for all integrations
@@ -79,10 +78,10 @@ If you're using GitHub Codespaces:
 
 3. **Run the setup script**:
    ```bash
-   ./codespaces_setup.sh
+   ./scripts/codespaces_setup.sh
    ```
 
-See [CODESPACES_SETUP.md](./CODESPACES_SETUP.md) for detailed instructions.
+See [CODESPACES_SETUP.md](./docs/setup/CODESPACES_SETUP.md) for detailed instructions.
 
 ### Basic Setup
 
@@ -136,11 +135,10 @@ See [CODESPACES_SETUP.md](./CODESPACES_SETUP.md) for detailed instructions.
 ### Advanced Setup
 
 For detailed setup instructions for specific features, see:
-- **Home Assistant**: [HOME_ASSISTANT_SETUP.md](./HOME_ASSISTANT_SETUP.md)
-- **Apple Music**: [APPLE_MUSIC_SETUP.md](./APPLE_MUSIC_SETUP.md)
-- **Star Trek Quotes**: [STAR_TREK_QUOTES_SETUP.md](./STAR_TREK_QUOTES_SETUP.md)
-- **Guest WiFi**: [GUEST_WIFI_SETUP.md](./GUEST_WIFI_SETUP.md)
-- **Rotation Control**: [ROTATION_CONTROL.md](./ROTATION_CONTROL.md)
+- **Home Assistant**: [HOME_ASSISTANT_SETUP.md](./docs/features/HOME_ASSISTANT_SETUP.md)
+- **Apple Music**: [APPLE_MUSIC_SETUP.md](./docs/features/APPLE_MUSIC_SETUP.md)
+- **Star Trek Quotes**: [STAR_TREK_QUOTES_SETUP.md](./docs/features/STAR_TREK_QUOTES_SETUP.md)
+- **Guest WiFi**: [GUEST_WIFI_SETUP.md](./docs/features/GUEST_WIFI_SETUP.md)
 
 ## Configuration
 
@@ -159,13 +157,6 @@ All configuration is done via environment variables in `.env`:
 - `REFRESH_INTERVAL_SECONDS`: Update frequency in seconds (default: 300 = 5 minutes)
 
 ### Feature Configuration
-
-#### Rotation Control
-- `ROTATION_ENABLED`: Enable/disable screen rotation (default: `true`)
-- `ROTATION_WEATHER_DURATION`: Weather display duration in seconds (default: `300`)
-- `ROTATION_HOME_ASSISTANT_DURATION`: Home Assistant duration in seconds (default: `300`)
-- `ROTATION_STAR_TREK_DURATION`: Star Trek quotes duration in seconds (default: `180`)
-- `ROTATION_ORDER`: Comma-separated list of screens (default: `weather,home_assistant`)
 
 #### Star Trek Quotes
 - `STAR_TREK_QUOTES_ENABLED`: Enable Star Trek quotes (default: `false`)
@@ -191,81 +182,50 @@ See `env.example` for all available options.
 
 ## Local Development
 
-### Option 1: Docker Compose (Recommended for Testing)
+### Docker Compose (Recommended)
 
 ```bash
-# Build and run both API and Web UI
-docker-compose up --build
+# Build and run for development
+docker-compose -f docker-compose.dev.yml up --build
 
-# Access Web UI at http://localhost:8080
+# Access Web UI at http://localhost:3000
 # Access API at http://localhost:8000
 ```
 
-### Option 2: API Server with Auto-reload
+The development environment includes hot reload for both Python and Next.js code.
 
-```bash
-# Install dependencies
-pip install -r requirements.txt
+For detailed development workflows, see [LOCAL_DEVELOPMENT.md](./docs/setup/LOCAL_DEVELOPMENT.md).
 
-# Run API server with auto-reload
-uvicorn src.api_server:app --reload --port 8000
+## How It Works
 
-# In another terminal, serve Web UI
-cd web_ui && python -m http.server 8080
-```
-
-### Option 3: Direct Python (Original Service)
-
-```bash
-pip install -r requirements.txt
-python -m src.main
-```
-
-For detailed development workflows, see [LOCAL_DEVELOPMENT.md](./LOCAL_DEVELOPMENT.md).
-
-## Display Priority System
-
-The Vestaboard follows this priority order:
-
-1. **Guest WiFi** (highest priority) - When enabled, overrides everything
-2. **Apple Music** - When music is playing, takes precedence
-3. **Rotation** - Weather, Home Assistant, and Star Trek rotate based on configuration
-4. **Weather + DateTime** - Default display
-
-This ensures important information (like guest WiFi) always shows, while allowing rotation of other content.
+Select a page in the web UI and the service will keep it updated on your Vestaboard. Pages use templates with dynamic data sources like weather, time, and more. Create custom pages to display exactly what you want.
 
 ## Project Structure
 
 ```
 Vesta/
-├── src/
-│   ├── main.py                      # Main entry point
-│   ├── config.py                    # Configuration management
-│   ├── vestaboard_client.py         # Vestaboard API client
-│   ├── vestaboard_chars.py          # Character codes and weather symbols
-│   ├── data_sources/
-│   │   ├── weather.py               # Weather API integration
-│   │   ├── datetime.py              # Date/time formatting
-│   │   ├── apple_music.py           # Apple Music "Now Playing"
-│   │   ├── home_assistant.py        # Home Assistant integration
-│   │   ├── star_trek_quotes.py      # Star Trek quotes source
-│   │   └── star_trek_quotes.json    # Quote database (102 quotes)
-│   └── formatters/
-│       └── message_formatter.py     # Message formatting for all screens
-├── macos_helper/
-│   ├── apple_music_service.py       # macOS helper for Apple Music
-│   └── README.md                    # Helper service documentation
-├── .env                             # Environment variables (create from env.example)
-├── env.example                      # Configuration template
-├── Dockerfile
-├── docker-compose.yml
-├── requirements.txt
-├── README.md                        # This file
-├── ROTATION_CONTROL.md              # Rotation configuration guide
-├── HOME_ASSISTANT_SETUP.md          # Home Assistant setup guide
-├── APPLE_MUSIC_SETUP.md             # Apple Music setup guide
-├── STAR_TREK_QUOTES_SETUP.md        # Star Trek quotes guide
-└── GUEST_WIFI_SETUP.md              # Guest WiFi guide
+├── src/                            # Python API and display service
+│   ├── api_server.py               # FastAPI REST API
+│   ├── main.py                     # Display service core
+│   ├── config.py                   # Configuration management
+│   ├── vestaboard_client.py        # Vestaboard API client
+│   ├── data_sources/               # Data integrations
+│   └── formatters/                 # Message formatting
+├── web/                            # Next.js web UI
+│   └── src/                        # React components and pages
+├── docs/                           # Documentation
+│   ├── setup/                      # Setup guides
+│   ├── features/                   # Feature guides
+│   ├── deployment/                 # Deployment guides
+│   └── reference/                  # API research and reference
+├── scripts/                        # Utility scripts
+├── tests/                          # Test suite
+├── macos_helper/                   # macOS Apple Music helper
+├── Dockerfile.api                  # API service Dockerfile
+├── Dockerfile.ui                   # Web UI Dockerfile
+├── docker-compose.yml              # Production compose
+├── docker-compose.dev.yml          # Development compose
+└── .env                            # Environment variables
 ```
 
 ## API Keys
@@ -313,25 +273,6 @@ docker-compose down
 docker-compose up --build
 ```
 
-### Legacy Docker Commands (Original Service)
-
-```bash
-# Build image
-docker build -f Dockerfile -t vestaboard-display .
-
-# Run container
-docker run -d \
-  --name vestaboard-display \
-  --env-file .env \
-  --restart unless-stopped \
-  vestaboard-display
-
-# View logs
-docker logs -f vestaboard-display
-
-# Stop container
-docker stop vestaboard-display
-```
 
 ## Troubleshooting
 
@@ -355,19 +296,10 @@ docker stop vestaboard-display
 
 ## Feature Guides
 
-### Rotation Control
-Control how screens rotate on your Vestaboard. Configure duration for each screen and choose which screens to include in rotation.
-
-See [ROTATION_CONTROL.md](./ROTATION_CONTROL.md) for:
-- Time-based rotation configuration
-- Screen duration settings
-- Common rotation patterns
-- Troubleshooting
-
 ### Star Trek Quotes
 Display inspiring quotes from TNG, Voyager, and DS9 with a configurable ratio between series.
 
-See [STAR_TREK_QUOTES_SETUP.md](./STAR_TREK_QUOTES_SETUP.md) for:
+See [STAR_TREK_QUOTES_SETUP.md](./docs/features/STAR_TREK_QUOTES_SETUP.md) for:
 - Quote ratio configuration (default: 3:5:9)
 - Full list of 102 quotes
 - Custom quote addition
@@ -376,7 +308,7 @@ See [STAR_TREK_QUOTES_SETUP.md](./STAR_TREK_QUOTES_SETUP.md) for:
 ### Home Assistant Integration
 Show real-time status of doors, garage, locks, and other Home Assistant entities.
 
-See [HOME_ASSISTANT_SETUP.md](./HOME_ASSISTANT_SETUP.md) for:
+See [HOME_ASSISTANT_SETUP.md](./docs/features/HOME_ASSISTANT_SETUP.md) for:
 - Getting access tokens
 - Finding entity IDs
 - Status indicators ([G] = good, [R] = attention needed)
@@ -385,7 +317,7 @@ See [HOME_ASSISTANT_SETUP.md](./HOME_ASSISTANT_SETUP.md) for:
 ### Apple Music "Now Playing"
 Display currently playing music from Apple Music on your Mac.
 
-See [APPLE_MUSIC_SETUP.md](./APPLE_MUSIC_SETUP.md) for:
+See [APPLE_MUSIC_SETUP.md](./docs/features/APPLE_MUSIC_SETUP.md) for:
 - macOS helper service setup
 - Network configuration
 - LaunchAgent for auto-start
@@ -394,7 +326,7 @@ See [APPLE_MUSIC_SETUP.md](./APPLE_MUSIC_SETUP.md) for:
 ### Guest WiFi Display
 Easily display WiFi credentials for guests, toggled on/off via configuration.
 
-See [GUEST_WIFI_SETUP.md](./GUEST_WIFI_SETUP.md) for:
+See [GUEST_WIFI_SETUP.md](./docs/features/GUEST_WIFI_SETUP.md) for:
 - Simple toggle setup
 - Display format
 - Security considerations
@@ -406,10 +338,6 @@ See [GUEST_WIFI_SETUP.md](./GUEST_WIFI_SETUP.md) for:
 - 🌐 Webhook support for manual messages
 - 📸 Custom image display
 - 📊 Analytics and usage stats
-
-## Development
-
-See [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md) for detailed development roadmap.
 
 ## License
 
@@ -433,15 +361,11 @@ The Vestaboard displays various screens in rotation:
 - [OpenWeatherMap](https://openweathermap.org/api)
 - [Home Assistant REST API](https://developers.home-assistant.io/docs/api/rest/)
 
-### Setup Guides
-- [General Setup](./SETUP.md)
-- [Rotation Control](./ROTATION_CONTROL.md)
-- [Star Trek Quotes](./STAR_TREK_QUOTES_SETUP.md)
-- [Home Assistant](./HOME_ASSISTANT_SETUP.md)
-- [Apple Music](./APPLE_MUSIC_SETUP.md)
-- [Guest WiFi](./GUEST_WIFI_SETUP.md)
-
-### Development
-- [Development Plan](./DEVELOPMENT_PLAN.md)
-- [API Research](./API_RESEARCH.md)
+### Documentation
+- [Local Development](./docs/setup/LOCAL_DEVELOPMENT.md)
+- [Docker Setup](./docs/setup/DOCKER_SETUP.md)
+- [Cloud API Setup](./docs/setup/CLOUD_API_SETUP.md)
+- [Deploy to Synology](./docs/deployment/DEPLOY_TO_SYNOLOGY.md)
+- [API Research](./docs/reference/API_RESEARCH.md)
+- [Character Codes](./docs/reference/VESTABOARD_CHARACTER_CODES.md)
 

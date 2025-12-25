@@ -51,9 +51,22 @@ export function PageSelector({ onCreateNew, onEditPage }: PageSelectorProps) {
   // Delete page mutation
   const deleteMutation = useMutation({
     mutationFn: (pageId: string) => api.deletePage(pageId),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["pages"] });
-      toast.success("Page deleted");
+      // Also invalidate active page if it was updated
+      if (data.active_page_updated) {
+        queryClient.invalidateQueries({ queryKey: ["active-page"] });
+        queryClient.invalidateQueries({ queryKey: ["status"] });
+      }
+      
+      // Show appropriate message
+      if (data.default_page_created) {
+        toast.success("Page deleted. A default welcome page was created.");
+      } else if (data.active_page_updated) {
+        toast.success("Page deleted. Active display updated.");
+      } else {
+        toast.success("Page deleted");
+      }
     },
     onError: () => {
       toast.error("Failed to delete page");

@@ -68,14 +68,16 @@ docker run -d \
 ## API Endpoints
 
 ### Service Control
-- `POST /start` - Start the background display service
-- `POST /stop` - Stop the background display service
 - `POST /refresh` - Manually refresh the display
+- `POST /force-refresh` - Force refresh (ignores cache)
+- `POST /dev-mode` - Toggle dev mode (preview vs live)
 
 ### Status & Info
 - `GET /health` - Health check
 - `GET /status` - Service status and configuration
 - `GET /config` - Configuration summary
+
+**Note**: The background display service starts automatically when the container starts. There's no need to manually start/stop it.
 
 ### Display Control
 - `POST /send-message` - Send custom message to Vestaboard
@@ -97,9 +99,11 @@ curl http://localhost:8000/health
 curl http://localhost:8000/status
 ```
 
-### Start Service
+### Toggle Dev Mode
 ```bash
-curl -X POST http://localhost:8000/start
+curl -X POST http://localhost:8000/dev-mode \
+  -H "Content-Type: application/json" \
+  -d '{"dev_mode": true}'
 ```
 
 ### Send Custom Message
@@ -171,12 +175,13 @@ curl -X POST http://localhost:8000/send-message \
 ├── Dockerfile.api          # API service Dockerfile
 ├── Dockerfile.ui          # UI service Dockerfile
 ├── docker-compose.yml     # Multi-service compose file
+├── docker-compose.dev.yml # Development compose file
 ├── .dockerignore          # Docker ignore patterns
 ├── src/
 │   ├── api_server.py     # FastAPI server
 │   └── main.py           # Display service (used by API)
-└── web_ui/
-    └── index.html        # Web UI interface
+└── web/
+    └── src/              # Next.js web application
 ```
 
 ## Environment Variables
@@ -192,6 +197,6 @@ Both services use the same `.env` file. Key variables:
 
 ## Production Deployment
 
-For production deployment to Synology NAS, see [DEPLOY_TO_SYNOLOGY.md](./DEPLOY_TO_SYNOLOGY.md).
+For production deployment to Synology NAS, see [DEPLOY_TO_SYNOLOGY.md](../deployment/DEPLOY_TO_SYNOLOGY.md).
 
 

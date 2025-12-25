@@ -185,14 +185,25 @@ class ConfigManager:
             return [self._deep_copy(item) for item in obj]
         return obj
 
+    # Fields that should be replaced entirely (not recursively merged)
+    REPLACE_FIELDS = {"color_rules"}
+
     def _merge_with_defaults(self, config: Dict[str, Any]) -> Dict[str, Any]:
-        """Recursively merge config with defaults to handle missing keys."""
+        """Recursively merge config with defaults to handle missing keys.
+        
+        Note: Some fields like 'color_rules' are replaced entirely rather than
+        recursively merged, so user deletions are preserved.
+        """
         result = self._deep_copy(DEFAULT_CONFIG)
         
-        def merge(base: Dict, update: Dict) -> Dict:
+        def merge(base: Dict, update: Dict, path: str = "") -> Dict:
             for key, value in update.items():
-                if key in base and isinstance(base[key], dict) and isinstance(value, dict):
-                    merge(base[key], value)
+                current_path = f"{path}.{key}" if path else key
+                # Check if this field should be replaced entirely
+                if key in self.REPLACE_FIELDS:
+                    base[key] = self._deep_copy(value)
+                elif key in base and isinstance(base[key], dict) and isinstance(value, dict):
+                    merge(base[key], value, current_path)
                 else:
                     base[key] = value
             return base

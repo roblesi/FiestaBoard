@@ -64,7 +64,7 @@ Once your Codespace is running:
 
 ```bash
 # Run the setup script
-./codespaces_setup.sh
+./scripts/codespaces_setup.sh
 ```
 
 This script will:
@@ -85,24 +85,14 @@ You should see your API keys populated from Codespaces secrets.
 
 ## Step 6: Run the Service
 
-### Local Testing (in Codespace)
-
-```bash
-# Install dependencies (if not already done)
-pip install -r requirements.txt
-
-# Run directly
-python -m src.main
-```
-
-### Docker (in Codespace)
+### Using Docker (Recommended)
 
 ```bash
 # Build and run
-docker-compose up -d
+docker-compose -f docker-compose.dev.yml up -d
 
 # View logs
-docker-compose logs -f
+docker-compose -f docker-compose.dev.yml logs -f
 ```
 
 ## Configuration Options
@@ -116,10 +106,9 @@ Beyond the required secrets, you can configure additional features using environ
 export WEATHER_LOCATION="New York, NY"
 export TIMEZONE="America/New_York"
 export STAR_TREK_QUOTES_ENABLED="true"
-export ROTATION_ORDER="weather,home_assistant,star_trek"
 
 # Then re-run setup
-./codespaces_setup.sh
+./scripts/codespaces_setup.sh
 ```
 
 ### Adding More Secrets
@@ -296,19 +285,19 @@ export VB_READ_WRITE_KEY="your-key"
 export WEATHER_API_KEY="your-key"
 export STAR_TREK_QUOTES_ENABLED="true"
 
-# Run directly (python-dotenv will fall back to env vars)
-python -m src.main
+# Run with Docker (env vars will be passed through)
+docker-compose -f docker-compose.dev.yml up -d
 ```
 
-The Python application checks environment variables first, then falls back to `.env` file.
+The application checks environment variables first, then falls back to `.env` file.
 
 ## Summary
 
 1. **Add secrets** to GitHub repository (Settings → Codespaces)
 2. **Launch Codespace** from GitHub
-3. **Run setup script**: `./codespaces_setup.sh`
+3. **Run setup script**: `./scripts/codespaces_setup.sh`
 4. **Verify configuration**: `cat .env`
-5. **Run the service**: `python -m src.main` or `docker-compose up -d`
+5. **Run the service**: `docker-compose -f docker-compose.dev.yml up -d`
 
-Your API keys are now secure and automatically available in Codespaces! 🚀
+Your API keys are now secure and automatically available in Codespaces!
 

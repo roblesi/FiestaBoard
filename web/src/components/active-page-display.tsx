@@ -6,17 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { 
   RefreshCw, 
-  Check,
   FileText, 
   Grid3X3, 
   Code2,
-  ChevronDown
 } from "lucide-react";
 import { VestaboardDisplay } from "@/components/vestaboard-display";
-import { useState } from "react";
 
 // Page type icons
 const PAGE_TYPE_ICONS: Record<string, typeof FileText> = {
@@ -26,8 +24,6 @@ const PAGE_TYPE_ICONS: Record<string, typeof FileText> = {
 };
 
 export function ActivePageDisplay() {
-  const [showPageSelector, setShowPageSelector] = useState(false);
-  
   // Fetch active page setting
   const { 
     data: activePageData, 
@@ -44,9 +40,6 @@ export function ActivePageDisplay() {
   // Get the active page ID
   const activePageId = activePageData?.page_id || null;
   const pages = pagesData?.pages || [];
-  
-  // Find the active page details
-  const activePage = pages.find(p => p.id === activePageId);
   
   // Fetch preview of active page with auto-refresh every 30 seconds
   const { 
@@ -80,10 +73,11 @@ export function ActivePageDisplay() {
   
   // Handle page selection
   const handleSelectPage = useCallback((pageId: string) => {
+    if (pageId === activePageId) return; // Don't re-select the same page
+    
     const page = pages.find(p => p.id === pageId);
     setActivePageMutation.mutate(pageId, {
       onSuccess: (result) => {
-        setShowPageSelector(false);
         if (result.sent_to_board) {
           toast.success(`Switched to "${page?.name || 'page'}"`);
         } else {
@@ -94,7 +88,7 @@ export function ActivePageDisplay() {
         toast.error("Failed to switch page");
       }
     });
-  }, [pages, setActivePageMutation]);
+  }, [pages, activePageId, setActivePageMutation]);
   
   const handleRefresh = useCallback(() => {
     refetchActivePage();
@@ -105,8 +99,8 @@ export function ActivePageDisplay() {
 
   return (
     <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+      <CardHeader className="pb-4">
+        <div className="flex items-center justify-between mb-4">
           <CardTitle className="text-lg">Active Display</CardTitle>
           <Button
             variant="ghost"
@@ -119,36 +113,15 @@ export function ActivePageDisplay() {
           </Button>
         </div>
         
-        {/* Page selector dropdown */}
-        <div className="relative">
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full justify-between"
-            onClick={() => setShowPageSelector(!showPageSelector)}
-            disabled={isLoading || pages.length === 0}
-          >
-            {isLoading ? (
-              <span className="text-muted-foreground">Loading...</span>
-            ) : activePage ? (
-              <div className="flex items-center gap-2">
-                {(() => {
-                  const TypeIcon = PAGE_TYPE_ICONS[activePage.type] || FileText;
-                  return <TypeIcon className="h-4 w-4" />;
-                })()}
-                <span className="truncate">{activePage.name}</span>
-              </div>
-            ) : pages.length === 0 ? (
-              <span className="text-muted-foreground">No pages available</span>
-            ) : (
-              <span className="text-muted-foreground">Select a page</span>
-            )}
-            <ChevronDown className={`h-4 w-4 transition-transform ${showPageSelector ? "rotate-180" : ""}`} />
-          </Button>
-          
-          {/* Dropdown menu */}
-          {showPageSelector && pages.length > 0 && (
-            <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-auto">
+        {/* Page selector - Horizontal Pills */}
+        {isLoading ? (
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-32" />
+          </div>
+        ) : pages.length > 0 ? (
+          <ScrollArea className="w-full whitespace-nowrap">
+            <div className="flex gap-2 pb-2">
               {pages.map((page) => {
                 const TypeIcon = PAGE_TYPE_ICONS[page.type] || FileText;
                 const isActive = page.id === activePageId;
@@ -156,30 +129,53 @@ export function ActivePageDisplay() {
                 return (
                   <button
                     key={page.id}
-                    className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors ${
-                      isActive ? "bg-accent/50" : ""
-                    }`}
                     onClick={() => handleSelectPage(page.id)}
-                    disabled={setActivePageMutation.isPending}
+                    disabled={setActivePageMutation.isPending || isActive}
+                    className={`
+                      group relative flex items-center gap-2 px-4 py-2.5 rounded-lg
+                      transition-all duration-200 ease-out
+                      border-2 
+                      ${isActive 
+                        ? "border-primary bg-primary/10 shadow-sm" 
+                        : "border-border hover:border-primary/50 hover:bg-accent"
+                      }
+                      disabled:opacity-50 disabled:cursor-not-allowed
+                      flex-shrink-0
+                    `}
                   >
-                    <TypeIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span className="flex-1 text-left truncate">{page.name}</span>
-                    <Badge variant="secondary" className="text-[10px] shrink-0">
+                    <TypeIcon className={`h-4 w-4 transition-colors ${
+                      isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                    }`} />
+                    <span className={`text-sm font-medium transition-colors ${
+                      isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
+                    }`}>
+                      {page.name}
+                    </span>
+                    <Badge 
+                      variant={isActive ? "default" : "secondary"} 
+                      className="text-[10px] px-1.5 py-0"
+                    >
                       {page.type}
                     </Badge>
-                    {isActive && <Check className="h-4 w-4 text-primary shrink-0" />}
+                    {isActive && (
+                      <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary rounded-full" />
+                    )}
                   </button>
                 );
               })}
             </div>
-          )}
-        </div>
+          </ScrollArea>
+        ) : (
+          <div className="text-sm text-muted-foreground py-2">
+            No pages available
+          </div>
+        )}
         
         {/* Status indicator */}
-        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2">
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span>Auto-updating every 1 min</span>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-3">
+          <div className="flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+            <span>Auto-refresh every 30s</span>
           </div>
         </div>
       </CardHeader>

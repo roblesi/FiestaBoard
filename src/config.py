@@ -172,12 +172,6 @@ class Config:
         """Default rotation duration in seconds."""
         return cls._get_feature("rotation").get("default_duration", 300)
     
-    # Legacy properties for backward compatibility
-    ROTATION_WEATHER_DURATION: int = 300
-    ROTATION_HOME_ASSISTANT_DURATION: int = 300
-    ROTATION_STAR_TREK_DURATION: int = 180
-    ROTATION_ORDER: str = "weather,home_assistant"
-    
     # ==================== Star Trek Quotes Configuration ====================
     
     @classmethod
@@ -284,15 +278,6 @@ class Config:
         """Home Assistant refresh interval."""
         return cls._get_feature("home_assistant").get("refresh_seconds", 30)
     
-    # ==================== Legacy/Unused Configuration ====================
-    
-    # These are kept for backward compatibility but not actively used
-    BAYWHEELS_ENABLED: bool = False
-    USER_LATITUDE: float = 37.7749
-    USER_LONGITUDE: float = -122.4194
-    MAX_DISTANCE_MILES: float = 2.0
-    WAYMO_ENABLED: bool = False
-    
     # ==================== Helper Methods ====================
     
     @classmethod
@@ -344,8 +329,6 @@ class Config:
             "datetime_enabled": cls.DATETIME_ENABLED,
             "weather_enabled": cls.WEATHER_ENABLED and bool(cls.WEATHER_API_KEY),
             "rotation_enabled": cls.ROTATION_ENABLED,
-            "baywheels_enabled": cls.BAYWHEELS_ENABLED,
-            "waymo_enabled": cls.WAYMO_ENABLED,
             "apple_music_enabled": cls.APPLE_MUSIC_ENABLED,
             "guest_wifi_enabled": cls.GUEST_WIFI_ENABLED,
             "home_assistant_enabled": cls.HOME_ASSISTANT_ENABLED,

@@ -38,15 +38,6 @@ describe("ServiceStatus", () => {
 });
 
 describe("ServiceControls", () => {
-  it("renders start and stop buttons", async () => {
-    render(<ServiceControls />, { wrapper: TestWrapper });
-
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: /start/i })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /stop/i })).toBeInTheDocument();
-    });
-  });
-
   it("shows dev mode switch", async () => {
     render(<ServiceControls />, { wrapper: TestWrapper });
 
@@ -56,12 +47,12 @@ describe("ServiceControls", () => {
     });
   });
 
-  it("disables start button when service is running", async () => {
+  it("shows cache controls", async () => {
     render(<ServiceControls />, { wrapper: TestWrapper });
 
     await waitFor(() => {
-      const startButton = screen.getByRole("button", { name: /start/i });
-      expect(startButton).toBeDisabled();
+      expect(screen.getByRole("button", { name: /clear cache/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /force refresh/i })).toBeInTheDocument();
     });
   });
 });

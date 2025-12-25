@@ -4,15 +4,38 @@ Provides high-level operations on pages including preview and send.
 """
 
 import logging
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from datetime import datetime
+from dataclasses import dataclass
 
 from .models import Page, PageCreate, PageUpdate, RowConfig
 from .storage import PageStorage
 from ..displays.service import get_display_service, DisplayResult
 from ..templates.engine import get_template_engine
+from ..settings.service import get_settings_service
 
 logger = logging.getLogger(__name__)
+
+
+# Default welcome page template (6 lines for Vestaboard)
+DEFAULT_PAGE_TEMPLATE = [
+    "      Welcome to      ",
+    "      Vestaboard      ",
+    "                      ",
+    "   Create a new page  ",
+    "    to get started    ",
+    "                      ",
+]
+
+
+@dataclass
+class DeleteResult:
+    """Result of a page deletion operation."""
+    deleted: bool
+    default_page_created: bool = False
+    new_page_id: Optional[str] = None
+    active_page_updated: bool = False
+    new_active_page_id: Optional[str] = None
 
 
 class PageService:
@@ -80,16 +103,83 @@ class PageService:
         updates = data.model_dump(exclude_unset=True)
         return self.storage.update(page_id, updates)
     
-    def delete_page(self, page_id: str) -> bool:
+    def delete_page(self, page_id: str) -> DeleteResult:
         """Delete a page.
+        
+        If this is the last page, a default welcome page is created first
+        to ensure there is always at least one page.
+        
+        If the deleted page is the active display page, the active page will
+        be updated to another valid page.
         
         Args:
             page_id: Page ID
             
         Returns:
-            True if deleted, False if not found
+            DeleteResult with deletion status and info about any default page created
         """
-        return self.storage.delete(page_id)
+        # Check if page exists
+        if not self.storage.exists(page_id):
+            return DeleteResult(deleted=False)
+        
+        # Check if this page is the active display page
+        settings_service = get_settings_service()
+        is_active_page = settings_service.get_active_page_id() == page_id
+        
+        # Check if this is the last page
+        if self.storage.count() == 1:
+            # Create default page before deleting the last one
+            default_page = self._create_default_page()
+            logger.info(f"Created default page {default_page.id} before deleting last page {page_id}")
+            
+            # Now delete the original page
+            self.storage.delete(page_id)
+            
+            # If deleted page was active, set the new default as active
+            if is_active_page:
+                settings_service.set_active_page_id(default_page.id)
+                logger.info(f"Active page updated to new default: {default_page.id}")
+            
+            return DeleteResult(
+                deleted=True,
+                default_page_created=True,
+                new_page_id=default_page.id,
+                active_page_updated=is_active_page,
+                new_active_page_id=default_page.id if is_active_page else None
+            )
+        
+        # Normal deletion
+        self.storage.delete(page_id)
+        
+        # If deleted page was active, set another page as active
+        new_active_id = None
+        if is_active_page:
+            remaining_pages = self.storage.list_all()
+            if remaining_pages:
+                new_active_id = remaining_pages[0].id
+                settings_service.set_active_page_id(new_active_id)
+                logger.info(f"Active page updated to: {new_active_id}")
+        
+        return DeleteResult(
+            deleted=True,
+            active_page_updated=is_active_page,
+            new_active_page_id=new_active_id
+        )
+    
+    def _create_default_page(self) -> Page:
+        """Create and save a default welcome page.
+        
+        Returns:
+            The created default page
+        """
+        page = Page(
+            name="Welcome",
+            type="template",
+            template=DEFAULT_PAGE_TEMPLATE,
+            duration_seconds=300,
+            created_at=datetime.utcnow()
+        )
+        return self.storage.create(page)
     
     # Rendering
     
