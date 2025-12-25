@@ -768,6 +768,7 @@ async def set_active_page(request: dict):
     page_id = request.get("page_id")
     
     # Validate page exists if not clearing
+    page = None
     if page_id is not None:
         page = page_service.get_page(page_id)
         if not page:
@@ -778,16 +779,21 @@ async def set_active_page(request: dict):
     
     # Immediately send to board if a page is set
     sent_to_board = False
-    if page_id and service and service.vb_client and not _dev_mode:
+    if page_id and page and service and service.vb_client and not _dev_mode:
         result = page_service.preview_page(page_id)
         if result and result.available:
-            transition = settings_service.get_transition_settings()
+            # Use page-level transitions if set, otherwise fall back to system defaults
+            system_transition = settings_service.get_transition_settings()
+            strategy = page.transition_strategy if page.transition_strategy else system_transition.strategy
+            interval_ms = page.transition_interval_ms if page.transition_interval_ms is not None else system_transition.step_interval_ms
+            step_size = page.transition_step_size if page.transition_step_size is not None else system_transition.step_size
+            
             board_array = text_to_board_array(result.formatted)
             success, was_sent = service.vb_client.send_characters(
                 board_array,
-                strategy=transition.strategy,
-                step_interval_ms=transition.step_interval_ms,
-                step_size=transition.step_size
+                strategy=strategy,
+                step_interval_ms=interval_ms,
+                step_size=step_size
             )
             sent_to_board = was_sent
             if not success:
@@ -952,6 +958,11 @@ async def send_page(page_id: str, target: Optional[str] = None):
     if not service or not service.vb_client:
         raise HTTPException(status_code=503, detail="Service not initialized")
     
+    # Get the page for transition settings
+    page = page_service.get_page(page_id)
+    if not page:
+        raise HTTPException(status_code=404, detail=f"Page not found: {page_id}")
+    
     # Render the page
     result = page_service.preview_page(page_id)
     
@@ -970,14 +981,19 @@ async def send_page(page_id: str, target: Optional[str] = None):
     # Send to board if appropriate
     sent_to_board = False
     if send_to_board and not _dev_mode:
-        transition = settings_service.get_transition_settings()
+        # Use page-level transitions if set, otherwise fall back to system defaults
+        system_transition = settings_service.get_transition_settings()
+        strategy = page.transition_strategy if page.transition_strategy else system_transition.strategy
+        interval_ms = page.transition_interval_ms if page.transition_interval_ms is not None else system_transition.step_interval_ms
+        step_size = page.transition_step_size if page.transition_step_size is not None else system_transition.step_size
+        
         # Convert to board array for proper character/color support
         board_array = text_to_board_array(result.formatted)
         success, was_sent = service.vb_client.send_characters(
             board_array,
-            strategy=transition.strategy,
-            step_interval_ms=transition.step_interval_ms,
-            step_size=transition.step_size
+            strategy=strategy,
+            step_interval_ms=interval_ms,
+            step_size=step_size
         )
         sent_to_board = was_sent
         if not success:

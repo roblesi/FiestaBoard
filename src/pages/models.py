@@ -51,6 +51,12 @@ class Page(BaseModel):
     # Rotation settings
     duration_seconds: int = Field(default=300, ge=10, le=3600)  # 10s to 1h
     
+    # Transition settings (per-page override, None means use system defaults)
+    # Valid strategies: column, reverse-column, edges-to-center, row, diagonal, random
+    transition_strategy: Optional[str] = None
+    transition_interval_ms: Optional[int] = Field(default=None, ge=0, le=5000)
+    transition_step_size: Optional[int] = Field(default=None, ge=1, le=22)
+    
     # Metadata
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: Optional[datetime] = None
@@ -102,6 +108,10 @@ class PageCreate(BaseModel):
     rows: Optional[List[RowConfig]] = None
     template: Optional[List[str]] = None
     duration_seconds: int = Field(default=300, ge=10, le=3600)
+    # Transition settings (per-page override)
+    transition_strategy: Optional[str] = None
+    transition_interval_ms: Optional[int] = Field(default=None, ge=0, le=5000)
+    transition_step_size: Optional[int] = Field(default=None, ge=1, le=22)
 
 
 class PageUpdate(BaseModel):
@@ -111,4 +121,8 @@ class PageUpdate(BaseModel):
     rows: Optional[List[RowConfig]] = None
     template: Optional[List[str]] = None
     duration_seconds: Optional[int] = Field(default=None, ge=10, le=3600)
+    # Transition settings (per-page override, use ... sentinel to leave unchanged)
+    transition_strategy: Optional[str] = None
+    transition_interval_ms: Optional[int] = Field(default=None, ge=0, le=5000)
+    transition_step_size: Optional[int] = Field(default=None, ge=1, le=22)
 

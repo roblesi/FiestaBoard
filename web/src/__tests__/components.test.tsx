@@ -48,12 +48,21 @@ describe("ServiceControls", () => {
     });
   });
 
-  it("shows cache controls", async () => {
+  it("shows service status badge", async () => {
     render(<ServiceControls />, { wrapper: TestWrapper });
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /clear cache/i })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /force refresh/i })).toBeInTheDocument();
+      // Should show either "Running" or "Stopped" badge
+      expect(screen.getByText(/Running|Stopped/)).toBeInTheDocument();
+    });
+  });
+
+  it("shows dev mode description", async () => {
+    render(<ServiceControls />, { wrapper: TestWrapper });
+
+    await waitFor(() => {
+      // Should show description about preview/live mode
+      expect(screen.getByText(/Preview mode|Live mode/)).toBeInTheDocument();
     });
   });
 });

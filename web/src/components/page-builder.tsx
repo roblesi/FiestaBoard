@@ -27,6 +27,9 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
+  FileText,
+  Braces,
+  ChevronDown,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -40,6 +43,26 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { api, PageCreate, PageUpdate, PageType } from "@/lib/api";
+import { cn } from "@/lib/utils";
+
+// Transition strategy display names
+const STRATEGY_LABELS: Record<string, string> = {
+  column: "Wave (Left to Right)",
+  "reverse-column": "Drift (Right to Left)",
+  "edges-to-center": "Curtain (Outside In)",
+  row: "Row (Top to Bottom)",
+  diagonal: "Diagonal (Corner to Corner)",
+  random: "Random",
+};
+
+const AVAILABLE_STRATEGIES = [
+  "column",
+  "reverse-column",
+  "edges-to-center",
+  "row",
+  "diagonal",
+  "random",
+];
 
 // Alignment type for template lines
 type LineAlignment = "left" | "center" | "right";
@@ -126,6 +149,13 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
   const [preview, setPreview] = useState<string | null>(null);
   const [showMobileVariablePicker, setShowMobileVariablePicker] = useState(false);
   const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null);
+  const [isRawMode, setIsRawMode] = useState(false);
+  
+  // Transition settings state
+  const [transitionStrategy, setTransitionStrategy] = useState<string | null>(null);
+  const [transitionIntervalMs, setTransitionIntervalMs] = useState<number | null>(null);
+  const [transitionStepSize, setTransitionStepSize] = useState<number | null>(null);
+  const [isTransitionOpen, setIsTransitionOpen] = useState(false);
 
   // Fetch existing page if editing
   const { data: existingPage, isLoading: loadingPage } = useQuery({
@@ -155,12 +185,51 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
       }
       setLineAlignments(alignments);
       setTemplateLines(contents);
+      
+      // Load transition settings
+      setTransitionStrategy(existingPage.transition_strategy ?? null);
+      setTransitionIntervalMs(existingPage.transition_interval_ms ?? null);
+      setTransitionStepSize(existingPage.transition_step_size ?? null);
+      // Open transition accordion if page has custom transition settings
+      if (existingPage.transition_strategy) {
+        setIsTransitionOpen(true);
+      }
     }
   }, [existingPage]);
 
   // Build template lines with alignment prefixes applied
   const getTemplateWithAlignments = (): string[] => {
     return templateLines.map((content, i) => applyAlignment(lineAlignments[i], content));
+  };
+
+  // Get raw text representation (6 lines joined by newlines)
+  const getRawText = (): string => {
+    return getTemplateWithAlignments().join("\n");
+  };
+
+  // Parse raw text back into template lines and alignments
+  // Enforces exactly 6 lines - truncates extras, pads if fewer
+  const parseRawText = (rawText: string) => {
+    // Split and limit to exactly 6 lines
+    let lines = rawText.split("\n");
+    
+    // If more than 6 lines, truncate (don't allow adding more)
+    if (lines.length > 6) {
+      lines = lines.slice(0, 6);
+    }
+    
+    const newContents: string[] = [];
+    const newAlignments: LineAlignment[] = [];
+    
+    for (let i = 0; i < 6; i++) {
+      const line = lines[i] || "";
+      const { alignment, content } = extractAlignment(line);
+      newAlignments.push(alignment);
+      newContents.push(content);
+    }
+    
+    setTemplateLines(newContents);
+    setLineAlignments(newAlignments);
   };
 
   // Save mutation
@@ -172,6 +241,9 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
         const payload: PageUpdate = {
           name,
           template: linesWithAlignments,
+          transition_strategy: transitionStrategy,
+          transition_interval_ms: transitionIntervalMs,
+          transition_step_size: transitionStepSize,
         };
         return api.updatePage(pageId, payload);
       } else {
@@ -180,6 +252,9 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
           name,
           type: "template" as PageType,
           template: linesWithAlignments,
+          transition_strategy: transitionStrategy,
+          transition_interval_ms: transitionIntervalMs,
+          transition_step_size: transitionStepSize,
         };
         return api.createPage(payload);
       }
@@ -345,106 +420,183 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-xs sm:text-sm font-medium">Template Lines</label>
+                {/* View mode toggle */}
+                <div className="flex items-center gap-1.5 bg-muted/50 rounded-md p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setIsRawMode(false)}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                      !isRawMode
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    title="Visual editor with badges"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Visual</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsRawMode(true)}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                      isRawMode
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    title="Raw template syntax"
+                  >
+                    <Braces className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Raw</span>
+                  </button>
+                </div>
               </div>
 
               {/* Helper text */}
               <div className="p-2 sm:p-3 bg-muted/50 rounded-md text-xs space-y-1">
                 <div className="flex items-start gap-2 text-muted-foreground">
                   <Info className="h-3 w-3 mt-0.5 shrink-0" />
-                  <span className="hidden sm:inline">Click or drag variables from the sidebar. Badges can be reordered by dragging.</span>
-                  <span className="sm:hidden">Tap &quot;Variables&quot; button to insert template variables.</span>
+                  {isRawMode ? (
+                    <span>Edit raw template syntax. Use {"{{variable}}"} for variables and {"{color}"} for colors. Alignment prefixes: {"{center}"}, {"{right}"}.</span>
+                  ) : (
+                    <>
+                      <span className="hidden sm:inline">Click or drag variables from the sidebar. Badges can be reordered by dragging.</span>
+                      <span className="sm:hidden">Tap &quot;Variables&quot; button to insert template variables.</span>
+                    </>
+                  )}
                 </div>
               </div>
 
-              {/* 6 template lines */}
-              <div className="flex flex-col gap-2 sm:gap-2 w-full">
-                {templateLines.map((line, i) => {
-                  const maxLengths = variablesData?.max_lengths || {};
-                  const warning = getLineLengthWarning(line, maxLengths);
-                  const alignment = lineAlignments[i];
-                  
-                  return (
-                    <div key={i} className="flex items-stretch w-full min-w-0">
-                      <span className="text-xs text-muted-foreground w-5 shrink-0 flex items-center justify-end pr-1.5">
-                        {i + 1}
-                      </span>
-                      {/* Combined input + alignment buttons container */}
-                      <div className="flex flex-1 min-w-0">
-                        <div className="flex-1 relative min-w-0">
-                          <TemplateLineEditor
-                            value={line}
-                            onChange={(newValue) => {
-                              const newLines = [...templateLines];
-                              newLines[i] = newValue;
-                              setTemplateLines(newLines);
-                            }}
-                            onFocus={() => setActiveLineIndex(i)}
-                            placeholder={`Line ${i + 1}`}
-                            isActive={activeLineIndex === i}
-                            hasWarning={warning.hasWarning}
-                          />
-                          {warning.hasWarning && (
-                            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none" title={`Line may render up to ${warning.maxLength} chars (max 22)`}>
-                              <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-vesta-yellow" />
-                            </div>
-                          )}
-                        </div>
-                        {/* Alignment toggle - joined to input */}
-                        <div className="flex rounded-r border-y border-r bg-muted/30 overflow-hidden shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const newAlignments = [...lineAlignments];
-                              newAlignments[i] = "left";
-                              setLineAlignments(newAlignments);
-                            }}
-                            className={`px-2 flex items-center justify-center transition-colors ${
-                              alignment === "left" 
-                                ? "bg-primary text-primary-foreground" 
-                                : "hover:bg-muted text-muted-foreground"
-                            }`}
-                            title="Align left"
-                          >
-                            <AlignLeft className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const newAlignments = [...lineAlignments];
-                              newAlignments[i] = "center";
-                              setLineAlignments(newAlignments);
-                            }}
-                            className={`px-2 flex items-center justify-center border-x transition-colors ${
-                              alignment === "center" 
-                                ? "bg-primary text-primary-foreground border-primary" 
-                                : "hover:bg-muted text-muted-foreground"
-                            }`}
-                            title="Align center"
-                          >
-                            <AlignCenter className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const newAlignments = [...lineAlignments];
-                              newAlignments[i] = "right";
-                              setLineAlignments(newAlignments);
-                            }}
-                            className={`px-2 flex items-center justify-center transition-colors ${
-                              alignment === "right" 
-                                ? "bg-primary text-primary-foreground" 
-                                : "hover:bg-muted text-muted-foreground"
-                            }`}
-                            title="Align right"
-                          >
-                            <AlignRight className="h-3.5 w-3.5" />
-                          </button>
+              {/* Visual Editor - 6 template lines */}
+              {!isRawMode && (
+                <div className="flex flex-col gap-2 sm:gap-2 w-full">
+                  {templateLines.map((line, i) => {
+                    const maxLengths = variablesData?.max_lengths || {};
+                    const warning = getLineLengthWarning(line, maxLengths);
+                    const alignment = lineAlignments[i];
+                    
+                    return (
+                      <div key={i} className="flex items-stretch w-full min-w-0">
+                        <span className="text-xs text-muted-foreground w-5 shrink-0 flex items-center justify-end pr-1.5">
+                          {i + 1}
+                        </span>
+                        {/* Combined input + alignment buttons container */}
+                        <div className="flex flex-1 min-w-0">
+                          <div className="flex-1 relative min-w-0">
+                            <TemplateLineEditor
+                              value={line}
+                              onChange={(newValue) => {
+                                const newLines = [...templateLines];
+                                newLines[i] = newValue;
+                                setTemplateLines(newLines);
+                              }}
+                              onFocus={() => setActiveLineIndex(i)}
+                              placeholder={`Line ${i + 1}`}
+                              isActive={activeLineIndex === i}
+                              hasWarning={warning.hasWarning}
+                            />
+                            {warning.hasWarning && (
+                              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none" title={`Line may render up to ${warning.maxLength} chars (max 22)`}>
+                                <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-vesta-yellow" />
+                              </div>
+                            )}
+                          </div>
+                          {/* Alignment toggle - joined to input */}
+                          <div className="flex rounded-r border-y border-r bg-muted/30 overflow-hidden shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newAlignments = [...lineAlignments];
+                                newAlignments[i] = "left";
+                                setLineAlignments(newAlignments);
+                              }}
+                              className={`px-2 flex items-center justify-center transition-colors ${
+                                alignment === "left" 
+                                  ? "bg-primary text-primary-foreground" 
+                                  : "hover:bg-muted text-muted-foreground"
+                              }`}
+                              title="Align left"
+                            >
+                              <AlignLeft className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newAlignments = [...lineAlignments];
+                                newAlignments[i] = "center";
+                                setLineAlignments(newAlignments);
+                              }}
+                              className={`px-2 flex items-center justify-center border-x transition-colors ${
+                                alignment === "center" 
+                                  ? "bg-primary text-primary-foreground border-primary" 
+                                  : "hover:bg-muted text-muted-foreground"
+                              }`}
+                              title="Align center"
+                            >
+                              <AlignCenter className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newAlignments = [...lineAlignments];
+                                newAlignments[i] = "right";
+                                setLineAlignments(newAlignments);
+                              }}
+                              className={`px-2 flex items-center justify-center transition-colors ${
+                                alignment === "right" 
+                                  ? "bg-primary text-primary-foreground" 
+                                  : "hover:bg-muted text-muted-foreground"
+                              }`}
+                              title="Align right"
+                            >
+                              <AlignRight className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </div>
                       </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Raw Editor - textarea with line numbers */}
+              {isRawMode && (
+                <div className="w-full">
+                  <div className="flex rounded-md border bg-background overflow-hidden focus-within:ring-1 focus-within:ring-primary">
+                    {/* Line numbers */}
+                    <div className="flex flex-col py-2 px-2 bg-muted/30 border-r text-xs font-mono text-muted-foreground select-none shrink-0">
+                      {[1, 2, 3, 4, 5, 6].map((num) => (
+                        <div key={num} className="h-[1.625rem] flex items-center justify-end pr-1 min-w-[1.5rem]">
+                          {num}
+                        </div>
+                      ))}
                     </div>
-                  );
-                })}
-              </div>
+                    {/* Textarea - no word wrap for proper line number alignment */}
+                    <div className="flex-1 overflow-x-auto">
+                      <textarea
+                        value={getRawText()}
+                        onChange={(e) => parseRawText(e.target.value)}
+                        onKeyDown={(e) => {
+                          // Prevent Enter if already at 6 lines
+                          if (e.key === "Enter") {
+                            const currentLines = getRawText().split("\n").length;
+                            if (currentLines >= 6) {
+                              e.preventDefault();
+                            }
+                          }
+                        }}
+                        placeholder={`Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6`}
+                        rows={6}
+                        spellCheck={false}
+                        wrap="off"
+                        className="w-full min-w-full px-3 py-2 text-sm font-mono bg-transparent resize-none focus:outline-none leading-[1.625rem] whitespace-pre overflow-x-auto"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1.5">
+                    Each line corresponds to a row on the Vestaboard (max 22 characters rendered).
+                  </p>
+                </div>
+              )}
 
               {/* Live preview */}
               <div className="mt-4">
@@ -454,6 +606,123 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
                   isLoading={previewMutation.isPending}
                   size="md"
                 />
+              </div>
+
+              {/* Transition Settings - Collapsible */}
+              <div className="mt-4 border rounded-lg overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setIsTransitionOpen(!isTransitionOpen)}
+                  className="flex items-center justify-between w-full px-4 py-3 text-left bg-muted/30 hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Wand2 className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Transition Settings</span>
+                    {transitionStrategy && (
+                      <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                        {STRATEGY_LABELS[transitionStrategy] || transitionStrategy}
+                      </span>
+                    )}
+                  </div>
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 text-muted-foreground transition-transform duration-200",
+                      isTransitionOpen && "rotate-180"
+                    )}
+                  />
+                </button>
+                
+                <div
+                  className={cn(
+                    "overflow-hidden transition-all duration-200",
+                    isTransitionOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
+                  )}
+                >
+                  <div className="p-4 space-y-4 border-t">
+                    <p className="text-xs text-muted-foreground">
+                      Control how the board animates when displaying this page. Leave empty to use instant updates.
+                    </p>
+                    
+                    {/* Warning note */}
+                    {transitionStrategy && (transitionIntervalMs ?? 0) > 500 && (
+                      <div className="flex items-start gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs text-amber-600 dark:text-amber-400">
+                        <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                        <span>
+                          <strong>Heads up:</strong> Slow transitions (especially with delays) can cause a queue buildup if pages change faster than they animate. Consider using faster settings for rotations with short durations.
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* Strategy selector */}
+                    <div className="space-y-2">
+                      <label className="text-xs sm:text-sm font-medium">Animation Style</label>
+                      <select
+                        value={transitionStrategy || ""}
+                        onChange={(e) => setTransitionStrategy(e.target.value || null)}
+                        className="w-full h-10 sm:h-9 px-3 text-sm rounded-md border bg-background"
+                      >
+                        <option value="">None (Instant)</option>
+                        {AVAILABLE_STRATEGIES.map((s) => (
+                          <option key={s} value={s}>
+                            {STRATEGY_LABELS[s] || s}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Interval slider */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <label className="text-xs sm:text-sm font-medium">Step Interval</label>
+                        <span className="text-xs sm:text-sm text-muted-foreground">
+                          {transitionIntervalMs ? `${transitionIntervalMs}ms` : "Fast"}
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="2000"
+                        step="100"
+                        value={transitionIntervalMs || 0}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          setTransitionIntervalMs(val === 0 ? null : val);
+                        }}
+                        className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-muted"
+                        disabled={!transitionStrategy}
+                      />
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">
+                        Delay between animation steps
+                      </p>
+                    </div>
+
+                    {/* Step size */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <label className="text-xs sm:text-sm font-medium">Step Size</label>
+                        <span className="text-xs sm:text-sm text-muted-foreground">
+                          {transitionStepSize || 1} {transitionStepSize === 1 || !transitionStepSize ? "column" : "columns"}
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min="1"
+                        max="11"
+                        step="1"
+                        value={transitionStepSize || 1}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          setTransitionStepSize(val === 1 ? null : val);
+                        }}
+                        className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-muted"
+                        disabled={!transitionStrategy}
+                      />
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">
+                        Columns/rows animated at once
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 

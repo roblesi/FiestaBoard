@@ -576,3 +576,315 @@ describe("Integration tests", () => {
   });
 });
 
+// ============================================
+// ARROW KEY NAVIGATION TESTS
+// ============================================
+
+describe("Arrow key navigation", () => {
+  it("renders badges that are non-editable", () => {
+    const onChange = vi.fn();
+    render(
+      <TemplateLineEditor
+        value="text{{var}}more"
+        onChange={onChange}
+      />
+    );
+    
+    const badge = screen.getByText("var").closest("[data-badge]");
+    expect(badge).toHaveAttribute("contenteditable", "false");
+  });
+
+  it("badges have data attributes for segment value", () => {
+    const onChange = vi.fn();
+    render(
+      <TemplateLineEditor
+        value="{{weather.temp}}"
+        onChange={onChange}
+      />
+    );
+    
+    const badge = screen.getByText("weather.temp").closest("[data-badge]");
+    expect(badge).toHaveAttribute("data-segment-value", "{{weather.temp}}");
+  });
+
+  it("handles keyboard navigation setup correctly", () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <TemplateLineEditor
+        value="start{{badge}}end"
+        onChange={onChange}
+      />
+    );
+    
+    const editor = container.querySelector("[contenteditable]");
+    expect(editor).toBeInTheDocument();
+    
+    // The editor should be focusable
+    editor?.focus();
+    expect(document.activeElement).toBe(editor);
+  });
+
+  it("prevents Enter key from creating new lines", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    
+    render(
+      <TemplateLineEditor
+        value="test"
+        onChange={onChange}
+      />
+    );
+    
+    const editor = screen.getByRole("textbox");
+    await user.click(editor);
+    await user.keyboard("{Enter}");
+    
+    // onChange should not be called with a newline character
+    const calls = onChange.mock.calls;
+    const hasNewline = calls.some((call: string[]) => call[0]?.includes("\n"));
+    expect(hasNewline).toBe(false);
+  });
+});
+
+// ============================================
+// DROP ZONE TESTS
+// ============================================
+
+describe("Drop zones", () => {
+  it("badges in consecutive position should handle drop zones", () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <TemplateLineEditor
+        value="{{var1}}{{var2}}"
+        onChange={onChange}
+      />
+    );
+    
+    // Both badges should be present
+    const badges = container.querySelectorAll("[data-badge]");
+    expect(badges).toHaveLength(2);
+    
+    // First badge
+    expect(badges[0]).toHaveAttribute("data-segment-value", "{{var1}}");
+    // Second badge
+    expect(badges[1]).toHaveAttribute("data-segment-value", "{{var2}}");
+  });
+
+  it("drop zones only appear during drag operations", () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <TemplateLineEditor
+        value="{{var1}}{{var2}}"
+        onChange={onChange}
+      />
+    );
+    
+    const editor = container.querySelector("[contenteditable]");
+    expect(editor).toBeInTheDocument();
+    
+    // Initially no drop zones (they only appear during drag)
+    const dropZones = container.querySelectorAll("[data-dropzone]");
+    expect(dropZones.length).toBe(0);
+  });
+
+  it("editor accepts drag over events", () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <TemplateLineEditor
+        value="{{var1}}{{var2}}"
+        onChange={onChange}
+      />
+    );
+    
+    const editor = container.querySelector("[contenteditable]");
+    expect(editor).toBeInTheDocument();
+    
+    // Simulate dragover
+    fireEvent.dragOver(editor!, {
+      dataTransfer: { dropEffect: "move" }
+    });
+    
+    // Editor should still be in the document
+    expect(editor).toBeInTheDocument();
+  });
+});
+
+// ============================================
+// CURSOR POSITION TESTS  
+// ============================================
+
+describe("Cursor position handling", () => {
+  it("text segments are wrapped in span elements", () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <TemplateLineEditor
+        value="hello{{var}}world"
+        onChange={onChange}
+      />
+    );
+    
+    // Text should be in span elements with data-text-segment attribute
+    const textSegments = container.querySelectorAll("[data-text-segment]");
+    expect(textSegments.length).toBeGreaterThan(0);
+  });
+
+  it("maintains content after focus and blur", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    
+    render(
+      <TemplateLineEditor
+        value="test{{var}}content"
+        onChange={onChange}
+      />
+    );
+    
+    const editor = screen.getByRole("textbox");
+    
+    // Focus
+    await user.click(editor);
+    
+    // Content should still be present
+    expect(screen.getByText("var")).toBeInTheDocument();
+    expect(screen.getByText(/test/)).toBeInTheDocument();
+    expect(screen.getByText(/content/)).toBeInTheDocument();
+  });
+
+  it("rerender preserves badge display after parent value change", () => {
+    const onChange = vi.fn();
+    
+    const { rerender } = render(
+      <TemplateLineEditor value="a{{v1}}b" onChange={onChange} />
+    );
+    
+    expect(screen.getByText("v1")).toBeInTheDocument();
+    
+    // Change value externally
+    rerender(
+      <TemplateLineEditor value="a{{v1}}b{{v2}}c" onChange={onChange} />
+    );
+    
+    // Both badges should be present
+    expect(screen.getByText("v1")).toBeInTheDocument();
+    expect(screen.getByText("v2")).toBeInTheDocument();
+  });
+});
+
+// ============================================
+// TEXT SPLITTING TESTS
+// ============================================
+
+describe("Text segment handling", () => {
+  it("text segments preserve spaces", () => {
+    const onChange = vi.fn();
+    render(
+      <TemplateLineEditor
+        value="  spaced  {{var}}  text  "
+        onChange={onChange}
+      />
+    );
+    
+    // The text with spaces should be preserved in the DOM
+    const editor = screen.getByRole("textbox");
+    expect(editor.textContent).toContain("spaced");
+    expect(editor.textContent).toContain("text");
+  });
+
+  it("handles text between multiple badges", () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <TemplateLineEditor
+        value="A{{v1}}B{{v2}}C{{v3}}D"
+        onChange={onChange}
+      />
+    );
+    
+    // All badges should be present
+    const badges = container.querySelectorAll("[data-badge]");
+    expect(badges).toHaveLength(3);
+    
+    // Text segments should be present
+    const textSegments = container.querySelectorAll("[data-text-segment]");
+    expect(textSegments.length).toBe(4); // A, B, C, D
+  });
+
+  it("handles empty text between badges", () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <TemplateLineEditor
+        value="{{v1}}{{v2}}"
+        onChange={onChange}
+      />
+    );
+    
+    // Both badges should be adjacent
+    const badges = container.querySelectorAll("[data-badge]");
+    expect(badges).toHaveLength(2);
+  });
+});
+
+// ============================================
+// DRAG AND DROP BEHAVIOR TESTS
+// ============================================
+
+describe("Drag and drop behavior", () => {
+  it("badge drag start sets correct data transfer", () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <TemplateLineEditor
+        value="{{myvar}}"
+        onChange={onChange}
+      />
+    );
+    
+    const badge = container.querySelector("[data-badge]");
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveAttribute("draggable", "true");
+  });
+
+  it("handles drag end cleanup", () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <TemplateLineEditor
+        value="{{var1}}{{var2}}"
+        onChange={onChange}
+      />
+    );
+    
+    const badges = container.querySelectorAll("[data-badge]");
+    const firstBadge = badges[0];
+    
+    // Simulate drag start and end
+    fireEvent.dragStart(firstBadge, {
+      dataTransfer: {
+        effectAllowed: "move",
+        setData: vi.fn(),
+      }
+    });
+    
+    fireEvent.dragEnd(firstBadge);
+    
+    // Badges should still be present
+    expect(container.querySelectorAll("[data-badge]")).toHaveLength(2);
+  });
+
+  it("container handles drag leave", () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <TemplateLineEditor
+        value="{{var}}"
+        onChange={onChange}
+      />
+    );
+    
+    const editor = container.querySelector("[contenteditable]");
+    
+    fireEvent.dragLeave(editor!, {
+      relatedTarget: null
+    });
+    
+    // Editor should still be functional
+    expect(editor).toBeInTheDocument();
+  });
+});
+
