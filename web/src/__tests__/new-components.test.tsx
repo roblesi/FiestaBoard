@@ -221,15 +221,14 @@ describe("ServiceControls with Dev Mode", () => {
     });
   });
 
-  it("shows cache controls", async () => {
+  it("shows service status badge", async () => {
     const { ServiceControls } = await import("@/components/service-controls");
     
     render(<ServiceControls />, { wrapper: TestWrapper });
 
     await waitFor(() => {
-      expect(screen.getByText("Message Cache")).toBeInTheDocument();
-      expect(screen.getByText("Clear Cache")).toBeInTheDocument();
-      expect(screen.getByText("Force Refresh")).toBeInTheDocument();
+      // Should show either "Running" or "Stopped" badge
+      expect(screen.getByText(/Running|Stopped/)).toBeInTheDocument();
     });
   });
 
