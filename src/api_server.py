@@ -17,7 +17,7 @@ from .config import Config
 from .config_manager import get_config_manager
 from .displays.service import get_display_service, DISPLAY_TYPES, DisplayResult
 from .settings.service import get_settings_service, VALID_STRATEGIES, VALID_OUTPUT_TARGETS
-from .pages.service import get_page_service
+from .pages.service import get_page_service, DeleteResult
 from .pages.models import PageCreate, PageUpdate
 from .templates.engine import get_template_engine
 from .rotations.service import get_rotation_service
@@ -127,7 +127,7 @@ def run_service_background():
 @app.on_event("startup")
 async def startup_event():
     """Initialize service on startup."""
-    global _dev_mode
+    global _dev_mode, _service_thread
     logger.info("API server starting up...")
     
     # Auto-enable dev mode in local development (when not in production)
@@ -138,7 +138,14 @@ async def startup_event():
         _dev_mode = True
         logger.info("Dev mode auto-enabled for local development")
     
-    get_service()
+    # Initialize and auto-start the service
+    service = get_service()
+    if service:
+        logger.info("Auto-starting background service...")
+        _service_thread = threading.Thread(target=run_service_background, daemon=True)
+        _service_thread.start()
+        time.sleep(0.5)  # Give it a moment to start
+        logger.info("Background service auto-started")
 
 
 @app.on_event("shutdown")
@@ -864,13 +871,36 @@ async def update_page(page_id: str, page_data: PageUpdate):
 
 @app.delete("/pages/{page_id}")
 async def delete_page(page_id: str):
-    """Delete a page."""
+    """Delete a page.
+    
+    If this is the last page, a default welcome page is automatically created
+    to ensure there is always at least one page.
+    
+    If the deleted page was the active display page, the active page will be
+    updated to another valid page automatically.
+    """
     page_service = get_page_service()
     
-    if not page_service.delete_page(page_id):
+    result = page_service.delete_page(page_id)
+    
+    if not result.deleted:
         raise HTTPException(status_code=404, detail=f"Page not found: {page_id}")
     
-    return {"status": "success", "message": f"Page {page_id} deleted"}
+    response = {
+        "status": "success",
+        "message": f"Page {page_id} deleted",
+        "default_page_created": result.default_page_created,
+        "active_page_updated": result.active_page_updated,
+    }
+    
+    if result.default_page_created:
+        response["message"] = f"Page {page_id} deleted. A default welcome page was created."
+        response["new_page_id"] = result.new_page_id
+    
+    if result.active_page_updated:
+        response["new_active_page_id"] = result.new_active_page_id
+    
+    return response
 
 
 @app.post("/pages/{page_id}/preview")

@@ -51,6 +51,7 @@ echo "📝 Generating .env file from Codespaces secrets..."
 cat > .env << EOF
 # Vestaboard Configuration
 # Auto-generated from GitHub Codespaces secrets
+VB_API_MODE=cloud
 VB_READ_WRITE_KEY=$VB_READ_WRITE_KEY
 
 # Weather API Configuration
@@ -60,15 +61,6 @@ WEATHER_PROVIDER=${WEATHER_PROVIDER:-weatherapi}
 # Location Configuration
 WEATHER_LOCATION=${WEATHER_LOCATION:-San Francisco, CA}
 TIMEZONE=${TIMEZONE:-America/Los_Angeles}
-
-# Baywheels Configuration (for Phase 3)
-BAYWHEELS_ENABLED=${BAYWHEELS_ENABLED:-false}
-USER_LATITUDE=${USER_LATITUDE:-37.7749}
-USER_LONGITUDE=${USER_LONGITUDE:-122.4194}
-MAX_DISTANCE_MILES=${MAX_DISTANCE_MILES:-2.0}
-
-# Waymo Configuration (for Phase 4)
-WAYMO_ENABLED=${WAYMO_ENABLED:-false}
 
 # Apple Music Configuration
 APPLE_MUSIC_ENABLED=${APPLE_MUSIC_ENABLED:-false}
@@ -90,15 +82,8 @@ HOME_ASSISTANT_ENTITIES=${HOME_ASSISTANT_ENTITIES:-[]}
 HOME_ASSISTANT_TIMEOUT=${HOME_ASSISTANT_TIMEOUT:-5}
 HOME_ASSISTANT_REFRESH_SECONDS=${HOME_ASSISTANT_REFRESH_SECONDS:-30}
 
-# Rotation Configuration
-ROTATION_ENABLED=${ROTATION_ENABLED:-true}
-ROTATION_WEATHER_DURATION=${ROTATION_WEATHER_DURATION:-300}
-ROTATION_HOME_ASSISTANT_DURATION=${ROTATION_HOME_ASSISTANT_DURATION:-300}
-ROTATION_STAR_TREK_DURATION=${ROTATION_STAR_TREK_DURATION:-180}
-ROTATION_ORDER=${ROTATION_ORDER:-weather,home_assistant,star_trek}
-
 # Star Trek Quotes Configuration
-STAR_TREK_QUOTES_ENABLED=${STAR_TREK_QUOTES_ENABLED:-true}
+STAR_TREK_QUOTES_ENABLED=${STAR_TREK_QUOTES_ENABLED:-false}
 STAR_TREK_QUOTES_RATIO=${STAR_TREK_QUOTES_RATIO:-3:5:9}
 EOF
 
@@ -110,14 +95,11 @@ echo "📋 Configuration Summary:"
 echo "   VB API Key: ${VB_READ_WRITE_KEY:0:10}..."
 echo "   Weather API Key: ${WEATHER_API_KEY:0:10}..."
 echo "   Weather Location: ${WEATHER_LOCATION:-San Francisco, CA}"
-echo "   Star Trek Quotes: ${STAR_TREK_QUOTES_ENABLED:-true}"
 echo ""
 
 echo "✅ Setup complete!"
 echo ""
 echo "Next steps:"
 echo "1. Review .env file and adjust optional settings"
-echo "2. Run: python -m src.main (for local testing)"
-echo "3. Or: docker-compose up -d (for Docker deployment)"
+echo "2. Run: docker-compose -f docker-compose.dev.yml up"
 echo ""
-

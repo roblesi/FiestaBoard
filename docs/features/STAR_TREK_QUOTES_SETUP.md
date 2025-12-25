@@ -17,11 +17,6 @@ Add these settings to your `.env` file:
 # Star Trek Quotes Configuration
 STAR_TREK_QUOTES_ENABLED=true
 STAR_TREK_QUOTES_RATIO=3:5:9
-
-# Add to rotation
-ROTATION_ENABLED=true
-ROTATION_STAR_TREK_DURATION=180
-ROTATION_ORDER=weather,home_assistant,star_trek
 ```
 
 ### Configuration Options
@@ -69,20 +64,6 @@ STAR_TREK_QUOTES_RATIO=0:0:1
 
 # TNG only
 STAR_TREK_QUOTES_RATIO=1:0:0
-```
-
-#### `ROTATION_STAR_TREK_DURATION`
-
-How long each quote displays (in seconds).
-
-**Default:** `180` (3 minutes)
-
-**Examples:**
-```bash
-ROTATION_STAR_TREK_DURATION=180   # 3 minutes
-ROTATION_STAR_TREK_DURATION=120   # 2 minutes
-ROTATION_STAR_TREK_DURATION=300   # 5 minutes
-ROTATION_STAR_TREK_DURATION=60    # 1 minute
 ```
 
 ## Display Format
@@ -156,110 +137,20 @@ The system includes a curated collection of memorable quotes:
 - "Never begin a negotiation on an empty stomach." - Quark
 - "What you leave behind is not as important as how you lived." - Sisko
 
-## Integration with Rotation
+## Using Star Trek Quotes
 
-Star Trek quotes rotate with other screens:
+To display Star Trek quotes on your Vestaboard:
 
-### Full Rotation Example
+1. Enable the feature in your `.env` file
+2. Create a page in the web UI using the `{{star_trek.quote}}` template variable
+3. Set that page as active
 
-```bash
-ROTATION_ENABLED=true
-ROTATION_WEATHER_DURATION=300          # Weather: 5 minutes
-ROTATION_HOME_ASSISTANT_DURATION=300    # Home Assistant: 5 minutes
-ROTATION_STAR_TREK_DURATION=180         # Star Trek: 3 minutes
-ROTATION_ORDER=weather,home_assistant,star_trek
-```
+### Template Variables
 
-**Timeline:**
-```
-0:00 - 5:00   → Weather + DateTime
-5:00 - 10:00  → Home Assistant
-10:00 - 13:00 → Star Trek Quote
-13:00 - 18:00 → Weather + DateTime
-... (repeats)
-```
-
-### Star Trek-Focused Rotation
-
-Show more quotes:
-
-```bash
-ROTATION_ENABLED=true
-ROTATION_WEATHER_DURATION=180          # Weather: 3 minutes
-ROTATION_HOME_ASSISTANT_DURATION=120   # Home Assistant: 2 minutes
-ROTATION_STAR_TREK_DURATION=300        # Star Trek: 5 minutes
-ROTATION_ORDER=weather,home_assistant,star_trek
-```
-
-### Star Trek Only
-
-Only display Star Trek quotes (no other screens):
-
-```bash
-ROTATION_ENABLED=true
-ROTATION_ORDER=star_trek
-STAR_TREK_QUOTES_ENABLED=true
-```
-
-**Note:** Quotes will change every `REFRESH_INTERVAL_SECONDS` (default: 5 minutes).
-
-## Priority System
-
-The display follows this priority:
-
-1. **Guest WiFi** (highest) - When enabled
-2. **Apple Music** - When music is playing
-3. **Rotation** - Weather, Home Assistant, Star Trek
-4. **Weather + DateTime** - Default
-
-Star Trek quotes are part of the rotation system and respect the priority hierarchy.
-
-## Testing
-
-Test the quotes formatting:
-
-```bash
-cd /path/to/Vesta
-python3 -c "
-import sys
-sys.path.insert(0, 'src')
-from src.data_sources.star_trek_quotes import StarTrekQuotesSource
-from src.formatters.message_formatter import get_message_formatter
-
-# Create source
-source = StarTrekQuotesSource(tng_weight=3, voyager_weight=5, ds9_weight=9)
-formatter = get_message_formatter()
-
-# Get random quote
-quote = source.get_random_quote()
-print(f'Series: {quote[\"series\"].upper()}')
-print(f'Character: {quote[\"character\"]}')
-print()
-print('Formatted for Vestaboard:')
-print(formatter.format_star_trek_quote(quote))
-"
-```
-
-Test the ratio distribution:
-
-```bash
-python3 -c "
-import sys
-sys.path.insert(0, 'src')
-from src.data_sources.star_trek_quotes import StarTrekQuotesSource
-
-source = StarTrekQuotesSource(tng_weight=3, voyager_weight=5, ds9_weight=9)
-counts = {'tng': 0, 'voyager': 0, 'ds9': 0}
-
-for _ in range(100):
-    quote = source.get_random_quote()
-    counts[quote['series'].lower()] += 1
-
-print(f'TNG: {counts[\"tng\"]}')
-print(f'Voyager: {counts[\"voyager\"]}')
-print(f'DS9: {counts[\"ds9\"]}')
-"
-```
+Available Star Trek template variables:
+- `{{star_trek.quote}}` - The quote text
+- `{{star_trek.character}}` - The character name
+- `{{star_trek.series}}` - Series abbreviation (TNG, VOY, DS9)
 
 ## Common Configurations
 
@@ -287,13 +178,6 @@ STAR_TREK_QUOTES_ENABLED=true
 STAR_TREK_QUOTES_RATIO=3:5:9
 ```
 
-### Random Quick Quotes
-```bash
-STAR_TREK_QUOTES_ENABLED=true
-STAR_TREK_QUOTES_RATIO=1:1:1
-ROTATION_STAR_TREK_DURATION=60  # Change every minute
-```
-
 ## Troubleshooting
 
 ### Quotes Not Showing
@@ -304,13 +188,7 @@ ROTATION_STAR_TREK_DURATION=60  # Change every minute
    # Should show: STAR_TREK_QUOTES_ENABLED=true
    ```
 
-2. **Check rotation order:**
-   ```bash
-   grep ROTATION_ORDER .env
-   # Should include: star_trek
-   ```
-
-3. **Check logs:**
+2. **Check logs:**
    ```bash
    docker-compose logs | grep -i "star trek"
    ```
@@ -320,10 +198,6 @@ ROTATION_STAR_TREK_DURATION=60  # Change every minute
 1. **Verify ratio format:**
    - Format must be `TNG:Voyager:DS9`
    - Example: `3:5:9`
-
-2. **Test ratio:**
-   - Run the ratio test script above
-   - Check distribution over 100 samples
 
 ### Quotes Too Long
 
@@ -361,17 +235,10 @@ docker-compose restart
 docker-compose logs -f
 ```
 
-Watch for:
-- "Star Trek quotes enabled"
-- "Display updated with Star Trek quote"
-- Series abbreviation in logs (TNG, VOY, DS9)
-
 ## Summary
 
 - **Enable quotes**: `STAR_TREK_QUOTES_ENABLED=true`
 - **Control ratio**: `STAR_TREK_QUOTES_RATIO=3:5:9` (TNG:Voyager:DS9)
-- **Set duration**: `ROTATION_STAR_TREK_DURATION=180` (seconds)
-- **Add to rotation**: Include `star_trek` in `ROTATION_ORDER`
+- **Use in pages**: Include `{{star_trek.quote}}` in your page template
 
 Live long and prosper! 🖖
-

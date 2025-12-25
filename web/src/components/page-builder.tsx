@@ -22,7 +22,19 @@ import {
   Info,
   Code2,
   AlertTriangle,
+  Trash2,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { api, PageCreate, PageUpdate, PageType } from "@/lib/api";
 
 // Calculate max possible rendered length of a template line
@@ -129,6 +141,32 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
     },
   });
 
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: () => api.deletePage(pageId!),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["pages"] });
+      // Also invalidate active page if it was updated
+      if (data.active_page_updated) {
+        queryClient.invalidateQueries({ queryKey: ["active-page"] });
+        queryClient.invalidateQueries({ queryKey: ["status"] });
+      }
+      
+      // Show appropriate message
+      if (data.default_page_created) {
+        toast.success("Page deleted. A default welcome page was created.");
+      } else if (data.active_page_updated) {
+        toast.success("Page deleted. Active display updated.");
+      } else {
+        toast.success("Page deleted");
+      }
+      onClose();
+    },
+    onError: () => {
+      toast.error("Failed to delete page");
+    },
+  });
+
   // Preview mutation
   const previewMutation = useMutation({
     mutationFn: () => api.renderTemplate(templateLines),
@@ -215,6 +253,37 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
                   <Code2 className="h-4 w-4 mr-1.5" />
                   <span className="text-xs">Variables</span>
                 </Button>
+                {/* Delete button - only show when editing */}
+                {pageId && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-9 w-9 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Page</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete &quot;{name || "this page"}&quot;? This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => deleteMutation.mutate()}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
                 <Button variant="ghost" size="icon" className="h-9 w-9" onClick={onClose}>
                   <X className="h-4 w-4" />
                 </Button>

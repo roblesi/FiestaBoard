@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { RotationManager } from "@/components/rotation-manager";
 import { PageBuilder } from "@/components/page-builder";
-import { DisplayExplorer } from "@/components/display-explorer";
 import { ConfigOverridesProvider } from "@/hooks/use-config-overrides";
 
 // Test wrapper with providers
@@ -208,67 +207,15 @@ describe("PageBuilder", () => {
   });
 });
 
-describe("DisplayExplorer", () => {
-  it("renders display source list", async () => {
-    render(<DisplayExplorer />, { wrapper: TestWrapper });
-
-    await waitFor(() => {
-      expect(screen.getByText("Display Sources")).toBeInTheDocument();
-    });
-  });
-
-  it("shows available sources count", async () => {
-    render(<DisplayExplorer />, { wrapper: TestWrapper });
-
-    await waitFor(() => {
-      expect(screen.getByText(/of.*sources available/i)).toBeInTheDocument();
-    });
-  });
-
-  it("shows display type buttons", async () => {
-    render(<DisplayExplorer />, { wrapper: TestWrapper });
-
-    await waitFor(() => {
-      // Check for some display types - they appear multiple times (buttons in grid)
-      // Use getAllByText and check length
-      const weatherElements = screen.getAllByText(/weather/i);
-      expect(weatherElements.length).toBeGreaterThan(0);
-    });
-  });
-
-  it("shows select prompt initially", async () => {
-    render(<DisplayExplorer />, { wrapper: TestWrapper });
-
-    await waitFor(() => {
-      expect(screen.getByText(/select a source/i)).toBeInTheDocument();
-    });
-  });
-
-  it("renders with close button when onClose provided", async () => {
-    const mockOnClose = vi.fn();
-    render(<DisplayExplorer onClose={mockOnClose} />, { wrapper: TestWrapper });
-
-    await waitFor(() => {
-      expect(screen.getByText("Display Sources")).toBeInTheDocument();
-    });
-
-    // Wait for buttons to be available
-    await waitFor(() => {
-      const buttons = screen.getAllByRole("button");
-      expect(buttons.length).toBeGreaterThan(0);
-    });
-  });
-});
-
-describe("ServiceControls with Output Settings", () => {
-  it("renders output target selector", async () => {
+describe("ServiceControls with Dev Mode", () => {
+  it("shows dev mode toggle", async () => {
     // Import dynamically to avoid issues
     const { ServiceControls } = await import("@/components/service-controls");
     
     render(<ServiceControls />, { wrapper: TestWrapper });
 
     await waitFor(() => {
-      expect(screen.getByText("Output Target")).toBeInTheDocument();
+      expect(screen.getByText(/Dev Mode/i)).toBeInTheDocument();
     });
   });
 
@@ -284,15 +231,14 @@ describe("ServiceControls with Output Settings", () => {
     });
   });
 
-  it("shows output target buttons", async () => {
+  it("explains dev mode states", async () => {
     const { ServiceControls } = await import("@/components/service-controls");
     
     render(<ServiceControls />, { wrapper: TestWrapper });
 
     await waitFor(() => {
-      expect(screen.getByText("UI Only")).toBeInTheDocument();
-      expect(screen.getByText("Board Only")).toBeInTheDocument();
-      expect(screen.getByText("Both")).toBeInTheDocument();
+      // Should show explanatory text about live/preview mode
+      expect(screen.getByText(/Web UI displays content/i)).toBeInTheDocument();
     });
   });
 });

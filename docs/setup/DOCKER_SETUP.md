@@ -68,14 +68,16 @@ docker run -d \
 ## API Endpoints
 
 ### Service Control
-- `POST /start` - Start the background display service
-- `POST /stop` - Stop the background display service
 - `POST /refresh` - Manually refresh the display
+- `POST /force-refresh` - Force refresh (ignores cache)
+- `POST /dev-mode` - Toggle dev mode (preview vs live)
 
 ### Status & Info
 - `GET /health` - Health check
 - `GET /status` - Service status and configuration
 - `GET /config` - Configuration summary
+
+**Note**: The background display service starts automatically when the container starts. There's no need to manually start/stop it.
 
 ### Display Control
 - `POST /send-message` - Send custom message to Vestaboard
@@ -97,9 +99,11 @@ curl http://localhost:8000/health
 curl http://localhost:8000/status
 ```
 
-### Start Service
+### Toggle Dev Mode
 ```bash
-curl -X POST http://localhost:8000/start
+curl -X POST http://localhost:8000/dev-mode \
+  -H "Content-Type: application/json" \
+  -d '{"dev_mode": true}'
 ```
 
 ### Send Custom Message

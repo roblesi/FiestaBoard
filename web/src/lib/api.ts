@@ -43,6 +43,15 @@ export interface ActionResponse {
   dev_mode?: boolean;
 }
 
+export interface PageDeleteResponse {
+  status: string;
+  message: string;
+  default_page_created: boolean;
+  new_page_id?: string;
+  active_page_updated: boolean;
+  new_active_page_id?: string;
+}
+
 // Display types
 export interface DisplayInfo {
   type: string;
@@ -402,7 +411,7 @@ export const api = {
       body: JSON.stringify(page),
     }),
   deletePage: (pageId: string) =>
-    fetchApi<ActionResponse>(`/pages/${pageId}`, { method: "DELETE" }),
+    fetchApi<PageDeleteResponse>(`/pages/${pageId}`, { method: "DELETE" }),
   previewPage: (pageId: string) =>
     fetchApi<PagePreviewResponse>(`/pages/${pageId}/preview`, { method: "POST" }),
   sendPage: (pageId: string, target?: "ui" | "board" | "both") => {

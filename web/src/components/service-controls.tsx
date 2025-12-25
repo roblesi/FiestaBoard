@@ -1,22 +1,15 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useStatus, useStartService, useStopService, useToggleDevMode } from "@/hooks/use-vestaboard";
+import { useStatus, useToggleDevMode } from "@/hooks/use-vestaboard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Play, Square, FlaskConical, Monitor, Tv, Trash2, RefreshCw } from "lucide-react";
+import { FlaskConical, Trash2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
-
-// Output target options
-const OUTPUT_TARGETS = [
-  { value: "ui" as const, label: "UI Only", icon: Monitor },
-  { value: "board" as const, label: "Board Only", icon: Tv },
-  { value: "both" as const, label: "Both", icon: null },
-];
 
 // Cache status response type
 interface CacheStatus {
@@ -30,16 +23,7 @@ interface CacheStatus {
 export function ServiceControls() {
   const queryClient = useQueryClient();
   const { data: status, isLoading } = useStatus();
-  const startMutation = useStartService();
-  const stopMutation = useStopService();
   const devModeMutation = useToggleDevMode();
-
-  // Output settings query
-  const { data: outputSettings } = useQuery({
-    queryKey: ["output-settings"],
-    queryFn: () => api.getOutputSettings(),
-    refetchInterval: 30000,
-  });
 
   // Cache status query
   const { data: cacheStatus, refetch: refetchCache } = useQuery<CacheStatus>({
@@ -56,18 +40,6 @@ export function ServiceControls() {
       return res.json();
     },
     refetchInterval: 10000,
-  });
-
-  // Update output settings mutation
-  const updateOutputMutation = useMutation({
-    mutationFn: (target: "ui" | "board" | "both") => api.updateOutputSettings(target),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["output-settings"] });
-      toast.success("Output target updated");
-    },
-    onError: () => {
-      toast.error("Failed to update output target");
-    },
   });
 
   // Clear cache mutation
@@ -116,50 +88,12 @@ export function ServiceControls() {
     },
   });
 
-  const handleStart = async () => {
-    try {
-      const result = await startMutation.mutateAsync();
-      toast.success(result.message || "Service started");
-    } catch {
-      toast.error("Failed to start service");
-    }
-  };
-
-  const handleStop = async () => {
-    try {
-      const result = await stopMutation.mutateAsync();
-      toast.success(result.message || "Service stopped");
-    } catch {
-      toast.error("Failed to stop service");
-    }
-  };
-
   const handleDevModeToggle = async (checked: boolean) => {
     try {
       const result = await devModeMutation.mutateAsync(checked);
-      
-      // When enabling dev mode, switch to UI only
-      if (checked && outputSettings?.target !== "ui") {
-        await updateOutputMutation.mutateAsync("ui");
-      }
-      
       toast.success(result.message || `Dev mode ${checked ? "enabled" : "disabled"}`);
     } catch {
       toast.error("Failed to toggle dev mode");
-    }
-  };
-
-  const handleOutputChange = async (target: "ui" | "board" | "both") => {
-    try {
-      // If switching away from UI only while in dev mode, turn off dev mode
-      if (devMode && target !== "ui") {
-        await devModeMutation.mutateAsync(false);
-        toast.info("Dev mode disabled");
-      }
-      
-      await updateOutputMutation.mutateAsync(target);
-    } catch {
-      toast.error("Failed to update output target");
     }
   };
 
@@ -173,10 +107,6 @@ export function ServiceControls() {
           <CardTitle className="text-base sm:text-lg">Service Control</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 px-4 sm:px-6">
-          <div className="flex gap-2">
-            <Skeleton className="h-10 sm:h-8 flex-1 sm:w-20 sm:flex-none" />
-            <Skeleton className="h-10 sm:h-8 flex-1 sm:w-20 sm:flex-none" />
-          </div>
           <Skeleton className="h-5 w-full max-w-[200px]" />
         </CardContent>
       </Card>
@@ -194,30 +124,7 @@ export function ServiceControls() {
         </div>
       </CardHeader>
       <CardContent className="space-y-4 px-4 sm:px-6">
-        <div className="flex gap-2">
-          <Button
-            onClick={handleStart}
-            disabled={isRunning || startMutation.isPending}
-            variant={isRunning ? "outline" : "default"}
-            size="default"
-            className="gap-1.5 h-10 sm:h-9 flex-1 sm:flex-none"
-          >
-            <Play className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
-            Start
-          </Button>
-          <Button
-            onClick={handleStop}
-            disabled={!isRunning || stopMutation.isPending}
-            variant={!isRunning ? "outline" : "destructive"}
-            size="default"
-            className="gap-1.5 h-10 sm:h-9 flex-1 sm:flex-none"
-          >
-            <Square className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
-            Stop
-          </Button>
-        </div>
-
-        <div className="flex items-center gap-3 pt-2">
+        <div className="flex items-center gap-3">
           <FlaskConical className="h-4 w-4 text-muted-foreground shrink-0" />
           <Switch
             checked={devMode}
@@ -225,38 +132,19 @@ export function ServiceControls() {
             disabled={devModeMutation.isPending}
             id="dev-mode"
           />
-          <label htmlFor="dev-mode" className="text-xs sm:text-sm cursor-pointer">
+          <label htmlFor="dev-mode" className="text-xs sm:text-sm cursor-pointer flex-1">
             Dev Mode
             <span className="text-muted-foreground ml-1">
-              {devMode ? "(preview)" : "(live)"}
+              {devMode ? "(preview only)" : "(live - sends to board)"}
             </span>
           </label>
         </div>
-
-        {/* Output Target Settings */}
-        <div className="pt-2 border-t">
-          <label className="text-xs sm:text-sm font-medium">Output Target</label>
-          <div className="flex flex-col sm:flex-row gap-1.5 sm:gap-1 mt-2">
-            {OUTPUT_TARGETS.map(({ value, label, icon: Icon }) => (
-              <Button
-                key={value}
-                size="sm"
-                variant={outputSettings?.target === value ? "default" : "outline"}
-                className="flex-1 h-9 sm:h-8 text-xs gap-1.5"
-                onClick={() => handleOutputChange(value)}
-                disabled={updateOutputMutation.isPending || devModeMutation.isPending}
-              >
-                {Icon && <Icon className="h-4 w-4 sm:h-3 sm:w-3" />}
-                {label}
-              </Button>
-            ))}
-          </div>
-          {outputSettings && (
-            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1.5">
-              Effective: {outputSettings.effective_target}
-            </p>
-          )}
-        </div>
+        
+        <p className="text-[10px] text-muted-foreground">
+          {devMode 
+            ? "Preview mode: Web UI displays content but nothing is sent to the physical board"
+            : "Live mode: Content is automatically sent to the physical Vestaboard"}
+        </p>
 
         {/* Cache Status */}
         <div className="pt-2 border-t">

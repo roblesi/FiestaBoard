@@ -106,10 +106,9 @@ Beyond the required secrets, you can configure additional features using environ
 export WEATHER_LOCATION="New York, NY"
 export TIMEZONE="America/New_York"
 export STAR_TREK_QUOTES_ENABLED="true"
-export ROTATION_ORDER="weather,home_assistant,star_trek"
 
 # Then re-run setup
-./codespaces_setup.sh
+./scripts/codespaces_setup.sh
 ```
 
 ### Adding More Secrets

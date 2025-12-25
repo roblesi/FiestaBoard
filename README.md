@@ -50,8 +50,7 @@ docker-compose down
 - 📶 **Guest WiFi**: Display WiFi credentials for guests (easily toggled on/off)
 
 ### System Features
-- 🔄 **Smart Rotation**: Time-based rotation between screens with configurable durations
-- 🎯 **Priority System**: Guest WiFi > Apple Music > Rotation > Weather
+- 📄 **Page-Based Display**: Create and select pages via the web UI
 - 🐳 **Docker Ready**: Containerized for easy deployment on any system
 - ⚙️ **Highly Configurable**: Environment-based configuration for all features
 - 🔒 **Secure**: API token support for all integrations
@@ -140,7 +139,6 @@ For detailed setup instructions for specific features, see:
 - **Apple Music**: [APPLE_MUSIC_SETUP.md](./docs/features/APPLE_MUSIC_SETUP.md)
 - **Star Trek Quotes**: [STAR_TREK_QUOTES_SETUP.md](./docs/features/STAR_TREK_QUOTES_SETUP.md)
 - **Guest WiFi**: [GUEST_WIFI_SETUP.md](./docs/features/GUEST_WIFI_SETUP.md)
-- **Rotation Control**: [ROTATION_CONTROL.md](./docs/features/ROTATION_CONTROL.md)
 
 ## Configuration
 
@@ -159,13 +157,6 @@ All configuration is done via environment variables in `.env`:
 - `REFRESH_INTERVAL_SECONDS`: Update frequency in seconds (default: 300 = 5 minutes)
 
 ### Feature Configuration
-
-#### Rotation Control
-- `ROTATION_ENABLED`: Enable/disable screen rotation (default: `true`)
-- `ROTATION_WEATHER_DURATION`: Weather display duration in seconds (default: `300`)
-- `ROTATION_HOME_ASSISTANT_DURATION`: Home Assistant duration in seconds (default: `300`)
-- `ROTATION_STAR_TREK_DURATION`: Star Trek quotes duration in seconds (default: `180`)
-- `ROTATION_ORDER`: Comma-separated list of screens (default: `weather,home_assistant`)
 
 #### Star Trek Quotes
 - `STAR_TREK_QUOTES_ENABLED`: Enable Star Trek quotes (default: `false`)
@@ -205,16 +196,9 @@ The development environment includes hot reload for both Python and Next.js code
 
 For detailed development workflows, see [LOCAL_DEVELOPMENT.md](./docs/setup/LOCAL_DEVELOPMENT.md).
 
-## Display Priority System
+## How It Works
 
-The Vestaboard follows this priority order:
-
-1. **Guest WiFi** (highest priority) - When enabled, overrides everything
-2. **Apple Music** - When music is playing, takes precedence
-3. **Rotation** - Weather, Home Assistant, and Star Trek rotate based on configuration
-4. **Weather + DateTime** - Default display
-
-This ensures important information (like guest WiFi) always shows, while allowing rotation of other content.
+Select a page in the web UI and the service will keep it updated on your Vestaboard. Pages use templates with dynamic data sources like weather, time, and more. Create custom pages to display exactly what you want.
 
 ## Project Structure
 
@@ -311,15 +295,6 @@ docker-compose up --build
 - Verify `.env` file is readable
 
 ## Feature Guides
-
-### Rotation Control
-Control how screens rotate on your Vestaboard. Configure duration for each screen and choose which screens to include in rotation.
-
-See [ROTATION_CONTROL.md](./docs/features/ROTATION_CONTROL.md) for:
-- Time-based rotation configuration
-- Screen duration settings
-- Common rotation patterns
-- Troubleshooting
 
 ### Star Trek Quotes
 Display inspiring quotes from TNG, Voyager, and DS9 with a configurable ratio between series.

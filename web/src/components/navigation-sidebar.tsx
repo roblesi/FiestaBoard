@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, FileText, Settings, Menu, X } from "lucide-react";
+import { Home, FileText, Settings, Terminal, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ServiceStatus } from "@/components/service-status";
@@ -19,6 +19,11 @@ const navigation = [
     name: "Pages",
     href: "/pages",
     icon: FileText,
+  },
+  {
+    name: "Logs",
+    href: "/logs",
+    icon: Terminal,
   },
   {
     name: "Settings",
@@ -53,23 +58,23 @@ export function NavigationSidebar() {
       {/* Mobile Header */}
       <header className="lg:hidden fixed top-0 left-0 right-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="flex items-center justify-between px-4 h-14">
-          <h1 className="text-lg font-semibold tracking-tight">FiestaBoard</h1>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <h1 className="text-lg font-semibold tracking-tight">FiestaBoard</h1>
             <ServiceStatus />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-10 w-10"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
-            >
-              {mobileMenuOpen ? (
-                <X className="h-5 w-5" />
-              ) : (
-                <Menu className="h-5 w-5" />
-              )}
-            </Button>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+          >
+            {mobileMenuOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
+          </Button>
         </div>
       </header>
 
@@ -122,12 +127,8 @@ export function NavigationSidebar() {
         <div className="flex h-full flex-col">
           {/* Header */}
           <div className="flex items-center justify-between border-b px-6 py-4">
-            <div>
-              <h1 className="text-xl font-semibold tracking-tight">FiestaBoard</h1>
-              <div className="mt-1">
-                <ServiceStatus />
-              </div>
-            </div>
+            <h1 className="text-xl font-semibold tracking-tight">FiestaBoard</h1>
+            <ServiceStatus />
           </div>
 
           {/* Navigation */}

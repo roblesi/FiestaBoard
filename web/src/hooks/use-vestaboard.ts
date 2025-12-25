@@ -31,28 +31,6 @@ export function useConfig() {
   });
 }
 
-// Start service mutation
-export function useStartService() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: api.startService,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.status });
-    },
-  });
-}
-
-// Stop service mutation
-export function useStopService() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: api.stopService,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.status });
-    },
-  });
-}
-
 // Toggle dev mode mutation
 export function useToggleDevMode() {
   const queryClient = useQueryClient();
