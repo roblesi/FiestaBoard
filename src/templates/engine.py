@@ -592,11 +592,13 @@ class TemplateEngine:
         
         Also supports _color suffix to get just the color tile for a field.
         e.g., {{weather.temperature_color}} returns {65} based on temperature value.
+        
+        Returns "???" if variable is unavailable (API error, missing data, etc.)
         """
         parts = expr.split('.')
         
         if len(parts) < 2:
-            return f"{{{{?{expr}}}}}"  # Invalid expression
+            return "???"  # Invalid expression
         
         source = parts[0].lower()
         field = parts[1]
@@ -604,10 +606,12 @@ class TemplateEngine:
         # Check if this is a _color request
         if field.endswith('_color'):
             base_field = field[:-6]  # Remove '_color' suffix
-            return self._get_color_only(source, base_field, context)
+            color_result = self._get_color_only(source, base_field, context)
+            # If color lookup fails, return empty string (no color tile)
+            return color_result if color_result else ""
         
         if source not in context:
-            return f"{{{{?{expr}}}}}"  # Source not available
+            return "???"  # Source not available (API failed, not configured, etc.)
         
         # Navigate to the field
         value = context[source]
@@ -615,13 +619,13 @@ class TemplateEngine:
             if isinstance(value, dict):
                 value = value.get(part, value.get(part.lower()))
                 if value is None:
-                    return f"{{{{?{expr}}}}}"
+                    return "???"  # Field not found in data
             else:
-                return f"{{{{?{expr}}}}}"
+                return "???"  # Invalid path
         
         # Convert to string
         if value is None:
-            return ""
+            return "???"  # Null value
         if isinstance(value, bool):
             return "Yes" if value else "No"
         if isinstance(value, (int, float)):
@@ -775,10 +779,47 @@ class TemplateEngine:
     def get_available_variables(self) -> Dict[str, List[str]]:
         """Get list of all available template variables by source.
         
+        Only returns variables from sources that are actually configured
+        and can provide data (not null/unavailable).
+        
         Returns:
             Dict mapping source names to lists of field names
         """
-        return AVAILABLE_VARIABLES.copy()
+        # Check which sources are actually available
+        available_sources = self._get_available_sources()
+        
+        # Filter to only include variables from available sources
+        filtered = {}
+        for source, fields in AVAILABLE_VARIABLES.items():
+            if source in available_sources:
+                filtered[source] = fields
+        
+        return filtered
+    
+    def _get_available_sources(self) -> List[str]:
+        """Check which data sources are configured (even if temporarily unavailable).
+        
+        Returns sources that are configured, regardless of whether they can currently
+        return data. This allows users to see available template variables even if
+        an API is temporarily down or not yet configured.
+        
+        Returns:
+            List of source names that are configured
+        """
+        available = []
+        sources = ["weather", "datetime", "home_assistant", "apple_music", "star_trek", "guest_wifi"]
+        
+        for source in sources:
+            try:
+                result = self.display_service.get_display(source)
+                # Include if source is configured (available=True), even if it can't return data right now
+                # This allows users to see what variables are available for configuration
+                if result.available:
+                    available.append(source)
+            except Exception as e:
+                logger.debug(f"Source {source} not configured: {e}")
+        
+        return available
     
     def validate_template(self, template: str) -> List[TemplateError]:
         """Validate template syntax.
@@ -896,10 +937,23 @@ class TemplateEngine:
     def get_variable_max_lengths(self) -> Dict[str, int]:
         """Get the max character lengths for all variables.
         
+        Only returns lengths for variables from sources that are actually available.
+        
         Returns:
             Dict mapping variable names to max lengths
         """
-        return VARIABLE_MAX_LENGTHS.copy()
+        # Check which sources are actually available
+        available_sources = self._get_available_sources()
+        
+        # Filter to only include max lengths for available sources
+        filtered = {}
+        for var_name, max_len in VARIABLE_MAX_LENGTHS.items():
+            # Extract source from variable name (e.g., "weather.temperature" -> "weather")
+            source = var_name.split('.')[0]
+            if source in available_sources:
+                filtered[var_name] = max_len
+        
+        return filtered
     
     def strip_formatting(self, text: str) -> str:
         """Remove all template formatting markers from text.
