@@ -64,6 +64,7 @@ AVAILABLE_VARIABLES = {
     "apple_music": ["track", "artist", "album", "playing"],
     "star_trek": ["quote", "character", "series", "series_color"],
     "guest_wifi": ["ssid", "password"],
+    "baywheels": ["electric_bikes", "classic_bikes", "num_bikes_available", "is_renting", "station_name", "status_color"],
 }
 
 # Maximum character lengths for each variable (for validation)
@@ -96,6 +97,12 @@ VARIABLE_MAX_LENGTHS = {
     "home_assistant.state": 10,
     "home_assistant.state_color": 4,  # Color tile
     "home_assistant.friendly_name": 15,
+    "baywheels.electric_bikes": 2,
+    "baywheels.classic_bikes": 2,
+    "baywheels.num_bikes_available": 2,
+    "baywheels.is_renting": 3,  # Yes/No
+    "baywheels.station_name": 10,
+    "baywheels.status_color": 4,  # Color tile
 }
 
 # Regex patterns
@@ -457,7 +464,7 @@ class TemplateEngine:
         context = {}
         
         # Fetch from each source
-        sources = ["weather", "datetime", "home_assistant", "apple_music", "star_trek", "guest_wifi"]
+        sources = ["weather", "datetime", "home_assistant", "apple_music", "star_trek", "guest_wifi", "baywheels"]
         
         for source in sources:
             try:
@@ -670,6 +677,7 @@ class TemplateEngine:
             "apple_music": "apple_music",
             "star_trek": "star_trek_quotes",
             "guest_wifi": "guest_wifi",
+            "baywheels": "baywheels",
         }
         
         feature_name = feature_map.get(source)
@@ -915,7 +923,7 @@ class TemplateEngine:
             List of source names that are configured
         """
         available = []
-        sources = ["weather", "datetime", "home_assistant", "apple_music", "star_trek", "guest_wifi"]
+        sources = ["weather", "datetime", "home_assistant", "apple_music", "star_trek", "guest_wifi", "baywheels"]
         
         for source in sources:
             try:
@@ -1024,6 +1032,7 @@ class TemplateEngine:
                     "weather": "weather",
                     "star_trek": "star_trek_quotes",
                     "home_assistant": "home_assistant",
+                    "baywheels": "baywheels",
                 }
                 feature = feature_map.get(source)
                 if feature:

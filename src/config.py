@@ -278,6 +278,40 @@ class Config:
         """Home Assistant refresh interval."""
         return cls._get_feature("home_assistant").get("refresh_seconds", 30)
     
+    # ==================== Bay Wheels Configuration ====================
+    
+    @classmethod
+    @property
+    def BAYWHEELS_ENABLED(cls) -> bool:
+        """Whether Bay Wheels integration is enabled."""
+        return cls._get_feature("baywheels").get("enabled", False)
+    
+    @classmethod
+    @property
+    def BAYWHEELS_STATION_ID(cls) -> str:
+        """Bay Wheels station ID to monitor."""
+        return cls._get_feature("baywheels").get("station_id", "")
+    
+    @classmethod
+    @property
+    def BAYWHEELS_STATION_NAME(cls) -> str:
+        """Display name for the Bay Wheels station."""
+        return cls._get_feature("baywheels").get("station_name", "19TH")
+    
+    @classmethod
+    @property
+    def BAYWHEELS_REFRESH_SECONDS(cls) -> int:
+        """Bay Wheels data refresh interval in seconds."""
+        return cls._get_feature("baywheels").get("refresh_seconds", 60)
+    
+    # ==================== Legacy/Unused Configuration ====================
+    
+    # These are kept for backward compatibility but not actively used
+    USER_LATITUDE: float = 37.7749
+    USER_LONGITUDE: float = -122.4194
+    MAX_DISTANCE_MILES: float = 2.0
+    WAYMO_ENABLED: bool = False
+    
     # ==================== Helper Methods ====================
     
     @classmethod
