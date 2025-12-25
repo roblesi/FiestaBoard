@@ -12,6 +12,7 @@ import {
   Wifi,
   Sparkles,
   RotateCw,
+  Waves,
 } from "lucide-react";
 
 // Output parameter definition
@@ -230,6 +231,43 @@ const FEATURE_DEFINITIONS: Record<
       { name: "quote", description: "The quote text", example: "Make it so.", maxChars: 120, typical: "20-120 chars (multi-line)" },
       { name: "character", description: "Character name", example: "Picard", maxChars: 15, typical: "4-15 chars" },
       { name: "series", description: "Series name", example: "TNG", maxChars: 3, typical: "3 chars" },
+    ],
+  },
+  surf: {
+    title: "Surf Conditions",
+    description: "Ocean Beach wave conditions",
+    icon: Waves,
+    hasRefreshInterval: true,
+    defaultRefreshSeconds: 1800,
+    fields: [
+      {
+        key: "latitude",
+        label: "Latitude",
+        type: "number",
+        placeholder: "37.7599",
+        description: "Location latitude (default: Ocean Beach, SF)",
+      },
+      {
+        key: "longitude",
+        label: "Longitude",
+        type: "number",
+        placeholder: "-122.5121",
+        description: "Location longitude (default: Ocean Beach, SF)",
+      },
+      {
+        key: "refresh_seconds",
+        label: "Refresh Interval (seconds)",
+        type: "number",
+        placeholder: "1800",
+        description: "How often to fetch surf data (default: 30 min)",
+      },
+    ],
+    outputs: [
+      { name: "wave_height", description: "Wave height in feet", example: "4.2", maxChars: 4, typical: "1-4 chars" },
+      { name: "swell_period", description: "Swell period in seconds", example: "12.5", maxChars: 4, typical: "2-4 chars" },
+      { name: "quality", description: "Surf quality rating", example: "GOOD", maxChars: 9, typical: "POOR/FAIR/GOOD/EXCELLENT" },
+      { name: "quality_color", description: "Quality color tile", example: "{66}", maxChars: 4, typical: "Color tile" },
+      { name: "formatted", description: "Pre-formatted message", example: "4FT GOOD", maxChars: 22, typical: "10-22 chars" },
     ],
   },
   rotation: {

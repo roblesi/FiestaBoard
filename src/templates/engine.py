@@ -64,6 +64,7 @@ AVAILABLE_VARIABLES = {
     "apple_music": ["track", "artist", "album", "playing"],
     "star_trek": ["quote", "character", "series", "series_color"],
     "guest_wifi": ["ssid", "password"],
+    "surf": ["wave_height", "swell_period", "quality", "quality_color", "formatted"],
 }
 
 # Maximum character lengths for each variable (for validation)
@@ -96,6 +97,11 @@ VARIABLE_MAX_LENGTHS = {
     "home_assistant.state": 10,
     "home_assistant.state_color": 4,  # Color tile
     "home_assistant.friendly_name": 15,
+    "surf.wave_height": 4,  # e.g., "3.5"
+    "surf.swell_period": 4,  # e.g., "12.5"
+    "surf.quality": 9,  # EXCELLENT, GOOD, FAIR, POOR
+    "surf.quality_color": 4,  # Color tile
+    "surf.formatted": 22,  # Pre-formatted message
 }
 
 # Regex patterns

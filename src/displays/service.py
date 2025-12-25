@@ -14,6 +14,7 @@ from ..data_sources.datetime import get_datetime_source
 from ..data_sources.apple_music import get_apple_music_source
 from ..data_sources.home_assistant import get_home_assistant_source
 from ..data_sources.star_trek_quotes import get_star_trek_quotes_source
+from ..data_sources.surf import get_surf_source
 from ..formatters.message_formatter import get_message_formatter
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,7 @@ DISPLAY_TYPES = [
     "apple_music",
     "star_trek",
     "guest_wifi",
+    "surf",
 ]
 
 
@@ -59,6 +61,7 @@ class DisplayService:
         self.apple_music_source = get_apple_music_source()
         self.home_assistant_source = get_home_assistant_source()
         self.star_trek_quotes_source = get_star_trek_quotes_source()
+        self.surf_source = get_surf_source()
         
         logger.info("DisplayService initialized")
     
@@ -107,6 +110,11 @@ class DisplayService:
                 "available": Config.GUEST_WIFI_ENABLED and bool(Config.GUEST_WIFI_SSID),
                 "description": "Guest WiFi credentials",
             },
+            {
+                "type": "surf",
+                "available": self.surf_source is not None and Config.SURF_ENABLED,
+                "description": "Ocean Beach surf conditions",
+            },
         ]
         return displays
     
@@ -143,6 +151,8 @@ class DisplayService:
                 return self._get_star_trek()
             elif display_type == "guest_wifi":
                 return self._get_guest_wifi()
+            elif display_type == "surf":
+                return self._get_surf()
             else:
                 return DisplayResult(
                     display_type=display_type,
@@ -337,6 +347,41 @@ class DisplayService:
         formatted = self.formatter.format_star_trek_quote(raw_data)
         return DisplayResult(
             display_type="star_trek",
+            formatted=formatted,
+            raw=raw_data,
+            available=True
+        )
+    
+    def _get_surf(self) -> DisplayResult:
+        """Get surf conditions display."""
+        if not self.surf_source or not Config.SURF_ENABLED:
+            return DisplayResult(
+                display_type="surf",
+                formatted="",
+                raw={},
+                available=False,
+                error="Surf source not configured or not enabled"
+            )
+        
+        raw_data = self.surf_source.fetch_surf_data()
+        if not raw_data:
+            return DisplayResult(
+                display_type="surf",
+                formatted="Surf: Unavailable",
+                raw={},
+                available=True,
+                error="Failed to fetch surf data"
+            )
+        
+        formatted = raw_data.get("formatted_message", "")
+        if not formatted:
+            # Build a simple formatted message if not provided
+            wave_height = raw_data.get("wave_height", 0)
+            quality = raw_data.get("quality", "UNKNOWN")
+            formatted = f"WAVES: {wave_height}FT {quality}"
+        
+        return DisplayResult(
+            display_type="surf",
             formatted=formatted,
             raw=raw_data,
             available=True

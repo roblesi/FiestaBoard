@@ -95,6 +95,20 @@ DEFAULT_CONFIG: Dict[str, Any] = {
                 ],
             },
         },
+        "surf": {
+            "enabled": False,
+            "latitude": 37.7599,  # Ocean Beach, SF
+            "longitude": -122.5121,  # Ocean Beach, SF
+            "refresh_seconds": 1800,  # 30 minutes for surf conditions
+            "color_rules": {
+                "quality": [
+                    {"condition": "==", "value": "EXCELLENT", "color": "green"},
+                    {"condition": "==", "value": "GOOD", "color": "yellow"},
+                    {"condition": "==", "value": "FAIR", "color": "orange"},
+                    {"condition": "==", "value": "POOR", "color": "red"},
+                ],
+            },
+        },
         "rotation": {
             "enabled": True,
             "default_duration": 300,
