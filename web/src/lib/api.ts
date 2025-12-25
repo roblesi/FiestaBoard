@@ -168,12 +168,18 @@ export interface PageSendResponse {
 }
 
 // Template types
+export interface FormattingVariable {
+  syntax: string;
+  description: string;
+}
+
 export interface TemplateVariables {
   variables: Record<string, string[]>;
   max_lengths: Record<string, number>;
   colors: Record<string, number>;
   symbols: string[];
   filters: string[];
+  formatting: Record<string, FormattingVariable>;
   syntax_examples: Record<string, string>;
 }
 

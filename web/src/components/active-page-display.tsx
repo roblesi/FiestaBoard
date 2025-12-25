@@ -133,7 +133,7 @@ export function ActivePageDisplay() {
         {/* Status indicator */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground mt-3">
           <div className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+            <div className="w-1.5 h-1.5 rounded-full bg-vesta-green animate-pulse" />
             <span>Auto-refresh every 30s</span>
           </div>
         </div>

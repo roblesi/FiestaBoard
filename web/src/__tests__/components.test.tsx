@@ -32,7 +32,8 @@ describe("ServiceStatus", () => {
     render(<ServiceStatus />, { wrapper: TestWrapper });
 
     await waitFor(() => {
-      expect(screen.getByText("Running")).toBeInTheDocument();
+      // ServiceStatus uses aria-label for the status indicator
+      expect(screen.getByLabelText("Running")).toBeInTheDocument();
     });
   });
 });

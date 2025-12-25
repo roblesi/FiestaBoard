@@ -51,7 +51,7 @@ export function RotationStatus() {
     <Card>
       <CardHeader className="px-4 sm:px-6">
         <CardTitle className="text-base flex items-center gap-2">
-          <Play className="h-4 w-4 text-green-500" />
+          <Play className="h-4 w-4 text-vesta-green" />
           Rotation Active
         </CardTitle>
       </CardHeader>

@@ -1,13 +1,28 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { DragEvent } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
-import { Copy } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { VESTABOARD_COLORS } from "@/lib/vestaboard-colors";
+
+// Color mapping with contrast info - uses Vestaboard's official colors
+const COLOR_MAP: Record<string, { bg: string; needsDarkText: boolean }> = {
+  red: { bg: VESTABOARD_COLORS.red, needsDarkText: false },
+  orange: { bg: VESTABOARD_COLORS.orange, needsDarkText: false },
+  yellow: { bg: VESTABOARD_COLORS.yellow, needsDarkText: true },
+  green: { bg: VESTABOARD_COLORS.green, needsDarkText: true },
+  blue: { bg: VESTABOARD_COLORS.blue, needsDarkText: false },
+  violet: { bg: VESTABOARD_COLORS.violet, needsDarkText: false },
+  white: { bg: VESTABOARD_COLORS.white, needsDarkText: true },
+  black: { bg: VESTABOARD_COLORS.black, needsDarkText: false },
+};
 
 interface VariablePickerProps {
   onInsert?: (variable: string) => void;
@@ -15,10 +30,109 @@ interface VariablePickerProps {
   showSymbols?: boolean;
 }
 
+// Collapsible section component
+function CollapsibleSection({
+  title,
+  defaultOpen = true,
+  children,
+}: {
+  title: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div className="border-b border-border/50 last:border-b-0">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center justify-between w-full py-2 text-left text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <span className="capitalize">{title.replace(/_/g, " ")}</span>
+        <ChevronDown
+          className={cn(
+            "h-3.5 w-3.5 transition-transform duration-200",
+            isOpen && "rotate-180"
+          )}
+        />
+      </button>
+      <div
+        className={cn(
+          "overflow-hidden transition-all duration-200",
+          isOpen ? "max-h-96 pb-3" : "max-h-0"
+        )}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// Variable pill component - matches editor badge style
+function VariablePill({
+  label,
+  value,
+  onInsert,
+  onDragStart,
+}: {
+  label: string;
+  value: string;
+  onInsert: () => void;
+  onDragStart: (e: DragEvent<HTMLButtonElement>) => void;
+}) {
+  return (
+    <button
+      type="button"
+      draggable
+      onDragStart={onDragStart}
+      onClick={onInsert}
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-mono",
+        "bg-indigo-500/15 border border-indigo-500/30 text-indigo-700 dark:text-indigo-300",
+        "hover:bg-indigo-500/25 cursor-grab active:cursor-grabbing transition-colors"
+      )}
+    >
+      {label}
+    </button>
+  );
+}
+
+// Color pill component - solid color like in editor
+function ColorPill({
+  colorName,
+  onInsert,
+  onDragStart,
+}: {
+  colorName: string;
+  onInsert: () => void;
+  onDragStart: (e: DragEvent<HTMLButtonElement>) => void;
+}) {
+  const colorInfo = COLOR_MAP[colorName.toLowerCase()];
+  if (!colorInfo) return null;
+
+  return (
+    <button
+      type="button"
+      draggable
+      onDragStart={onDragStart}
+      onClick={onInsert}
+      style={{ backgroundColor: colorInfo.bg }}
+      className={cn(
+        "inline-flex items-center justify-center rounded-full px-3 py-1 text-xs font-medium",
+        "cursor-grab active:cursor-grabbing transition-all hover:scale-105",
+        colorInfo.needsDarkText ? "text-black/80" : "text-white/90"
+      )}
+      aria-label={`${colorName} color`}
+    >
+      {colorName}
+    </button>
+  );
+}
+
 export function VariablePicker({
   onInsert,
   showColors = true,
-  showSymbols = true,
 }: VariablePickerProps) {
   const { data: templateVars, isLoading } = useQuery({
     queryKey: ["template-variables"],
@@ -36,6 +150,12 @@ export function VariablePicker({
     } else {
       handleCopy(variable);
     }
+  };
+
+  const handleDragStart = (e: DragEvent<HTMLButtonElement>, value: string) => {
+    e.dataTransfer.effectAllowed = "copy";
+    e.dataTransfer.setData("text/plain", value);
+    e.dataTransfer.setData("application/x-template-variable", value);
   };
 
   if (isLoading) {
@@ -57,132 +177,101 @@ export function VariablePicker({
 
   return (
     <Card className="flex flex-col h-full min-h-0">
-      <CardHeader className="flex-shrink-0 px-4 sm:px-6">
+      <CardHeader className="flex-shrink-0 px-4 sm:px-6 pb-2">
         <CardTitle className="text-base">Template Variables</CardTitle>
         <CardDescription className="text-xs sm:text-sm">
-          Tap to {onInsert ? "insert" : "copy"} into your template
+          Tap to {onInsert ? "insert" : "copy"} or drag into template
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex-1 min-h-0 flex flex-col overflow-y-auto px-4 sm:px-6">
-        <div className="space-y-6 pr-2 sm:pr-4">
-            {/* Variables */}
-            <div>
-              <h4 className="text-sm font-semibold mb-3">Data Variables</h4>
-              <div className="space-y-4">
-                {Object.entries(templateVars.variables).map(([category, vars]) => (
-                  <div key={category}>
-                    <p className="text-xs font-medium text-muted-foreground mb-2 capitalize">
-                      {category.replace(/_/g, " ")}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {vars.map((variable) => (
-                        <Button
-                          key={variable}
-                          variant="outline"
-                          size="sm"
-                          className="h-9 sm:h-8 px-3 text-xs font-mono active:bg-accent"
-                          onClick={() => handleInsert(`{{${category}.${variable}}}`)}
-                        >
-                          {variable}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-                
-                {/* Colors as variables */}
-                {showColors && Object.keys(templateVars.colors).length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground mb-2 capitalize">
-                      Colors
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {Object.entries(templateVars.colors).map(([colorName]) => (
-                        <Button
-                          key={colorName}
-                          variant="outline"
-                          size="sm"
-                          className="h-9 sm:h-8 px-3 text-xs font-mono active:bg-accent"
-                          onClick={() => handleInsert(`{${colorName}}`)}
-                        >
-                          {colorName}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                )}
+      <CardContent className="flex-1 min-h-0 flex flex-col overflow-y-auto px-4 sm:px-6 pt-0">
+        <div className="space-y-1">
+          {/* Data Variables - collapsible by category */}
+          <div className="pb-2">
+            <h4 className="text-sm font-semibold mb-2">Data Variables</h4>
+            {Object.entries(templateVars.variables).map(([category, vars]) => (
+              <CollapsibleSection key={category} title={category} defaultOpen={true}>
+                <div className="flex flex-wrap gap-1.5">
+                  {vars.map((variable) => {
+                    const varValue = `{{${category}.${variable}}}`;
+                    return (
+                      <VariablePill
+                        key={variable}
+                        label={variable}
+                        value={varValue}
+                        onInsert={() => handleInsert(varValue)}
+                        onDragStart={(e) => handleDragStart(e, varValue)}
+                      />
+                    );
+                  })}
+                </div>
+              </CollapsibleSection>
+            ))}
+          </div>
+
+          {/* Colors */}
+          {showColors && Object.keys(templateVars.colors).length > 0 && (
+            <div className="py-2 border-t border-border/50">
+              <h4 className="text-sm font-semibold mb-3">Colors</h4>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(templateVars.colors).map(([colorName]) => {
+                  const colorValue = `{${colorName}}`;
+                  return (
+                    <ColorPill
+                      key={colorName}
+                      colorName={colorName}
+                      onInsert={() => handleInsert(colorValue)}
+                      onDragStart={(e) => handleDragStart(e, colorValue)}
+                    />
+                  );
+                })}
               </div>
             </div>
+          )}
 
-            {/* Filters */}
-            {templateVars.filters.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold mb-3">Filters</h4>
-                <div className="flex flex-wrap gap-2">
-                  {templateVars.filters.map((filter) => (
-                    <Badge
-                      key={filter}
-                      variant="secondary"
-                      className="cursor-pointer text-xs py-1.5 px-2.5 active:bg-muted"
-                      onClick={() => handleCopy(`|${filter}`)}
-                    >
-                      |{filter}
-                    </Badge>
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Example: {"{{weather.temperature|upper}}"}
-                </p>
+          {/* Formatting */}
+          {templateVars.formatting && Object.keys(templateVars.formatting).length > 0 && (
+            <div className="py-2 border-t border-border/50">
+              <h4 className="text-sm font-semibold mb-3">Formatting</h4>
+              <div className="flex flex-wrap gap-1.5">
+                {Object.entries(templateVars.formatting).map(([name, info]) => (
+                  <VariablePill
+                    key={name}
+                    label={name.replace(/_/g, " ")}
+                    value={info.syntax}
+                    onInsert={() => handleInsert(info.syntax)}
+                    onDragStart={(e) => handleDragStart(e, info.syntax)}
+                  />
+                ))}
               </div>
-            )}
+              <p className="text-xs text-muted-foreground mt-2">
+                Use fill_space to push content apart: {"Left{{fill_space}}Right"}
+              </p>
+            </div>
+          )}
 
-            {/* Colors */}
-            {showColors && Object.keys(templateVars.colors).length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold mb-3">Colors</h4>
-                <div className="grid grid-cols-2 gap-2">
-                  {Object.entries(templateVars.colors).map(([colorName]) => (
-                    <Button
-                      key={colorName}
-                      variant="outline"
-                      size="sm"
-                      className="h-10 sm:h-9 text-xs justify-start active:bg-accent"
-                      onClick={() => handleInsert(`{${colorName}}`)}
-                    >
-                      <span
-                        className="w-4 h-4 sm:w-3 sm:h-3 rounded-sm mr-2"
-                        style={{
-                          backgroundColor: getColorPreview(colorName),
-                        }}
-                      />
-                      {colorName}
-                    </Button>
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Use: {"{red}TEXT"} or {"{blue}MORE"}
-                </p>
+          {/* Filters */}
+          {templateVars.filters.length > 0 && (
+            <div className="py-2 border-t border-border/50">
+              <h4 className="text-sm font-semibold mb-3">Filters</h4>
+              <div className="flex flex-wrap gap-1.5">
+                {templateVars.filters.map((filter) => (
+                  <Badge
+                    key={filter}
+                    variant="secondary"
+                    className="cursor-pointer text-xs py-1 px-2 font-mono active:bg-muted"
+                    onClick={() => handleCopy(`|${filter}`)}
+                  >
+                    |{filter}
+                  </Badge>
+                ))}
               </div>
-            )}
-
+              <p className="text-xs text-muted-foreground mt-2">
+                Example: {"{{weather.temperature|upper}}"}
+              </p>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
   );
 }
-
-// Helper to get color preview (basic approximation)
-function getColorPreview(colorName: string): string {
-  const colorMap: Record<string, string> = {
-    red: "#e74c3c",
-    orange: "#e67e22",
-    yellow: "#f1c40f",
-    green: "#2ecc71",
-    blue: "#3498db",
-    violet: "#9b59b6",
-    white: "#ecf0f1",
-    black: "#2c3e50",
-  };
-  return colorMap[colorName.toLowerCase()] || "#95a5a6";
-}
-

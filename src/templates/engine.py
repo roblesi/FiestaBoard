@@ -103,6 +103,8 @@ VAR_PATTERN = re.compile(r'\{\{([^}]+)\}\}')  # {{source.field}} or {{source.fie
 COLOR_START_PATTERN = re.compile(r'\{(red|orange|yellow|green|blue|violet|purple|white|black|6[3-9]|70)\}', re.IGNORECASE)
 COLOR_END_PATTERN = re.compile(r'\{/(red|orange|yellow|green|blue|violet|purple|white|black)?\}', re.IGNORECASE)
 SYMBOL_PATTERN = re.compile(r'\{(sun|star|cloud|rain|snow|storm|fog|partly|heart|check|x)\}', re.IGNORECASE)
+ALIGNMENT_PATTERN = re.compile(r'^\{(left|center|right)\}', re.IGNORECASE)
+FILL_SPACE_PATTERN = re.compile(r'\{\{fill_space\}\}', re.IGNORECASE)
 
 
 @dataclass
@@ -270,8 +272,10 @@ class TemplateEngine:
     def render_lines(self, template_lines: List[str], context: Optional[Dict[str, Any]] = None) -> str:
         """Render a list of template lines (for template pages).
         
-        Handles the special |wrap filter which allows content to flow
-        across multiple lines, filling empty lines below.
+        Handles:
+        - The special |wrap filter which allows content to flow across multiple lines
+        - Alignment directives {left}, {center}, {right}
+        - The {{fill_space}} variable for flexible spacing
         
         Args:
             template_lines: List of up to 6 template lines
@@ -297,8 +301,11 @@ class TemplateEngine:
                 # This line was filled by wrap overflow, already set
                 continue
             
+            # Extract alignment directive
+            alignment, content = self._extract_alignment(line)
+            
             # Check if this line contains a |wrap filter
-            if '|wrap}}' in line or '|wrap|' in line:
+            if '|wrap}}' in content or '|wrap|' in content:
                 # Find how many empty lines follow (for wrap overflow)
                 empty_count = 0
                 for j in range(i + 1, 6):
@@ -308,19 +315,24 @@ class TemplateEngine:
                         break
                 
                 # Render the wrap content
-                wrapped_lines = self._render_with_wrap(line, context, max_lines=1 + empty_count)
+                wrapped_lines = self._render_with_wrap(content, context, max_lines=1 + empty_count)
                 
-                # Fill in the lines
+                # Fill in the lines with alignment
                 for k, wrapped_line in enumerate(wrapped_lines):
                     if i + k < 6:
-                        rendered[i + k] = self._truncate_to_tiles(wrapped_line, max_tiles=22)
+                        # Process fill_space first
+                        processed = self._process_fill_space(wrapped_line, width=22)
+                        # Then apply alignment
+                        rendered[i + k] = self._apply_alignment(processed, alignment, width=22)
                 
                 skip_until = i + len(wrapped_lines) - 1
             else:
                 # Normal rendering
-                rendered_line = self.render(line, context)
-                # Truncate to 22 tiles (not characters) - color markers count as 1 tile
-                rendered[i] = self._truncate_to_tiles(rendered_line, max_tiles=22)
+                rendered_line = self.render(content, context)
+                # Process fill_space first
+                rendered_line = self._process_fill_space(rendered_line, width=22)
+                # Apply alignment (this also truncates if needed)
+                rendered[i] = self._apply_alignment(rendered_line, alignment, width=22)
         
         return '\n'.join(rendered)
     
@@ -593,8 +605,15 @@ class TemplateEngine:
         Also supports _color suffix to get just the color tile for a field.
         e.g., {{weather.temperature_color}} returns {65} based on temperature value.
         
+        Special variables:
+        - fill_space: Returns a placeholder that will be expanded later
+        
         Returns "???" if variable is unavailable (API error, missing data, etc.)
         """
+        # Handle special fill_space variable
+        if expr.lower() == 'fill_space':
+            return '\x00FILL_SPACE\x00'  # Special marker to be processed later
+        
         parts = expr.split('.')
         
         if len(parts) < 2:
@@ -773,6 +792,95 @@ class TemplateEngine:
         
         # Normalize end tags to just {/}
         result = COLOR_END_PATTERN.sub("{/}", result)
+        
+        return result
+    
+    def _extract_alignment(self, line: str) -> tuple:
+        """Extract alignment directive from a line.
+        
+        Args:
+            line: Template line that may start with {left}, {center}, or {right}
+            
+        Returns:
+            Tuple of (alignment, content) where alignment is 'left', 'center', or 'right'
+        """
+        match = ALIGNMENT_PATTERN.match(line)
+        if match:
+            alignment = match.group(1).lower()
+            content = line[match.end():]
+            return (alignment, content)
+        return ('left', line)
+    
+    def _apply_alignment(self, text: str, alignment: str, width: int = 22) -> str:
+        """Apply alignment to rendered text.
+        
+        Args:
+            text: Rendered text (may contain color markers)
+            alignment: 'left', 'center', or 'right'
+            width: Target width (default 22 for Vestaboard)
+            
+        Returns:
+            Text padded/aligned to the specified width
+        """
+        # Calculate actual tile count (color markers count as 1 tile)
+        tile_count = self._count_tiles(text)
+        
+        if tile_count >= width:
+            # Already at or over width, truncate
+            return self._truncate_to_tiles(text, width)
+        
+        padding_needed = width - tile_count
+        
+        if alignment == 'center':
+            left_pad = padding_needed // 2
+            right_pad = padding_needed - left_pad
+            return ' ' * left_pad + text + ' ' * right_pad
+        elif alignment == 'right':
+            return ' ' * padding_needed + text
+        else:  # left (default)
+            return text + ' ' * padding_needed
+    
+    def _process_fill_space(self, text: str, width: int = 22) -> str:
+        """Process fill_space markers, expanding them to fill available space.
+        
+        If multiple fill_space markers exist, space is distributed evenly.
+        The fill_space markers are represented by the special marker '\x00FILL_SPACE\x00'
+        after variable substitution.
+        
+        Args:
+            text: Rendered text with fill_space markers
+            width: Target width (default 22 for Vestaboard)
+            
+        Returns:
+            Text with fill_space markers replaced by appropriate padding
+        """
+        # The fill_space marker after variable substitution
+        FILL_MARKER = '\x00FILL_SPACE\x00'
+        
+        # Count fill_space markers
+        fill_count = text.count(FILL_MARKER)
+        if fill_count == 0:
+            return text
+        
+        # Calculate text width without fill_space markers
+        text_without_fills = text.replace(FILL_MARKER, '')
+        tile_count = self._count_tiles(text_without_fills)
+        
+        if tile_count >= width:
+            # No room for fills, remove them
+            return self._truncate_to_tiles(text_without_fills, width)
+        
+        # Calculate space to distribute
+        total_fill_space = width - tile_count
+        base_fill = total_fill_space // fill_count
+        extra = total_fill_space % fill_count
+        
+        # Replace each fill_space marker with calculated padding
+        result = text
+        for i in range(fill_count):
+            # Distribute extra space to earlier fills
+            fill_width = base_fill + (1 if i < extra else 0)
+            result = result.replace(FILL_MARKER, ' ' * fill_width, 1)
         
         return result
     

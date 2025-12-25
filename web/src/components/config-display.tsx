@@ -103,7 +103,7 @@ export function ConfigDisplay() {
                   variant={enabled ? "default" : "secondary"}
                   className={`ml-auto shrink-0 text-[10px] px-1.5 py-0.5 transition-all ${
                     enabled 
-                      ? "bg-emerald-600 hover:bg-emerald-600" 
+                      ? "bg-vesta-green hover:bg-vesta-green" 
                       : ""
                   }`}
                 >

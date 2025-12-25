@@ -56,16 +56,16 @@ export function NavigationSidebar() {
   return (
     <>
       {/* Mobile Header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-[100] border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="flex items-center justify-between px-4 h-14">
-          <div className="flex items-center gap-3">
-            <h1 className="text-lg font-semibold tracking-tight">FiestaBoard</h1>
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <h1 className="text-lg font-semibold tracking-tight whitespace-nowrap truncate">FiestaBoard</h1>
             <ServiceStatus />
           </div>
           <Button
             variant="ghost"
             size="icon"
-            className="h-10 w-10"
+            className="h-10 w-10 flex-shrink-0 ml-2"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
           >
@@ -81,7 +81,7 @@ export function NavigationSidebar() {
       {/* Mobile Menu Backdrop */}
       {mobileMenuOpen && (
         <div 
-          className="lg:hidden fixed inset-0 z-40 bg-background/80 backdrop-blur-sm"
+          className="lg:hidden fixed inset-0 z-[90] bg-background/80 backdrop-blur-sm"
           onClick={() => setMobileMenuOpen(false)}
           aria-hidden="true"
         />
@@ -90,7 +90,7 @@ export function NavigationSidebar() {
       {/* Mobile Menu */}
       <div 
         className={cn(
-          "lg:hidden fixed top-14 left-0 right-0 z-50 bg-background border-b shadow-lg transform transition-transform duration-200 ease-in-out",
+          "lg:hidden fixed top-14 left-0 right-0 z-[95] bg-background border-b shadow-lg transform transition-transform duration-200 ease-in-out",
           mobileMenuOpen ? "translate-y-0" : "-translate-y-full pointer-events-none"
         )}
       >

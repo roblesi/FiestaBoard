@@ -250,13 +250,195 @@ class TestAvailableVariables:
     
     def test_weather_variables(self):
         """Test weather has expected variables."""
-        assert "temp" in AVAILABLE_VARIABLES["weather"]
+        assert "temperature" in AVAILABLE_VARIABLES["weather"]
         assert "condition" in AVAILABLE_VARIABLES["weather"]
     
     def test_datetime_variables(self):
         """Test datetime has expected variables."""
         assert "time" in AVAILABLE_VARIABLES["datetime"]
         assert "date" in AVAILABLE_VARIABLES["datetime"]
+
+
+class TestAlignment:
+    """Tests for line alignment handling."""
+    
+    @pytest.fixture
+    def engine(self):
+        return TemplateEngine()
+    
+    def test_extract_alignment_left_implicit(self, engine):
+        """Test left alignment is default."""
+        alignment, content = engine._extract_alignment("Hello World")
+        assert alignment == "left"
+        assert content == "Hello World"
+    
+    def test_extract_alignment_left_explicit(self, engine):
+        """Test explicit {left} prefix."""
+        alignment, content = engine._extract_alignment("{left}Hello World")
+        assert alignment == "left"
+        assert content == "Hello World"
+    
+    def test_extract_alignment_center(self, engine):
+        """Test {center} prefix."""
+        alignment, content = engine._extract_alignment("{center}Hello World")
+        assert alignment == "center"
+        assert content == "Hello World"
+    
+    def test_extract_alignment_right(self, engine):
+        """Test {right} prefix."""
+        alignment, content = engine._extract_alignment("{right}Hello World")
+        assert alignment == "right"
+        assert content == "Hello World"
+    
+    def test_extract_alignment_case_insensitive(self, engine):
+        """Test alignment prefix is case insensitive."""
+        alignment, content = engine._extract_alignment("{CENTER}Hello")
+        assert alignment == "center"
+        assert content == "Hello"
+    
+    def test_apply_alignment_left(self, engine):
+        """Test left alignment pads on the right."""
+        result = engine._apply_alignment("Hello", "left", width=10)
+        assert result == "Hello     "
+        assert len(result) == 10
+    
+    def test_apply_alignment_center(self, engine):
+        """Test center alignment pads both sides."""
+        result = engine._apply_alignment("Hello", "center", width=10)
+        # "Hello" is 5 chars, 5 spaces to add, 2 left + 3 right
+        assert result == "  Hello   "
+        assert len(result) == 10
+    
+    def test_apply_alignment_right(self, engine):
+        """Test right alignment pads on the left."""
+        result = engine._apply_alignment("Hello", "right", width=10)
+        assert result == "     Hello"
+        assert len(result) == 10
+    
+    def test_render_lines_with_center_alignment(self, engine):
+        """Test render_lines applies center alignment."""
+        lines = ["{center}TEST"]
+        result = engine.render_lines(lines, {})
+        output_lines = result.split('\n')
+        # "TEST" is 4 chars, centered in 22 chars: 9 spaces + TEST + 9 spaces
+        assert "TEST" in output_lines[0]
+        assert output_lines[0].strip() == "TEST"
+        assert len(output_lines[0]) == 22
+        # Verify it's centered (roughly equal padding on both sides)
+        left_pad = len(output_lines[0]) - len(output_lines[0].lstrip())
+        right_pad = len(output_lines[0]) - len(output_lines[0].rstrip())
+        assert abs(left_pad - right_pad) <= 1  # Allow 1 char difference for odd widths
+    
+    def test_render_lines_with_right_alignment(self, engine):
+        """Test render_lines applies right alignment."""
+        lines = ["{right}TEST"]
+        result = engine.render_lines(lines, {})
+        output_lines = result.split('\n')
+        # "TEST" should be at the right
+        assert output_lines[0].endswith("TEST")
+        assert len(output_lines[0]) == 22
+
+
+class TestFillSpace:
+    """Tests for {{fill_space}} variable."""
+    
+    # The fill_space marker used internally after variable substitution
+    FILL_MARKER = '\x00FILL_SPACE\x00'
+    
+    @pytest.fixture
+    def engine(self):
+        return TemplateEngine()
+    
+    def test_single_fill_space(self, engine):
+        """Test single fill_space expands to fill remaining width."""
+        # Direct test of _process_fill_space uses the internal marker
+        result = engine._process_fill_space(f"A{self.FILL_MARKER}B", width=10)
+        # "A" + spaces + "B" = 10 chars
+        assert result == "A        B"
+        assert len(result) == 10
+    
+    def test_double_fill_space(self, engine):
+        """Test two fill_spaces distribute space evenly."""
+        result = engine._process_fill_space(f"A{self.FILL_MARKER}B{self.FILL_MARKER}C", width=11)
+        # "A" + 4 spaces + "B" + 4 spaces + "C" = 11 chars (4+4 = 8 spaces for 8 remaining)
+        assert result == "A    B    C"
+        assert len(result) == 11
+    
+    def test_fill_space_no_room(self, engine):
+        """Test fill_space removed when no room."""
+        result = engine._process_fill_space(f"ABCDEFGHIJKLMNOPQRSTUV{self.FILL_MARKER}W", width=22)
+        # 23 chars with W, no room for fill, should truncate
+        assert self.FILL_MARKER not in result
+        assert len(result) <= 22
+    
+    def test_fill_space_case_insensitive(self, engine):
+        """Test fill_space variable is case insensitive (via full render path)."""
+        # Test via full render to verify case insensitivity of the variable
+        result = engine.render("A{{FILL_SPACE}}B", context={})
+        # Should have the marker in it (case insensitive variable lookup)
+        assert self.FILL_MARKER in result
+    
+    def test_render_lines_with_fill_space(self, engine):
+        """Test render_lines processes fill_space."""
+        lines = ["LEFT{{fill_space}}RIGHT"]
+        result = engine.render_lines(lines, {})
+        output_lines = result.split('\n')
+        # Should have "LEFT" at start and "RIGHT" at end
+        assert output_lines[0].startswith("LEFT")
+        assert output_lines[0].endswith("RIGHT")
+        assert len(output_lines[0]) == 22
+    
+    def test_fill_space_three_columns(self, engine):
+        """Test three-column layout with two fill_spaces."""
+        lines = ["A{{fill_space}}B{{fill_space}}C"]
+        result = engine.render_lines(lines, {})
+        output_lines = result.split('\n')
+        # "A", "B", "C" = 3 chars, 19 spaces to distribute
+        assert output_lines[0].startswith("A")
+        assert output_lines[0].endswith("C")
+        assert "B" in output_lines[0]
+        assert len(output_lines[0]) == 22
+        # B should be roughly in the middle
+        b_pos = output_lines[0].index("B")
+        assert 9 <= b_pos <= 12  # Roughly centered
+
+
+class TestAlignmentWithFillSpace:
+    """Tests for combining alignment and fill_space."""
+    
+    @pytest.fixture
+    def engine(self):
+        return TemplateEngine()
+    
+    def test_fill_space_with_center_alignment(self, engine):
+        """Test fill_space with center alignment - fill_space fills the line first."""
+        # When fill_space is present, it fills the remaining space first
+        # Then alignment is applied, but since fill_space already fills to 22 chars,
+        # the alignment has no additional effect
+        lines = ["{center}A{{fill_space}}B"]
+        result = engine.render_lines(lines, {})
+        output_lines = result.split('\n')
+        # fill_space should push A and B apart within the 22 char width
+        # "A" + 20 spaces + "B" = 22 chars
+        assert "A" in output_lines[0]
+        assert "B" in output_lines[0]
+        assert len(output_lines[0]) == 22
+        # A should be at start, B at end since fill_space expands between them
+        assert output_lines[0].strip().startswith("A")
+        assert output_lines[0].strip().endswith("B")
+    
+    def test_alignment_without_fill_space(self, engine):
+        """Test alignment works independently of fill_space."""
+        # Pure center alignment without fill_space
+        lines = ["{center}ABC"]
+        result = engine.render_lines(lines, {})
+        output_lines = result.split('\n')
+        # Should be centered
+        stripped = output_lines[0].strip()
+        assert stripped == "ABC"
+        left_pad = len(output_lines[0]) - len(output_lines[0].lstrip())
+        right_pad = len(output_lines[0]) - len(output_lines[0].rstrip())
+        assert abs(left_pad - right_pad) <= 1
 
 
 class TestTemplateAPIEndpoints:
