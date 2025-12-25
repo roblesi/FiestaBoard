@@ -14,6 +14,7 @@ import {
   RotateCw,
   Wind,
   TrainFront,
+  Bike,
 } from "lucide-react";
 
 // Output parameter definition
@@ -337,6 +338,44 @@ const FEATURE_DEFINITIONS: Record<
       { name: "stop_name", description: "Stop name", example: "Church & Duboce", maxChars: 22, typical: "10-22 chars" },
       { name: "formatted", description: "Pre-formatted arrivals", example: "N: 3, 8, 15 min", maxChars: 22, typical: "10-22 chars" },
       { name: "is_delayed", description: "Delay status", example: "Yes", maxChars: 3, typical: "Yes/No" },
+    ],
+  },
+  baywheels: {
+    title: "Bay Wheels",
+    description: "Bike share availability",
+    icon: Bike,
+    hasRefreshInterval: true,
+    defaultRefreshSeconds: 60,
+    fields: [
+      {
+        key: "station_id",
+        label: "Station ID",
+        type: "text",
+        placeholder: "e.g., abc123",
+        required: true,
+        description: "GBFS station ID from Bay Wheels",
+      },
+      {
+        key: "station_name",
+        label: "Display Name",
+        type: "text",
+        placeholder: "19th St Station",
+        description: "Friendly name for the station",
+      },
+      {
+        key: "refresh_seconds",
+        label: "Refresh Interval (seconds)",
+        type: "number",
+        placeholder: "60",
+        description: "How often to check availability (min: 30)",
+      },
+    ],
+    outputs: [
+      { name: "electric_bikes", description: "Electric bikes available", example: "5", maxChars: 2, typical: "1-2 digits" },
+      { name: "classic_bikes", description: "Classic bikes available", example: "8", maxChars: 2, typical: "1-2 digits" },
+      { name: "num_bikes_available", description: "Total bikes", example: "13", maxChars: 2, typical: "1-2 digits" },
+      { name: "station_name", description: "Station name", example: "19TH", maxChars: 10, typical: "4-10 chars" },
+      { name: "status_color", description: "Availability color", example: "{66}", maxChars: 4, typical: "Color tile" },
     ],
   },
   rotation: {

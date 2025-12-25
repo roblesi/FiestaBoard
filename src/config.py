@@ -354,10 +354,35 @@ class Config:
         """Muni data refresh interval in seconds."""
         return cls._get_feature("muni").get("refresh_seconds", 60)
     
+    # ==================== Bay Wheels Configuration ====================
+    
+    @classmethod
+    @property
+    def BAYWHEELS_ENABLED(cls) -> bool:
+        """Whether Bay Wheels integration is enabled."""
+        return cls._get_feature("baywheels").get("enabled", False)
+    
+    @classmethod
+    @property
+    def BAYWHEELS_STATION_ID(cls) -> str:
+        """Bay Wheels station ID to monitor."""
+        return cls._get_feature("baywheels").get("station_id", "")
+    
+    @classmethod
+    @property
+    def BAYWHEELS_STATION_NAME(cls) -> str:
+        """Display name for the Bay Wheels station."""
+        return cls._get_feature("baywheels").get("station_name", "19TH")
+    
+    @classmethod
+    @property
+    def BAYWHEELS_REFRESH_SECONDS(cls) -> int:
+        """Bay Wheels data refresh interval in seconds."""
+        return cls._get_feature("baywheels").get("refresh_seconds", 60)
+    
     # ==================== Legacy/Unused Configuration ====================
     
     # These are kept for backward compatibility but not actively used
-    BAYWHEELS_ENABLED: bool = False
     USER_LATITUDE: float = 37.7749
     USER_LONGITUDE: float = -122.4194
     MAX_DISTANCE_MILES: float = 2.0
@@ -420,6 +445,7 @@ class Config:
             "star_trek_quotes_enabled": cls.STAR_TREK_QUOTES_ENABLED,
             "air_fog_enabled": cls.AIR_FOG_ENABLED,
             "muni_enabled": cls.MUNI_ENABLED,
+            "baywheels_enabled": cls.BAYWHEELS_ENABLED,
             # Vestaboard config
             "vb_api_mode": cls.VB_API_MODE,
             "vb_host": cls.VB_HOST if cls.VB_API_MODE.lower() == "local" else "cloud",

@@ -120,6 +120,20 @@ DEFAULT_CONFIG: Dict[str, Any] = {
             "refresh_seconds": 60,  # 1 minute for transit data
             "color_rules": {},
         },
+        "baywheels": {
+            "enabled": False,
+            "station_id": "",  # Bay Wheels/GBFS station ID
+            "station_name": "",  # Display name for the station
+            "refresh_seconds": 60,  # 1 minute for bike availability
+            "color_rules": {
+                # Status colors based on electric bike availability
+                "electric_bikes": [
+                    {"condition": "<", "value": 2, "color": "red"},
+                    {"condition": "<=", "value": 5, "color": "yellow"},
+                    {"condition": ">", "value": 5, "color": "green"},
+                ],
+            },
+        },
         "rotation": {
             "enabled": True,
             "default_duration": 300,

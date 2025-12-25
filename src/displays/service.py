@@ -16,6 +16,7 @@ from ..data_sources.home_assistant import get_home_assistant_source
 from ..data_sources.star_trek_quotes import get_star_trek_quotes_source
 from ..data_sources.air_fog import get_air_fog_source
 from ..data_sources.muni import get_muni_source
+from ..data_sources.baywheels import get_baywheels_source
 from ..formatters.message_formatter import get_message_formatter
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,7 @@ DISPLAY_TYPES = [
     "guest_wifi",
     "air_fog",
     "muni",
+    "baywheels",
 ]
 
 
@@ -65,6 +67,7 @@ class DisplayService:
         self.star_trek_quotes_source = get_star_trek_quotes_source()
         self.air_fog_source = get_air_fog_source()
         self.muni_source = get_muni_source()
+        self.baywheels_source = get_baywheels_source()
         
         logger.info("DisplayService initialized")
     
@@ -123,6 +126,11 @@ class DisplayService:
                 "available": self.muni_source is not None and Config.MUNI_ENABLED,
                 "description": "Real-time Muni transit arrivals",
             },
+            {
+                "type": "baywheels",
+                "available": self.baywheels_source is not None and Config.BAYWHEELS_ENABLED,
+                "description": "Bay Wheels bike availability",
+            },
         ]
         return displays
     
@@ -163,6 +171,8 @@ class DisplayService:
                 return self._get_air_fog()
             elif display_type == "muni":
                 return self._get_muni()
+            elif display_type == "baywheels":
+                return self._get_baywheels()
             else:
                 return DisplayResult(
                     display_type=display_type,
@@ -459,6 +469,42 @@ class DisplayService:
         formatted = self.formatter.format_muni(raw_data)
         return DisplayResult(
             display_type="muni",
+            formatted=formatted,
+            raw=raw_data,
+            available=True
+        )
+    
+    def _get_baywheels(self) -> DisplayResult:
+        """Get Bay Wheels display."""
+        if not self.baywheels_source or not Config.BAYWHEELS_ENABLED:
+            return DisplayResult(
+                display_type="baywheels",
+                formatted="",
+                raw={},
+                available=False,
+                error="Bay Wheels not configured or disabled"
+            )
+        
+        raw_data = self.baywheels_source.fetch_station_status()
+        
+        if not raw_data:
+            return DisplayResult(
+                display_type="baywheels",
+                formatted="Bay Wheels: Unavailable",
+                raw={},
+                available=True,
+                error="Failed to fetch Bay Wheels data"
+            )
+        
+        # Format the display using the configured station name
+        station_name = Config.BAYWHEELS_STATION_NAME or raw_data.get("station_name", "STATION")
+        electric = raw_data.get("electric_bikes", 0)
+        total = raw_data.get("num_bikes_available", 0)
+        
+        formatted = f"E-BIKES @ {station_name}: {electric} (Total: {total})"
+        
+        return DisplayResult(
+            display_type="baywheels",
             formatted=formatted,
             raw=raw_data,
             available=True
