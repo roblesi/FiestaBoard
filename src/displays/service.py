@@ -14,6 +14,7 @@ from ..data_sources.datetime import get_datetime_source
 from ..data_sources.apple_music import get_apple_music_source
 from ..data_sources.home_assistant import get_home_assistant_source
 from ..data_sources.star_trek_quotes import get_star_trek_quotes_source
+from ..data_sources.air_fog import get_air_fog_source
 from ..formatters.message_formatter import get_message_formatter
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,7 @@ DISPLAY_TYPES = [
     "apple_music",
     "star_trek",
     "guest_wifi",
+    "air_fog",
 ]
 
 
@@ -59,6 +61,7 @@ class DisplayService:
         self.apple_music_source = get_apple_music_source()
         self.home_assistant_source = get_home_assistant_source()
         self.star_trek_quotes_source = get_star_trek_quotes_source()
+        self.air_fog_source = get_air_fog_source()
         
         logger.info("DisplayService initialized")
     
@@ -107,6 +110,11 @@ class DisplayService:
                 "available": Config.GUEST_WIFI_ENABLED and bool(Config.GUEST_WIFI_SSID),
                 "description": "Guest WiFi credentials",
             },
+            {
+                "type": "air_fog",
+                "available": self.air_fog_source is not None and Config.AIR_FOG_ENABLED,
+                "description": "Air quality and fog conditions",
+            },
         ]
         return displays
     
@@ -143,6 +151,8 @@ class DisplayService:
                 return self._get_star_trek()
             elif display_type == "guest_wifi":
                 return self._get_guest_wifi()
+            elif display_type == "air_fog":
+                return self._get_air_fog()
             else:
                 return DisplayResult(
                     display_type=display_type,
@@ -374,6 +384,41 @@ class DisplayService:
         
         return DisplayResult(
             display_type="guest_wifi",
+            formatted=formatted,
+            raw=raw_data,
+            available=True
+        )
+    
+    def _get_air_fog(self) -> DisplayResult:
+        """Get air quality and fog conditions display."""
+        if not self.air_fog_source or not Config.AIR_FOG_ENABLED:
+            return DisplayResult(
+                display_type="air_fog",
+                formatted="",
+                raw={},
+                available=False,
+                error="Air/Fog source not configured or not enabled"
+            )
+        
+        raw_data = self.air_fog_source.fetch_air_fog_data()
+        if not raw_data:
+            return DisplayResult(
+                display_type="air_fog",
+                formatted="Air/Fog: Unavailable",
+                raw={},
+                available=True,
+                error="Failed to fetch air/fog data"
+            )
+        
+        formatted = raw_data.get("formatted_message", "")
+        if not formatted:
+            # Build a simple formatted message if not provided
+            aqi = raw_data.get("pm2_5_aqi", "?")
+            fog_status = raw_data.get("fog_status", "UNKNOWN")
+            formatted = f"AQI:{aqi} {fog_status}"
+        
+        return DisplayResult(
+            display_type="air_fog",
             formatted=formatted,
             raw=raw_data,
             available=True

@@ -13,7 +13,7 @@ class TestDisplayTypes:
     def test_all_display_types_defined(self):
         """Test that all expected display types are defined."""
         expected = ["weather", "datetime", "weather_datetime", "home_assistant", 
-                    "apple_music", "star_trek", "guest_wifi"]
+                    "apple_music", "star_trek", "guest_wifi", "air_fog"]
         assert DISPLAY_TYPES == expected
 
 
@@ -27,7 +27,8 @@ class TestDisplayService:
              patch('src.displays.service.get_datetime_source') as mock_datetime, \
              patch('src.displays.service.get_apple_music_source') as mock_apple, \
              patch('src.displays.service.get_home_assistant_source') as mock_ha, \
-             patch('src.displays.service.get_star_trek_quotes_source') as mock_trek:
+             patch('src.displays.service.get_star_trek_quotes_source') as mock_trek, \
+             patch('src.displays.service.get_air_fog_source') as mock_air_fog:
             
             # Setup mock sources
             mock_weather.return_value = Mock()
@@ -35,6 +36,7 @@ class TestDisplayService:
             mock_apple.return_value = None  # Disabled by default
             mock_ha.return_value = None
             mock_trek.return_value = None
+            mock_air_fog.return_value = None  # Disabled by default
             
             service = DisplayService()
             yield service
@@ -43,11 +45,12 @@ class TestDisplayService:
         """Test listing available displays."""
         displays = service.get_available_displays()
         
-        assert len(displays) == 7
+        assert len(displays) == 8
         display_types = [d["type"] for d in displays]
         assert "weather" in display_types
         assert "datetime" in display_types
         assert "guest_wifi" in display_types
+        assert "air_fog" in display_types
     
     def test_get_available_displays_includes_availability(self, service):
         """Test that availability is correctly reported."""

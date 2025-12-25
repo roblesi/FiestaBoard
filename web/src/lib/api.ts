@@ -308,6 +308,16 @@ export interface StarTrekQuotesFeatureConfig {
   ratio: string;
 }
 
+export interface AirFogFeatureConfig {
+  enabled: boolean;
+  purpleair_api_key: string;
+  openweathermap_api_key: string;
+  purpleair_sensor_id: string;
+  latitude: number;
+  longitude: number;
+  refresh_seconds: number;
+}
+
 export interface RotationFeatureConfig {
   enabled: boolean;
   default_duration: number;
@@ -320,6 +330,7 @@ export interface FeaturesConfig {
   apple_music: AppleMusicFeatureConfig;
   guest_wifi: GuestWifiFeatureConfig;
   star_trek_quotes: StarTrekQuotesFeatureConfig;
+  air_fog: AirFogFeatureConfig;
   rotation: RotationFeatureConfig;
 }
 

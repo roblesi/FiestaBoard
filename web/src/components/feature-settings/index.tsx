@@ -12,6 +12,7 @@ import {
   Wifi,
   Sparkles,
   RotateCw,
+  Wind,
 } from "lucide-react";
 
 // Output parameter definition
@@ -230,6 +231,66 @@ const FEATURE_DEFINITIONS: Record<
       { name: "quote", description: "The quote text", example: "Make it so.", maxChars: 120, typical: "20-120 chars (multi-line)" },
       { name: "character", description: "Character name", example: "Picard", maxChars: 15, typical: "4-15 chars" },
       { name: "series", description: "Series name", example: "TNG", maxChars: 3, typical: "3 chars" },
+    ],
+  },
+  air_fog: {
+    title: "Air Quality & Fog",
+    description: "AQI and fog conditions",
+    icon: Wind,
+    hasRefreshInterval: true,
+    defaultRefreshSeconds: 600,
+    fields: [
+      {
+        key: "purpleair_api_key",
+        label: "PurpleAir API Key",
+        type: "password",
+        placeholder: "Enter PurpleAir API key",
+        description: "API key from PurpleAir (for AQI)",
+      },
+      {
+        key: "openweathermap_api_key",
+        label: "OpenWeatherMap API Key",
+        type: "password",
+        placeholder: "Enter OpenWeatherMap API key",
+        description: "API key from OpenWeatherMap (for fog/visibility)",
+      },
+      {
+        key: "purpleair_sensor_id",
+        label: "PurpleAir Sensor ID (optional)",
+        type: "text",
+        placeholder: "123456",
+        description: "Specific sensor ID, or leave blank for nearest",
+      },
+      {
+        key: "latitude",
+        label: "Latitude",
+        type: "number",
+        placeholder: "37.7749",
+        description: "Location latitude (default: San Francisco)",
+      },
+      {
+        key: "longitude",
+        label: "Longitude",
+        type: "number",
+        placeholder: "-122.4194",
+        description: "Location longitude (default: San Francisco)",
+      },
+      {
+        key: "refresh_seconds",
+        label: "Refresh Interval (seconds)",
+        type: "number",
+        placeholder: "600",
+        description: "How often to fetch data (default: 10 min)",
+      },
+    ],
+    outputs: [
+      { name: "aqi", description: "Air Quality Index", example: "45", maxChars: 3, typical: "1-3 digits" },
+      { name: "air_status", description: "Air quality status", example: "GOOD", maxChars: 18, typical: "GOOD/MODERATE/UNHEALTHY" },
+      { name: "air_color", description: "AQI color tile", example: "{65}", maxChars: 4, typical: "Color tile" },
+      { name: "fog_status", description: "Fog condition", example: "FOGGY", maxChars: 10, typical: "CLEAR/HAZE/MIST/FOG" },
+      { name: "fog_color", description: "Fog color tile", example: "{64}", maxChars: 4, typical: "Color tile" },
+      { name: "is_foggy", description: "Fog present", example: "Yes", maxChars: 3, typical: "Yes/No" },
+      { name: "formatted", description: "Pre-formatted message", example: "AQI:45 CLEAR", maxChars: 22, typical: "10-22 chars" },
     ],
   },
   rotation: {
