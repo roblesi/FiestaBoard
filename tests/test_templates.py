@@ -53,15 +53,15 @@ class TestVariableSubstitution:
         assert result == "72"
     
     def test_missing_source(self, engine):
-        """Test missing source returns marker."""
+        """Test missing source returns error indicator."""
         result = engine.render("{{missing.field}}", context={})
-        assert "?" in result  # Marker for missing
+        assert "???" in result  # Error indicator for missing/unavailable
     
     def test_missing_field(self, engine):
-        """Test missing field returns marker."""
+        """Test missing field returns error indicator."""
         context = {"weather": {"temperature": 72}}
         result = engine.render("{{weather.missing}}", context)
-        assert "?" in result
+        assert "???" in result
     
     def test_boolean_value(self, engine):
         """Test boolean values are converted to Yes/No."""

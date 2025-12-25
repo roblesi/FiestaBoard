@@ -59,6 +59,7 @@ class WeatherSource:
                 "condition": data["current"]["condition"]["text"],
                 "humidity": data["current"]["humidity"],
                 "wind_mph": data["current"]["wind_mph"],
+                "wind_speed": data["current"]["wind_mph"],  # Alias for template compatibility
                 "location": data["location"]["name"]
             }
             
@@ -89,7 +90,8 @@ class WeatherSource:
                 "condition": data["weather"][0]["main"],
                 "description": data["weather"][0]["description"],
                 "humidity": data["main"]["humidity"],
-                "wind_mph": data["wind"]["speed"]
+                "wind_mph": data["wind"]["speed"],
+                "wind_speed": data["wind"]["speed"]  # Alias for template compatibility
             }
             
         except requests.exceptions.RequestException as e:

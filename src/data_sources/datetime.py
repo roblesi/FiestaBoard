@@ -40,6 +40,12 @@ class DateTimeSource:
             "datetime": now.strftime("%Y-%m-%d %H:%M"),
             "day_of_week": now.strftime("%A"),
             "timezone_abbr": now.strftime("%Z"),
+            # Individual date components
+            "day": str(now.day),  # Day of month (1-31)
+            "month": now.strftime("%B"),  # Full month name (January, February, etc.)
+            "year": str(now.year),  # Year (2025, etc.)
+            "hour": str(now.hour),  # Hour (0-23)
+            "minute": str(now.minute),  # Minute (0-59)
         }
     
     def format_for_display(self, format_string: str = "%Y-%m-%d %H:%M %Z") -> str:
