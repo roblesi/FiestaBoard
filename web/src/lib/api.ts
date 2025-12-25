@@ -340,6 +340,15 @@ export interface SurfFeatureConfig {
   refresh_seconds: number;
 }
 
+export interface TrafficFeatureConfig {
+    enabled: boolean;
+    api_key: string;
+    origin: string;
+    destination: string;
+    destination_name: string;
+    refresh_seconds: number;
+}
+
 export interface RotationFeatureConfig {
   enabled: boolean;
   default_duration: number;
@@ -356,6 +365,7 @@ export interface FeaturesConfig {
   muni: MuniFeatureConfig;
   surf: SurfFeatureConfig;
   baywheels: BayWheelsFeatureConfig;
+  traffic: TrafficFeatureConfig;
   rotation: RotationFeatureConfig;
 }
 

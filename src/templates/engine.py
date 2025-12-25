@@ -65,10 +65,12 @@ AVAILABLE_VARIABLES = {
     "star_trek": ["quote", "character", "series", "series_color"],
     "guest_wifi": ["ssid", "password"],
 <<<<<<< HEAD
+<<<<<<< HEAD
     "air_fog": ["aqi", "air_status", "air_color", "fog_status", "fog_color", "is_foggy", "visibility", "formatted"],
     "muni": ["line", "stop_name", "arrivals", "is_delayed", "delay_description", "formatted"],
     "surf": ["wave_height", "swell_period", "quality", "quality_color", "formatted"],
     "baywheels": ["electric_bikes", "classic_bikes", "num_bikes_available", "is_renting", "station_name", "status_color"],
+    "traffic": ["duration_minutes", "delay_minutes", "traffic_status", "traffic_color", "destination_name", "formatted"],
 }
 
 # Maximum character lengths for each variable (for validation)
@@ -102,6 +104,7 @@ VARIABLE_MAX_LENGTHS = {
     "home_assistant.state_color": 4,  # Color tile
     "home_assistant.friendly_name": 15,
 <<<<<<< HEAD
+<<<<<<< HEAD
     "air_fog.aqi": 3,  # 0-500
     "air_fog.air_status": 18,  # UNHEALTHY_SENSITIVE
     "air_fog.air_color": 4,  # Color tile
@@ -127,6 +130,12 @@ VARIABLE_MAX_LENGTHS = {
     "baywheels.is_renting": 3,  # Yes/No
     "baywheels.station_name": 10,
     "baywheels.status_color": 4,  # Color tile
+    "traffic.duration_minutes": 3,  # e.g., "45"
+    "traffic.delay_minutes": 3,  # e.g., "+12"
+    "traffic.traffic_status": 8,  # LIGHT, MODERATE, HEAVY
+    "traffic.traffic_color": 4,  # Color tile
+    "traffic.destination_name": 10,  # e.g., "DOWNTOWN"
+    "traffic.formatted": 22,  # Pre-formatted message
 }
 
 # Regex patterns
@@ -488,7 +497,7 @@ class TemplateEngine:
         context = {}
         
         # Fetch from each source
-        sources = ["weather", "datetime", "home_assistant", "apple_music", "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels"]
+        sources = ["weather", "datetime", "home_assistant", "apple_music", "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels", "traffic"]
         
         for source in sources:
             try:
@@ -553,6 +562,7 @@ class TemplateEngine:
             "muni": "muni",
             "surf": "surf",
             "baywheels": "baywheels",
+            "traffic": "traffic",
         }
         
         feature_name = feature_map.get(source)
@@ -709,6 +719,7 @@ class TemplateEngine:
             "muni": "muni",
             "surf": "surf",
             "baywheels": "baywheels",
+            "traffic": "traffic",
         }
         
         feature_name = feature_map.get(source)
@@ -954,7 +965,7 @@ class TemplateEngine:
             List of source names that are configured
         """
         available = []
-        sources = ["weather", "datetime", "home_assistant", "apple_music", "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels"]
+        sources = ["weather", "datetime", "home_assistant", "apple_music", "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels", "traffic"]
         
         for source in sources:
             try:
@@ -1067,6 +1078,7 @@ class TemplateEngine:
                     "muni": "muni",
                     "surf": "surf",
                     "baywheels": "baywheels",
+                    "traffic": "traffic",
                 }
                 feature = feature_map.get(source)
                 if feature:

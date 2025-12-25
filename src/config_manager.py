@@ -96,6 +96,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
             },
         },
 <<<<<<< HEAD
+<<<<<<< HEAD
         "air_fog": {
             "enabled": False,
             "purpleair_api_key": "",  # PurpleAir API key
@@ -146,6 +147,21 @@ DEFAULT_CONFIG: Dict[str, Any] = {
                     {"condition": "<", "value": 2, "color": "red"},
                     {"condition": "<=", "value": 5, "color": "yellow"},
                     {"condition": ">", "value": 5, "color": "green"},
+                ],
+            },
+        },
+        "traffic": {
+            "enabled": False,
+            "api_key": "",  # Google Routes API key (using api_key for consistency)
+            "origin": "",  # Origin address or lat,lng
+            "destination": "",  # Destination address or lat,lng
+            "destination_name": "DOWNTOWN",  # Display name for destination
+            "refresh_seconds": 300,  # 5 minutes
+            "color_rules": {
+                "traffic_status": [
+                    {"condition": "==", "value": "LIGHT", "color": "green"},
+                    {"condition": "==", "value": "MODERATE", "color": "yellow"},
+                    {"condition": "==", "value": "HEAVY", "color": "red"},
                 ],
             },
         },
