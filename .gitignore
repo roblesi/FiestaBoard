@@ -34,6 +34,10 @@ env/
 ENV/
 .venv
 
+# Next.js build output
+web/out/
+web/.next/
+
 # IDE
 .vscode/
 .idea/

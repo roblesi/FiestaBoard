@@ -171,12 +171,13 @@ curl -X POST http://localhost:8000/send-message \
 ├── Dockerfile.api          # API service Dockerfile
 ├── Dockerfile.ui          # UI service Dockerfile
 ├── docker-compose.yml     # Multi-service compose file
+├── docker-compose.dev.yml # Development compose file
 ├── .dockerignore          # Docker ignore patterns
 ├── src/
 │   ├── api_server.py     # FastAPI server
 │   └── main.py           # Display service (used by API)
-└── web_ui/
-    └── index.html        # Web UI interface
+└── web/
+    └── src/              # Next.js web application
 ```
 
 ## Environment Variables
@@ -192,6 +193,6 @@ Both services use the same `.env` file. Key variables:
 
 ## Production Deployment
 
-For production deployment to Synology NAS, see [DEPLOY_TO_SYNOLOGY.md](./DEPLOY_TO_SYNOLOGY.md).
+For production deployment to Synology NAS, see [DEPLOY_TO_SYNOLOGY.md](../deployment/DEPLOY_TO_SYNOLOGY.md).
 
 

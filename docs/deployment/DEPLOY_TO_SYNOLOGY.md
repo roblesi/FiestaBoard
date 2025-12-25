@@ -53,13 +53,13 @@ nano .env
 
 Make sure it contains:
 ```bash
-VB_READ_WRITE_KEY=1a801a86+c1f1+4007+bec9+7ea92443d3cd
-WEATHER_API_KEY=bd6af5858e41468396d25331252312
+VB_READ_WRITE_KEY=your_vestaboard_read_write_key_here
+WEATHER_API_KEY=your_weather_api_key_here
 WEATHER_PROVIDER=weatherapi
 WEATHER_LOCATION=San Francisco, CA
 TIMEZONE=America/Los_Angeles
 APPLE_MUSIC_ENABLED=true
-APPLE_MUSIC_SERVICE_URL=http://192.168.0.116:8080
+APPLE_MUSIC_SERVICE_URL=http://your_mac_ip:8080
 APPLE_MUSIC_TIMEOUT=5
 APPLE_MUSIC_REFRESH_SECONDS=10
 ```

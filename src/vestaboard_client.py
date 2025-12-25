@@ -167,7 +167,8 @@ class VestaboardClient:
             
             self._last_text = clean_text
             self._last_characters = None
-            logger.info("Message sent successfully to Vestaboard via Local API")
+            api_type = "Cloud API" if self.use_cloud else "Local API"
+            logger.info(f"Message sent successfully to Vestaboard via {api_type}")
             return (True, True)
             
         except requests.exceptions.RequestException as e:
