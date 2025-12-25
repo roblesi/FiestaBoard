@@ -318,6 +318,14 @@ export interface AirFogFeatureConfig {
   refresh_seconds: number;
 }
 
+export interface MuniFeatureConfig {
+  enabled: boolean;
+  api_key: string;
+  stop_code: string;
+  line_name: string;
+  refresh_seconds: number;
+}
+
 export interface RotationFeatureConfig {
   enabled: boolean;
   default_duration: number;
@@ -331,6 +339,7 @@ export interface FeaturesConfig {
   guest_wifi: GuestWifiFeatureConfig;
   star_trek_quotes: StarTrekQuotesFeatureConfig;
   air_fog: AirFogFeatureConfig;
+  muni: MuniFeatureConfig;
   rotation: RotationFeatureConfig;
 }
 

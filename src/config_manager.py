@@ -112,6 +112,14 @@ DEFAULT_CONFIG: Dict[str, Any] = {
                 ],
             },
         },
+        "muni": {
+            "enabled": False,
+            "api_key": "",  # 511.org API key
+            "stop_code": "",  # Muni stop code (e.g., "15726")
+            "line_name": "",  # Optional line filter (e.g., "N" for N-Judah)
+            "refresh_seconds": 60,  # 1 minute for transit data
+            "color_rules": {},
+        },
         "rotation": {
             "enabled": True,
             "default_duration": 300,

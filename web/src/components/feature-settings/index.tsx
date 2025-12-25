@@ -13,6 +13,7 @@ import {
   Sparkles,
   RotateCw,
   Wind,
+  TrainFront,
 } from "lucide-react";
 
 // Output parameter definition
@@ -291,6 +292,51 @@ const FEATURE_DEFINITIONS: Record<
       { name: "fog_color", description: "Fog color tile", example: "{64}", maxChars: 4, typical: "Color tile" },
       { name: "is_foggy", description: "Fog present", example: "Yes", maxChars: 3, typical: "Yes/No" },
       { name: "formatted", description: "Pre-formatted message", example: "AQI:45 CLEAR", maxChars: 22, typical: "10-22 chars" },
+    ],
+  },
+  muni: {
+    title: "Muni Transit",
+    description: "Real-time SF Muni arrivals",
+    icon: TrainFront,
+    hasRefreshInterval: true,
+    defaultRefreshSeconds: 60,
+    fields: [
+      {
+        key: "api_key",
+        label: "511.org API Key",
+        type: "password",
+        placeholder: "Enter your 511.org API key",
+        required: true,
+        description: "Get a free key from 511.org/open-data",
+      },
+      {
+        key: "stop_code",
+        label: "Stop Code",
+        type: "text",
+        placeholder: "15726",
+        required: true,
+        description: "Muni stop code (find at 511.org)",
+      },
+      {
+        key: "line_name",
+        label: "Line Filter (optional)",
+        type: "text",
+        placeholder: "N",
+        description: "Filter to specific line (e.g., N, J, KT)",
+      },
+      {
+        key: "refresh_seconds",
+        label: "Refresh Interval (seconds)",
+        type: "number",
+        placeholder: "60",
+        description: "How often to fetch arrival data (min: 30)",
+      },
+    ],
+    outputs: [
+      { name: "line", description: "Transit line name", example: "N-JUDAH", maxChars: 12, typical: "1-12 chars" },
+      { name: "stop_name", description: "Stop name", example: "Church & Duboce", maxChars: 22, typical: "10-22 chars" },
+      { name: "formatted", description: "Pre-formatted arrivals", example: "N: 3, 8, 15 min", maxChars: 22, typical: "10-22 chars" },
+      { name: "is_delayed", description: "Delay status", example: "Yes", maxChars: 3, typical: "Yes/No" },
     ],
   },
   rotation: {
