@@ -308,6 +308,13 @@ export interface StarTrekQuotesFeatureConfig {
   ratio: string;
 }
 
+export interface BayWheelsFeatureConfig {
+  enabled: boolean;
+  station_id: string;
+  station_name: string;
+  refresh_seconds: number;
+}
+
 export interface RotationFeatureConfig {
   enabled: boolean;
   default_duration: number;
@@ -320,6 +327,7 @@ export interface FeaturesConfig {
   apple_music: AppleMusicFeatureConfig;
   guest_wifi: GuestWifiFeatureConfig;
   star_trek_quotes: StarTrekQuotesFeatureConfig;
+  baywheels: BayWheelsFeatureConfig;
   rotation: RotationFeatureConfig;
 }
 
