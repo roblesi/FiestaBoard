@@ -108,9 +108,20 @@ def test_vestaboard_connection():
         print("  ❌ No Vestaboard API key configured")
         return
     
+    if Config.VB_LOCAL_API_ENABLED and not Config.VB_LOCAL_API_HOST:
+        print("  ❌ Local API enabled but VB_LOCAL_API_HOST not configured")
+        return
+    
     try:
-        client = VestaboardClient(Config.VB_READ_WRITE_KEY)
-        print("  ✅ Client initialized")
+        client = VestaboardClient(
+            api_key=Config.VB_READ_WRITE_KEY,
+            local_api_host=Config.VB_LOCAL_API_HOST if Config.VB_LOCAL_API_ENABLED else None,
+            use_local_api=Config.VB_LOCAL_API_ENABLED
+        )
+        if Config.VB_LOCAL_API_ENABLED:
+            print(f"  ✅ Client initialized (Local API at {Config.VB_LOCAL_API_HOST})")
+        else:
+            print("  ✅ Client initialized (Read/Write API)")
         print("  ℹ️  To actually send, uncomment the send_text call below")
         
         # Uncomment to actually send a test message:

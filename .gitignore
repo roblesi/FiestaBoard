@@ -16,8 +16,10 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+/lib/
+/lib64/
+# Don't ignore web source lib folder
+!web/src/lib/
 parts/
 sdist/
 var/
@@ -53,6 +55,14 @@ Thumbs.db
 # Config files with sensitive data
 config/config.yaml
 !config/config.yaml.example
+config.json
+!config.example.json
+
+# Data directory (user-specific data, contains secrets)
+data/
+# But track seed/default pages
+!data/pages.json
+# Note: data/config.json and data/settings.json contain user secrets and are NOT tracked
 
 # API keys reference (optional - remove if you want to track it)
 API_KEYS.md

@@ -16,6 +16,9 @@ from .data_sources.apple_music import get_apple_music_source
 from .data_sources.home_assistant import get_home_assistant_source
 from .data_sources.star_trek_quotes import get_star_trek_quotes_source
 from .formatters.message_formatter import get_message_formatter
+from .text_to_board import text_to_board_array, format_board_array_preview
+from .settings.service import get_settings_service
+from .pages.service import get_page_service
 
 # Configure logging
 logging.basicConfig(
@@ -46,6 +49,10 @@ class VestaboardDisplayService:
         self.last_rotation_change = 0.0
         self.current_rotation_screen = None
         
+        # Active page polling state
+        self._last_active_page_content: Optional[str] = None
+        self._last_active_page_id: Optional[str] = None
+        
         # Setup signal handlers for graceful shutdown
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
@@ -54,6 +61,41 @@ class VestaboardDisplayService:
         """Handle shutdown signals."""
         logger.info(f"Received signal {signum}, shutting down gracefully...")
         self.running = False
+    
+    def _send_message(self, message: str, transition_settings: dict = None) -> tuple:
+        """
+        Convert formatted text to character array and send to Vestaboard.
+        
+        Args:
+            message: Formatted text message (with optional color markers)
+            transition_settings: Optional dict with transition parameters
+            
+        Returns:
+            Tuple of (success, was_sent)
+        """
+        # Convert text to character array
+        board_array = text_to_board_array(message)
+        
+        # Log preview for debugging
+        preview = format_board_array_preview(board_array)
+        logger.debug(f"Board array preview:\n{preview}")
+        
+        # Log full board array for diagnostic verification
+        logger.info("Sending board array (6x22):")
+        for i, row in enumerate(board_array):
+            logger.info(f"  Row {i}: {row}")
+        
+        # Get transition settings from config if not provided
+        if transition_settings is None:
+            transition_settings = Config.get_transition_settings()
+        
+        # Send to Vestaboard using character array
+        return self.vb_client.send_characters(
+            board_array,
+            strategy=transition_settings.get("strategy"),
+            step_interval_ms=transition_settings.get("step_interval_ms"),
+            step_size=transition_settings.get("step_size")
+        )
     
     def initialize(self) -> bool:
         """Initialize all components."""
@@ -64,10 +106,23 @@ class VestaboardDisplayService:
             logger.error("Configuration validation failed")
             return False
         
-        # Initialize Vestaboard client
+        # Initialize Vestaboard client (Local or Cloud API)
         try:
-            self.vb_client = VestaboardClient(Config.VB_READ_WRITE_KEY)
-            logger.info("Vestaboard client initialized")
+            use_cloud = Config.VB_API_MODE.lower() == "cloud"
+            self.vb_client = VestaboardClient(
+                api_key=Config.get_vb_api_key(),
+                host=Config.VB_HOST if not use_cloud else None,
+                use_cloud=use_cloud,
+                skip_unchanged=True  # Default: skip sending unchanged messages
+            )
+            # Sync cache with current board state to avoid unnecessary initial update
+            logger.info("Syncing cache with current board state...")
+            self.vb_client.read_current_message(sync_cache=True)
+            
+            # Log transition settings if configured
+            transition = Config.get_transition_settings()
+            if transition["strategy"]:
+                logger.info(f"Default transition: {transition['strategy']} (interval={transition['step_interval_ms']}ms, step_size={transition['step_size']})")
         except Exception as e:
             logger.error(f"Failed to initialize Vestaboard client: {e}")
             return False
@@ -122,7 +177,7 @@ class VestaboardDisplayService:
         
         return True
     
-    def fetch_and_display(self, force_apple_music: bool = False):
+    def fetch_and_display(self, force_apple_music: bool = False, dev_mode: bool = False):
         """
         Fetch data and display on Vestaboard.
         
@@ -148,10 +203,16 @@ class VestaboardDisplayService:
                 )
                 logger.info(f"Formatted message (Guest WiFi):\n{message}")
                 
+                if dev_mode:
+                    logger.info(f"[DEV MODE] Would send Guest WiFi (not actually sending):\n{message}")
+                    return
                 if self.vb_client:
-                    success = self.vb_client.send_text(message)
+                    success, was_sent = self._send_message(message)
                     if success:
-                        logger.info("Display updated with Guest WiFi")
+                        if was_sent:
+                            logger.info("Display updated with Guest WiFi")
+                        else:
+                            logger.debug("Guest WiFi unchanged, no update needed")
                     else:
                         logger.error("Failed to update display with Guest WiFi")
                 return  # Guest WiFi overrides everything else
@@ -200,10 +261,16 @@ class VestaboardDisplayService:
             message = self.formatter.format_apple_music(apple_music_data)
             logger.info(f"Formatted message (Apple Music):\n{message}")
             
+            if dev_mode:
+                logger.info(f"[DEV MODE] Would send Apple Music (not actually sending):\n{message}")
+                return
             if self.vb_client:
-                success = self.vb_client.send_text(message)
+                success, was_sent = self._send_message(message)
                 if success:
-                    logger.info("Display updated with Apple Music")
+                    if was_sent:
+                        logger.info("Display updated with Apple Music")
+                    else:
+                        logger.debug("Apple Music unchanged, no update needed")
                 else:
                     logger.error("Failed to update display")
             return
@@ -226,10 +293,18 @@ class VestaboardDisplayService:
                     message = self.formatter.format_star_trek_quote(quote_data)
                     logger.info(f"Formatted message (Star Trek - {quote_data['series'].upper()}):\n{message}")
                     
+                    if dev_mode:
+                        logger.info(f"[DEV MODE] Would send Star Trek quote (not actually sending):\n{message}")
+                        self.current_rotation_screen = "star_trek"
+                        self.last_rotation_change = current_time
+                        return
                     if self.vb_client:
-                        success = self.vb_client.send_text(message)
+                        success, was_sent = self._send_message(message)
                         if success:
-                            logger.info("Display updated with Star Trek quote")
+                            if was_sent:
+                                logger.info("Display updated with Star Trek quote")
+                            else:
+                                logger.debug("Star Trek quote unchanged, no update needed")
                             self.current_rotation_screen = "star_trek"
                             self.last_rotation_change = current_time
                         else:
@@ -243,10 +318,18 @@ class VestaboardDisplayService:
             message = self.formatter.format_house_status(home_assistant_data)
             logger.info(f"Formatted message (House Status):\n{message}")
             
+            if dev_mode:
+                logger.info(f"[DEV MODE] Would send Home Assistant (not actually sending):\n{message}")
+                self.current_rotation_screen = "home_assistant"
+                self.last_rotation_change = current_time
+                return
             if self.vb_client:
-                success = self.vb_client.send_text(message)
+                success, was_sent = self._send_message(message)
                 if success:
-                    logger.info("Display updated with House Status")
+                    if was_sent:
+                        logger.info("Display updated with House Status")
+                    else:
+                        logger.debug("House Status unchanged, no update needed")
                     self.current_rotation_screen = "home_assistant"
                     self.last_rotation_change = current_time
                 else:
@@ -282,10 +365,17 @@ class VestaboardDisplayService:
                 logger.info(f"Formatted message:\n{message}")
                 
                 # Send to Vestaboard
-                if self.vb_client:
-                    success = self.vb_client.send_text(message)
+                if dev_mode:
+                    logger.info(f"[DEV MODE] Would send Weather/DateTime (not actually sending):\n{message}")
+                    self.current_rotation_screen = "weather"
+                    self.last_rotation_change = current_time
+                elif self.vb_client:
+                    success, was_sent = self._send_message(message)
                     if success:
-                        logger.info("Display updated successfully")
+                        if was_sent:
+                            logger.info("Display updated successfully")
+                        else:
+                            logger.debug("Weather/DateTime unchanged, no update needed")
                         self.current_rotation_screen = "weather"
                         self.last_rotation_change = current_time
                     else:
@@ -374,40 +464,100 @@ class VestaboardDisplayService:
         self.last_rotation_change = current_time
         return available_screens[0]
     
+    def check_and_send_active_page(self, dev_mode: bool = False) -> bool:
+        """Check the active page and send to board if content changed.
+        
+        Args:
+            dev_mode: If True, don't actually send to board
+            
+        Returns:
+            True if content was sent to board, False otherwise
+        """
+        try:
+            settings_service = get_settings_service()
+            page_service = get_page_service()
+            
+            active_page_id = settings_service.get_active_page_id()
+            
+            # No active page set - try to default to first page
+            if not active_page_id:
+                pages = page_service.list_pages()
+                if pages:
+                    active_page_id = pages[0].id
+                    settings_service.set_active_page_id(active_page_id)
+                    logger.info(f"No active page set, defaulting to first page: {active_page_id}")
+                else:
+                    logger.debug("No active page and no pages available")
+                    return False
+            
+            # Render the page
+            result = page_service.preview_page(active_page_id)
+            if not result or not result.available:
+                logger.warning(f"Failed to render active page: {active_page_id}")
+                return False
+            
+            # Check if content changed
+            current_content = result.formatted
+            if (current_content == self._last_active_page_content and 
+                active_page_id == self._last_active_page_id):
+                logger.debug("Active page content unchanged, skipping send")
+                return False
+            
+            # Content changed, send to board
+            logger.info(f"Active page content changed, sending to board: {active_page_id}")
+            
+            if dev_mode:
+                logger.info("[DEV MODE] Would send active page (not actually sending)")
+                self._last_active_page_content = current_content
+                self._last_active_page_id = active_page_id
+                return False
+            
+            if not self.vb_client:
+                logger.warning("Vestaboard client not initialized")
+                return False
+            
+            # Get transition settings
+            transition = settings_service.get_transition_settings()
+            
+            # Send to board
+            board_array = text_to_board_array(current_content)
+            success, was_sent = self.vb_client.send_characters(
+                board_array,
+                strategy=transition.strategy,
+                step_interval_ms=transition.step_interval_ms,
+                step_size=transition.step_size
+            )
+            
+            if success:
+                self._last_active_page_content = current_content
+                self._last_active_page_id = active_page_id
+                if was_sent:
+                    logger.info(f"Active page sent to board: {active_page_id}")
+                else:
+                    logger.debug("Active page unchanged at board level")
+                return was_sent
+            else:
+                logger.error(f"Failed to send active page to board: {active_page_id}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error checking active page: {e}")
+            return False
+    
     def run(self):
         """Run the main service loop."""
         if not self.initialize():
             logger.error("Initialization failed, exiting")
             sys.exit(1)
         
-        # Send initial update
-        logger.info("Sending initial update...")
-        self.fetch_and_display()
+        # Schedule active page polling every 1 minute
+        # This is the ONLY way content gets sent to the board - via configured pages
+        schedule.every(1).minutes.do(lambda: self.check_and_send_active_page(dev_mode=False))
+        logger.info("Active page polling scheduled every 1 minute")
         
-        # Schedule periodic updates
-        interval_minutes = Config.REFRESH_INTERVAL_SECONDS / 60
-        schedule.every(interval_minutes).minutes.do(self.fetch_and_display)
-        logger.info(f"Scheduled updates every {interval_minutes} minutes")
-        
-        # Schedule Apple Music checks more frequently (if enabled)
-        if self.apple_music_source:
-            apple_music_interval = Config.APPLE_MUSIC_REFRESH_SECONDS
-            schedule.every(apple_music_interval).seconds.do(
-                lambda: self.fetch_and_display(force_apple_music=False)
-            )
-            logger.info(f"Apple Music checks every {apple_music_interval} seconds")
-        
-        # Schedule Guest WiFi refresh (if enabled)
-        if Config.GUEST_WIFI_ENABLED:
-            guest_wifi_interval = Config.GUEST_WIFI_REFRESH_SECONDS
-            schedule.every(guest_wifi_interval).seconds.do(self.fetch_and_display)
-            logger.info(f"Guest WiFi refresh every {guest_wifi_interval} seconds")
-        
-        # Schedule Home Assistant checks (if enabled)
-        if self.home_assistant_source:
-            ha_interval = Config.HOME_ASSISTANT_REFRESH_SECONDS
-            schedule.every(ha_interval).seconds.do(self.fetch_and_display)
-            logger.info(f"Home Assistant checks every {ha_interval} seconds")
+        # Send initial active page on startup
+        logger.info("Sending initial active page...")
+        self.check_and_send_active_page(dev_mode=False)
         
         # Main loop
         logger.info("Service started, waiting for scheduled updates...")

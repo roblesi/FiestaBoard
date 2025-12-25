@@ -1,4 +1,12 @@
-"""Message formatting for Vestaboard display."""
+"""Message formatting for Vestaboard display.
+
+Vestaboard supports:
+- Characters: A-Z, 0-9, and limited punctuation (codes 0-62)
+- Color tiles: Red, Orange, Yellow, Green, Blue, Violet, White, Black (codes 63-70)
+
+Color markers like {red} or {66} create SOLID COLOR TILES, not colored text.
+Use them as decorative indicators followed by a space, e.g., "{green} SSID: network"
+"""
 
 import logging
 from typing import Optional, Dict, List
@@ -47,9 +55,9 @@ class MessageFormatter:
         temp = int(weather_data.get("temperature", 0))
         feels_like = int(weather_data.get("feels_like", temp))
         if temp == feels_like:
-            lines.append(f"Temp: {temp}°F")
+            lines.append(f"Temp: {temp}F")
         else:
-            lines.append(f"Temp: {temp}°F (feels {feels_like}°F)")
+            lines.append(f"Temp: {temp}F (feels {feels_like}F)")
         
         # Additional info
         humidity = weather_data.get("humidity")
@@ -116,8 +124,8 @@ class MessageFormatter:
         
         lines = []
         
-        # Header
-        lines.append("Now Playing:")
+        # Header with violet tile indicator for music
+        lines.append("{violet} Now Playing")
         
         # Artist and Track
         artist = music_data.get("artist", "")
@@ -148,6 +156,11 @@ class MessageFormatter:
         """
         Format guest WiFi credentials for display.
         
+        Uses colored tiles as decorative indicators:
+        - Green tile for header (welcoming)
+        - Blue tile for SSID
+        - Violet tile for password
+        
         Args:
             ssid: WiFi network name (SSID)
             password: WiFi password
@@ -157,28 +170,29 @@ class MessageFormatter:
         """
         lines = []
         
-        # Header with green color (welcoming)
-        lines.append("{66}Guest WiFi"[:self.MAX_COLS + 4])
+        # Header with green tile indicator
+        lines.append("{green} Guest WiFi")
         lines.append("")
         
-        # SSID with blue color
-        lines.append(f"SSID: {{67}}{ssid}"[:self.MAX_COLS + 4])
+        # SSID with blue tile indicator
+        ssid_line = f"{{blue}} {ssid}"
+        lines.append(ssid_line[:self.MAX_COLS + 6])  # +6 for {blue} marker
         
-        # Password with violet color (to distinguish from SSID)
-        lines.append(f"Password: {{68}}{password}"[:self.MAX_COLS + 4])
+        # Password with violet tile indicator
+        pass_line = f"{{violet}} {password}"
+        lines.append(pass_line[:self.MAX_COLS + 8])  # +8 for {violet} marker
         
         # Ensure we don't exceed 6 rows
-        result = "\n".join(lines[:self.MAX_ROWS])
-        
-        # Truncate each line to 22 characters if needed
-        result_lines = result.split("\n")
-        truncated = [line[:self.MAX_COLS] for line in result_lines]
-        
-        return "\n".join(truncated)
+        return "\n".join(lines[:self.MAX_ROWS])
     
     def format_star_trek_quote(self, quote_data: Dict) -> str:
         """
         Format Star Trek quote for display.
+        
+        Uses colored tiles to indicate the series:
+        - Yellow tile for TNG (gold uniforms)
+        - Blue tile for Voyager 
+        - Red tile for DS9 (command red)
         
         Args:
             quote_data: Dictionary with 'quote', 'character', and 'series' keys
@@ -190,20 +204,17 @@ class MessageFormatter:
         
         quote = quote_data.get("quote", "")
         character = quote_data.get("character", "")
-        series = quote_data.get("series", "").upper()
+        series = quote_data.get("series", "").lower()
         
-        # Series name mapping with colors
-        # TNG = Yellow (classic gold uniforms)
-        # Voyager = Blue (blue/teal uniforms)
-        # DS9 = Red (command red)
-        series_info = {
-            "tng": {"name": "TNG", "color": "{65}"},      # Yellow
-            "voyager": {"name": "VOY", "color": "{67}"},  # Blue
-            "ds9": {"name": "DS9", "color": "{63}"}       # Red
+        # Series name and color mapping
+        series_config = {
+            "tng": {"name": "TNG", "color": "{yellow}"},
+            "voyager": {"name": "VOY", "color": "{blue}"},
+            "ds9": {"name": "DS9", "color": "{red}"}
         }
-        series_data = series_info.get(series.lower(), {"name": series, "color": ""})
-        series_display = series_data["name"]
-        series_color = series_data["color"]
+        config = series_config.get(series, {"name": series.upper(), "color": ""})
+        series_display = config["name"]
+        series_color = config["color"]
         
         # Split quote into lines that fit
         quote_lines = self.split_into_lines(quote, max_lines=4)
@@ -213,31 +224,26 @@ class MessageFormatter:
         if len(lines) < self.MAX_ROWS - 1:
             lines.append("")
         
-        # Add attribution if we have room
+        # Add attribution with series color tile if we have room
         if len(lines) < self.MAX_ROWS:
-            attribution = f"- {character}"
-            if len(lines) < self.MAX_ROWS - 1:
-                # Room for both character and series
-                lines.append(attribution[:self.MAX_COLS])
-                if series_display:
-                    # Add series with color
-                    lines.append(f"  {series_color}{series_display}"[:self.MAX_COLS + 4])
+            if series_color and len(lines) < self.MAX_ROWS - 1:
+                # Room for character line and series line with color
+                lines.append(f"- {character}"[:self.MAX_COLS])
+                lines.append(f"{series_color} {series_display}"[:self.MAX_COLS + 8])
             else:
-                # Only room for one line - combine
-                lines.append(f"- {character} ({series_color}{series_display})"[:self.MAX_COLS + 4])
+                # Combine into one line
+                lines.append(f"- {character} ({series_display})"[:self.MAX_COLS])
         
-        # Ensure we don't exceed 6 rows
-        result = "\n".join(lines[:self.MAX_ROWS])
-        
-        # Truncate each line to 22 characters if needed
-        result_lines = result.split("\n")
-        truncated = [line[:self.MAX_COLS] for line in result_lines]
-        
-        return "\n".join(truncated)
+        return "\n".join(lines[:self.MAX_ROWS])
     
     def format_house_status(self, status_data: Dict[str, Dict]) -> str:
         """
         Format house status from Home Assistant.
+        
+        Uses colored tiles as status indicators:
+        - Green tile = closed/locked/off (secure/good)
+        - Red tile = open/unlocked/on (needs attention)
+        - Yellow tile = unavailable/unknown
         
         Args:
             status_data: Dictionary mapping entity names to status info
@@ -260,62 +266,50 @@ class MessageFormatter:
             error = info.get("error", False)
             entity_id = info.get("entity_id", "")
             
-            # Determine status indicator and friendly text
-            # For binary_sensor: "on" = open/active (red), "off" = closed/inactive (green)
-            # For cover: "open" = open (red), "closed" = closed (green)
-            # For lock: "unlocked" = unlocked (red), "locked" = locked (green)
-            
+            # Determine status text and color indicator
             if error or state == "unavailable":
-                indicator = "{65}"  # Yellow - warning/unknown
-                status_text = "unavailable"
+                indicator = "{yellow}"  # Warning/unknown
+                status_text = "?"
             elif state in ["on", "open", "unlocked"]:
-                indicator = "{63}"  # Red - needs attention
+                indicator = "{red}"  # Needs attention
                 # Convert to friendly text
-                if state == "on":
-                    # For binary sensors, "on" usually means open/active
-                    if "door" in entity_id.lower() or "window" in entity_id.lower():
-                        status_text = "open"
-                    else:
-                        status_text = "on"
+                if state == "on" and ("door" in entity_id.lower() or "window" in entity_id.lower()):
+                    status_text = "open"
                 else:
                     status_text = state
             elif state in ["off", "closed", "locked"]:
-                indicator = "{66}"  # Green - secure/good
+                indicator = "{green}"  # Secure/good
                 # Convert to friendly text
-                if state == "off":
-                    # For binary sensors, "off" usually means closed/inactive
-                    if "door" in entity_id.lower() or "window" in entity_id.lower():
-                        status_text = "closed"
-                    else:
-                        status_text = "off"
+                if state == "off" and ("door" in entity_id.lower() or "window" in entity_id.lower()):
+                    status_text = "closed"
                 else:
                     status_text = state
             else:
-                indicator = "{65}"  # Yellow - unknown state
-                status_text = state
+                indicator = "{yellow}"  # Unknown state
+                status_text = state[:6]  # Truncate unknown states
             
-            # Format: "Name: status {color}"
-            # Color codes take 4 chars in text format: {63}
-            # Truncate name if needed to fit
-            max_name_len = self.MAX_COLS - len(f": {status_text} {{63}}")
+            # Format: "{color} Name: status"
+            # Account for color marker length when truncating
+            max_name_len = self.MAX_COLS - len(f" : {status_text}") - 1  # -1 for indicator tile
             display_name = name[:max_name_len] if len(name) > max_name_len else name
             
-            line = f"{display_name}: {status_text} {indicator}"
-            lines.append(line[:self.MAX_COLS + 4])  # +4 for color code format
+            line = f"{indicator} {display_name}: {status_text}"
+            lines.append(line)
         
-        # Ensure we don't exceed 6 rows
-        result = "\n".join(lines[:self.MAX_ROWS])
-        
-        # Truncate each line to 22 characters if needed
-        result_lines = result.split("\n")
-        truncated = [line[:self.MAX_COLS] for line in result_lines]
-        
-        return "\n".join(truncated)
+        return "\n".join(lines[:self.MAX_ROWS])
     
     def format_combined(self, weather_data: Optional[Dict], 
                        datetime_data: Optional[Dict]) -> str:
         """
         Format combined weather and datetime display.
+        
+        Uses colored tile before temperature to indicate temperature range:
+        - Red = very hot (90F+)
+        - Orange = hot (80-89F)
+        - Yellow = warm (70-79F)
+        - Green = comfortable (60-69F)
+        - Blue = cool (45-59F)
+        - Violet = cold (<45F)
         
         Args:
             weather_data: Weather information dictionary
@@ -355,48 +349,55 @@ class MessageFormatter:
             symbol = weather_symbol_info.get("symbol", "?")
             condition_display = weather_symbol_info.get("description", condition)
             
-            # Get color for temperature
+            # Get color tile for temperature indication
             temp_color = self._get_temp_color(temp)
             
             # Compact format to fit
             if len(lines) + 2 <= self.MAX_ROWS:
                 lines.append(f"{location}: {symbol} {condition_display}")
-                lines.append(f"Temp: {temp_color}{temp}°F")
+                # Temperature with color tile indicator before the number
+                lines.append(f"Temp: {temp_color} {temp}F")
             elif len(lines) + 1 <= self.MAX_ROWS:
-                # Very compact
-                lines.append(f"{location}: {symbol} {temp_color}{temp}°F")
+                # Very compact - color tile before temp
+                lines.append(f"{location}: {temp_color} {temp}F")
         
         # Ensure we don't exceed 6 rows
         result = "\n".join(lines[:self.MAX_ROWS])
         
-        # Truncate each line to 22 characters if needed
+        # Truncate each line to 22 characters if needed (accounting for color markers)
         result_lines = result.split("\n")
-        truncated = [line[:self.MAX_COLS] for line in result_lines]
+        truncated = []
+        for line in result_lines:
+            # Don't count color markers toward the 22 char limit
+            # They get stripped during conversion
+            truncated.append(line)
         
         return "\n".join(truncated)
     
     def _get_temp_color(self, temp: int) -> str:
         """
-        Get color code for temperature display.
+        Get color marker for temperature display.
+        
+        Creates a single colored tile to indicate temperature range.
         
         Args:
             temp: Temperature in Fahrenheit
             
         Returns:
-            Color code string (e.g., "{63}" for red)
+            Color marker string (e.g., "{red}" for hot)
         """
         if temp >= 90:
-            return "{63}"  # Red - very hot
+            return "{red}"     # Very hot
         elif temp >= 80:
-            return "{64}"  # Orange - hot
+            return "{orange}"  # Hot
         elif temp >= 70:
-            return "{65}"  # Yellow - warm
+            return "{yellow}"  # Warm
         elif temp >= 60:
-            return "{66}"  # Green - comfortable
+            return "{green}"   # Comfortable
         elif temp >= 45:
-            return "{67}"  # Blue - cool
+            return "{blue}"    # Cool
         else:
-            return "{68}"  # Violet - cold
+            return "{violet}"  # Cold
     
     def split_into_lines(self, text: str, max_lines: int = MAX_ROWS) -> List[str]:
         """
@@ -440,4 +441,3 @@ class MessageFormatter:
 def get_message_formatter() -> MessageFormatter:
     """Get message formatter instance."""
     return MessageFormatter()
-

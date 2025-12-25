@@ -1,0 +1,354 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { VariablePicker } from "@/components/variable-picker";
+import { VestaboardDisplay } from "@/components/vestaboard-display";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
+import { toast } from "sonner";
+import {
+  Wand2,
+  X,
+  Save,
+  Info,
+  Code2,
+  AlertTriangle,
+} from "lucide-react";
+import { api, PageCreate, PageUpdate, PageType } from "@/lib/api";
+
+// Calculate max possible rendered length of a template line
+function calculateMaxLineLength(line: string, maxLengths: Record<string, number>): number {
+  // If line has |wrap, it handles overflow automatically
+  if (line.includes("|wrap}}") || line.includes("|wrap|")) {
+    return 22;
+  }
+
+  let result = line;
+
+  // Remove color markers (they become single tiles, count as 1 char each)
+  result = result.replace(/\{(red|orange|yellow|green|blue|violet|purple|white|black|6[3-9]|70)\}/gi, "C");
+  result = result.replace(/\{\/(red|orange|yellow|green|blue|violet|purple|white|black)?\}/gi, "");
+
+  // Replace symbols with placeholder (1-2 chars)
+  result = result.replace(/\{(sun|star|cloud|rain|snow|storm|fog|partly|heart|check|x)\}/gi, "XX");
+
+  // Replace variables with their max length
+  result = result.replace(/\{\{([^}]+)\}\}/g, (match, expr) => {
+    const varPart = expr.split("|")[0].trim().toLowerCase();
+    const maxLen = maxLengths[varPart] || 10;
+    return "X".repeat(maxLen);
+  });
+
+  return result.length;
+}
+
+// Get line length warning info
+function getLineLengthWarning(line: string, maxLengths: Record<string, number>): { hasWarning: boolean; maxLength: number } {
+  const maxLength = calculateMaxLineLength(line, maxLengths);
+  return {
+    hasWarning: maxLength > 22,
+    maxLength,
+  };
+}
+
+interface PageBuilderProps {
+  pageId?: string; // If provided, edit existing page
+  onClose: () => void;
+  onSave?: () => void;
+}
+
+export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
+  const queryClient = useQueryClient();
+
+  // Form state
+  const [name, setName] = useState("");
+  const [templateLines, setTemplateLines] = useState<string[]>(["", "", "", "", "", ""]);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [showMobileVariablePicker, setShowMobileVariablePicker] = useState(false);
+  const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Fetch existing page if editing
+  const { data: existingPage, isLoading: loadingPage } = useQuery({
+    queryKey: ["page", pageId],
+    queryFn: () => api.getPage(pageId!),
+    enabled: !!pageId,
+  });
+
+  // Fetch template variables for helper
+  const { data: variablesData } = useQuery({
+    queryKey: ["template-variables"],
+    queryFn: () => api.getTemplateVariables(),
+  });
+
+  // Load existing page data
+  useEffect(() => {
+    if (existingPage) {
+      setName(existingPage.name);
+      setTemplateLines(existingPage.template || ["", "", "", "", "", ""]);
+    }
+  }, [existingPage]);
+
+  // Save mutation
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      if (pageId) {
+        // Update existing page
+        const payload: PageUpdate = {
+          name,
+          template: templateLines,
+        };
+        return api.updatePage(pageId, payload);
+      } else {
+        // Create new page
+        const payload: PageCreate = {
+          name,
+          type: "template" as PageType,
+          template: templateLines,
+        };
+        return api.createPage(payload);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pages"] });
+      toast.success(pageId ? "Page updated" : "Page created");
+      onSave?.();
+      onClose();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  // Preview mutation
+  const previewMutation = useMutation({
+    mutationFn: () => api.renderTemplate(templateLines),
+    onSuccess: (data) => {
+      setPreview(data.rendered);
+    },
+    onError: () => {
+      setPreview(null);
+    },
+  });
+
+  // Auto-preview when template lines change (debounced)
+  useEffect(() => {
+    // Only preview if at least one line has content
+    const hasContent = templateLines.some(line => line.trim().length > 0);
+    if (!hasContent) {
+      setPreview(null);
+      return;
+    }
+
+    // Debounce the preview
+    const timeoutId = setTimeout(() => {
+      previewMutation.mutate();
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [templateLines]);
+
+  // Insert variable/text at cursor position
+  const insertAtCursor = (text: string) => {
+    const lineIndex = activeLineIndex ?? 0;
+    const input = inputRefs.current[lineIndex];
+    
+    if (input) {
+      const start = input.selectionStart ?? templateLines[lineIndex].length;
+      const end = input.selectionEnd ?? templateLines[lineIndex].length;
+      const newLines = [...templateLines];
+      const currentLine = newLines[lineIndex];
+      newLines[lineIndex] = currentLine.substring(0, start) + text + currentLine.substring(end);
+      setTemplateLines(newLines);
+      
+      // Focus and set cursor position after inserted text
+      setTimeout(() => {
+        input.focus();
+        input.setSelectionRange(start + text.length, start + text.length);
+      }, 0);
+    } else {
+      // Fallback: append to active line
+      const newLines = [...templateLines];
+      newLines[lineIndex] = newLines[lineIndex] + text;
+      setTemplateLines(newLines);
+    }
+  };
+
+  if (pageId && loadingPage) {
+    return (
+      <Card>
+        <CardContent className="p-4 sm:p-6">
+          <Skeleton className="h-64 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 sm:gap-6 flex-1 min-h-0">
+        {/* Main Editor */}
+        <Card className="flex flex-col min-h-0">
+          <CardHeader className="pb-3 flex-shrink-0 px-4 sm:px-6">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                <Wand2 className="h-4 w-4" />
+                {pageId ? "Edit Page" : "Create Page"}
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                {/* Mobile variable picker toggle */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="lg:hidden h-9 px-3"
+                  onClick={() => setShowMobileVariablePicker(true)}
+                >
+                  <Code2 className="h-4 w-4 mr-1.5" />
+                  <span className="text-xs">Variables</span>
+                </Button>
+                <Button variant="ghost" size="icon" className="h-9 w-9" onClick={onClose}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="flex flex-col flex-1 min-h-0 space-y-4 overflow-y-auto px-4 sm:px-6">
+            {/* Page name */}
+            <div className="space-y-1.5">
+              <label className="text-xs sm:text-sm font-medium">Page Name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="My Custom Page"
+                className="w-full h-10 sm:h-9 px-3 text-sm rounded-md border bg-background"
+              />
+            </div>
+
+            {/* Template line editors */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs sm:text-sm font-medium">Template Lines</label>
+              </div>
+
+              {/* Helper text */}
+              <div className="p-2 sm:p-3 bg-muted/50 rounded-md text-xs space-y-1">
+                <div className="flex items-start gap-2 text-muted-foreground">
+                  <Info className="h-3 w-3 mt-0.5 shrink-0" />
+                  <span className="hidden sm:inline">Click variables in the sidebar to insert them. Mix static text with {"{{variables}}"}.</span>
+                  <span className="sm:hidden">Tap &quot;Variables&quot; button to insert template variables.</span>
+                </div>
+              </div>
+
+              {/* 6 template lines */}
+              <div className="flex flex-col gap-2 sm:gap-2">
+                {templateLines.map((line, i) => {
+                  const maxLengths = variablesData?.max_lengths || {};
+                  const warning = getLineLengthWarning(line, maxLengths);
+                  
+                  return (
+                    <div key={i} className="flex gap-2">
+                      <span className="text-xs text-muted-foreground w-4 shrink-0 pt-3 sm:pt-2.5">
+                        {i + 1}
+                      </span>
+                      <div className="flex-1 relative">
+                        <input
+                          ref={(el) => { inputRefs.current[i] = el; }}
+                          type="text"
+                          value={line}
+                          onChange={(e) => {
+                            const newLines = [...templateLines];
+                            newLines[i] = e.target.value;
+                            setTemplateLines(newLines);
+                          }}
+                          onFocus={() => setActiveLineIndex(i)}
+                          placeholder={`Line ${i + 1}`}
+                          className={`w-full h-10 sm:h-9 px-3 text-sm font-mono rounded border bg-background transition-colors ${
+                            activeLineIndex === i ? "border-primary ring-1 ring-primary" : ""
+                          } ${warning.hasWarning ? "border-yellow-500" : ""}`}
+                        />
+                        {warning.hasWarning && (
+                          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1" title={`Line may render up to ${warning.maxLength} chars (max 22)`}>
+                            <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Live preview */}
+              <div className="mt-4">
+                <label className="text-xs sm:text-sm font-medium mb-2 block">Preview</label>
+                <VestaboardDisplay 
+                  message={preview} 
+                  isLoading={previewMutation.isPending}
+                  size="md"
+                />
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 pt-2 pb-4">
+              <Button
+                size="default"
+                className="flex-1 h-10 sm:h-9"
+                onClick={() => saveMutation.mutate()}
+                disabled={!name.trim() || saveMutation.isPending}
+              >
+                <Save className="h-4 w-4 mr-1.5" />
+                {saveMutation.isPending ? "Saving..." : "Save Page"}
+              </Button>
+              <Button size="default" variant="outline" className="h-10 sm:h-9" onClick={onClose}>
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Desktop Variable Picker Sidebar */}
+        <div className="hidden lg:flex flex-col min-h-0">
+          <VariablePicker 
+            onInsert={insertAtCursor}
+            showColors={true}
+            showSymbols={false}
+          />
+        </div>
+      </div>
+
+      {/* Mobile Variable Picker Sheet */}
+      <Sheet open={showMobileVariablePicker} onOpenChange={setShowMobileVariablePicker}>
+        <SheetContent side="bottom" className="h-[70vh] p-0">
+          <SheetHeader className="px-4 py-3 border-b">
+            <SheetTitle>Template Variables</SheetTitle>
+            <SheetDescription>
+              Tap a variable to insert it at Line {(activeLineIndex ?? 0) + 1}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto p-4">
+            <VariablePicker 
+              onInsert={(text) => {
+                insertAtCursor(text);
+                setShowMobileVariablePicker(false);
+              }}
+              showColors={true}
+              showSymbols={false}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+    </>
+  );
+}
+

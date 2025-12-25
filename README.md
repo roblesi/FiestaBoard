@@ -2,6 +2,43 @@
 
 A Python service that runs in Docker to display dynamic information on your Vestaboard, including weather, date/time, house status, Star Trek quotes, Apple Music "Now Playing", and guest WiFi credentials.
 
+## 🚀 TLDR - Quick Start
+
+**Just want to get it running? Here's the fastest way:**
+
+```bash
+# 1. Create .env file with your API keys
+cp env.example .env
+# Edit .env and add: VB_READ_WRITE_KEY and WEATHER_API_KEY
+
+# 2. Run it! (first time builds images)
+docker-compose up --build
+
+# Or for subsequent runs (uses cached images)
+docker-compose up
+```
+
+That's it! 🎉
+
+**Access:**
+- **Web UI**: http://localhost:8080 (start service, send messages, monitor)
+- **API**: http://localhost:8000 (REST API endpoints)
+- **API Docs**: http://localhost:8000/docs (interactive API documentation)
+
+**To start the display service:**
+1. Open http://localhost:8080 in your browser
+2. Click "▶ Start Service" button
+3. Your Vestaboard will start updating!
+
+**To stop:**
+```bash
+docker-compose down
+```
+
+**For development/testing:** Just run `docker-compose up` - it works great for local dev! See [LOCAL_DEVELOPMENT.md](./LOCAL_DEVELOPMENT.md) for more options.
+
+---
+
 ## Features
 
 ### Core Features
@@ -19,7 +56,7 @@ A Python service that runs in Docker to display dynamic information on your Vest
 - ⚙️ **Highly Configurable**: Environment-based configuration for all features
 - 🔒 **Secure**: API token support for all integrations
 
-## Quick Start
+## Quick Start (Detailed)
 
 ### Prerequisites
 
@@ -74,10 +111,24 @@ See [CODESPACES_SETUP.md](./CODESPACES_SETUP.md) for detailed instructions.
 
 4. **Build and run with Docker Compose**:
    ```bash
-   docker-compose up -d
+   # First time (builds images)
+   docker-compose up --build
+   
+   # Or run in background
+   docker-compose up -d --build
    ```
 
-5. **View logs**:
+5. **Access the services**:
+   - **Web UI**: http://localhost:8080
+   - **API**: http://localhost:8000
+   - **API Docs**: http://localhost:8000/docs
+
+6. **Start the display service**:
+   - Open http://localhost:8080 in your browser
+   - Click "▶ Start Service" button
+   - Your Vestaboard will begin updating!
+
+7. **View logs**:
    ```bash
    docker-compose logs -f
    ```
@@ -140,19 +191,37 @@ See `env.example` for all available options.
 
 ## Local Development
 
-### Install Dependencies
+### Option 1: Docker Compose (Recommended for Testing)
+
+```bash
+# Build and run both API and Web UI
+docker-compose up --build
+
+# Access Web UI at http://localhost:8080
+# Access API at http://localhost:8000
+```
+
+### Option 2: API Server with Auto-reload
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Run API server with auto-reload
+uvicorn src.api_server:app --reload --port 8000
+
+# In another terminal, serve Web UI
+cd web_ui && python -m http.server 8080
+```
+
+### Option 3: Direct Python (Original Service)
 
 ```bash
 pip install -r requirements.txt
-```
-
-### Run Locally
-
-```bash
 python -m src.main
 ```
 
-Make sure your `.env` file is in the project root.
+For detailed development workflows, see [LOCAL_DEVELOPMENT.md](./LOCAL_DEVELOPMENT.md).
 
 ## Display Priority System
 
@@ -221,9 +290,34 @@ Vesta/
 
 ## Docker Commands
 
+### Using Docker Compose (Recommended)
+
+```bash
+# Build and start services
+docker-compose up --build
+
+# Run in background
+docker-compose up -d --build
+
+# View logs
+docker-compose logs -f
+
+# View specific service logs
+docker-compose logs -f vestaboard-api
+docker-compose logs -f vestaboard-ui
+
+# Stop services
+docker-compose down
+
+# Rebuild after code changes
+docker-compose up --build
+```
+
+### Legacy Docker Commands (Original Service)
+
 ```bash
 # Build image
-docker build -t vestaboard-display .
+docker build -f Dockerfile -t vestaboard-display .
 
 # Run container
 docker run -d \
@@ -237,9 +331,6 @@ docker logs -f vestaboard-display
 
 # Stop container
 docker stop vestaboard-display
-
-# Remove container
-docker rm vestaboard-display
 ```
 
 ## Troubleshooting

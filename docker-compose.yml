@@ -1,20 +1,68 @@
 version: '3.8'
 
 services:
-  vestaboard-display:
+  # API Service - REST API for controlling the Vestaboard display
+  vestaboard-api:
     build:
       context: .
-      dockerfile: Dockerfile
-    container_name: vestaboard-display
+      dockerfile: Dockerfile.api
+    container_name: vestaboard-api
     env_file:
       - .env
     restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      # Persist data (including config) to local filesystem
+      - ./data:/app/data
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
-    # Uncomment to mount config directory if needed
-    # volumes:
-    #   - ./config:/app/config:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  # Web UI - Monitoring and control interface
+  vestaboard-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    container_name: vestaboard-ui
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - vestaboard-api
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  # Legacy service (optional - kept for backward compatibility)
+  # Uncomment if you want to run the original scheduled service instead of API
+  # vestaboard-display:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: vestaboard-display
+  #   env_file:
+  #     - .env
+  #   restart: unless-stopped
+  #   logging:
+  #     driver: "json-file"
+  #     options:
+  #       max-size: "10m"
+  #       max-file: "3"
 
