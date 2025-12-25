@@ -12,8 +12,13 @@ services:
     environment:
       - PRODUCTION=false
     volumes:
-      # Persist data (including config) to local filesystem
+      # Persist data (including config and logs) to local filesystem
       - ./data:/app/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # Web UI - Development mode with HMR
   vestaboard-ui-dev:
@@ -31,5 +36,8 @@ services:
     command: sh -c "npm install && npm run dev -- -H 0.0.0.0"
     depends_on:
       - vestaboard-api
-
-
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

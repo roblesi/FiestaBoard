@@ -17,6 +17,8 @@ import type {
   Rotation,
   RotationCreate,
   RotationStateResponse,
+  LogsResponse,
+  LogEntry,
 } from "@/lib/api";
 
 const API_BASE = "http://localhost:8000";
@@ -204,6 +206,58 @@ export const mockCacheStatus = {
   last_sent_at: "2024-01-01T12:00:00Z",
   cache_hits: 5,
   total_sends: 10,
+};
+
+// Mock log entries
+export const mockLogEntries: LogEntry[] = [
+  {
+    timestamp: "2025-12-25T10:00:00",
+    level: "INFO",
+    logger: "src.api_server",
+    message: "API server starting up...",
+  },
+  {
+    timestamp: "2025-12-25T10:00:01",
+    level: "INFO",
+    logger: "src.main",
+    message: "Initializing Vestaboard Display Service...",
+  },
+  {
+    timestamp: "2025-12-25T10:00:02",
+    level: "DEBUG",
+    logger: "src.vestaboard_client",
+    message: "Connecting to board at 192.168.1.100",
+  },
+  {
+    timestamp: "2025-12-25T10:00:03",
+    level: "WARNING",
+    logger: "src.data_sources.weather",
+    message: "Weather API rate limit approaching",
+  },
+  {
+    timestamp: "2025-12-25T10:00:04",
+    level: "ERROR",
+    logger: "src.displays.service",
+    message: "Failed to render display: timeout",
+  },
+  {
+    timestamp: "2025-12-25T10:00:05",
+    level: "INFO",
+    logger: "src.api_server",
+    message: "Background service auto-started",
+  },
+];
+
+export const mockLogsResponse: LogsResponse = {
+  logs: mockLogEntries,
+  total: mockLogEntries.length,
+  limit: 50,
+  offset: 0,
+  has_more: false,
+  filters: {
+    level: null,
+    search: null,
+  },
 };
 
 // Store for tracking request bodies in tests
@@ -538,6 +592,49 @@ export const handlers = [
       status: "success",
       message: "Display force-refreshed",
     });
+  }),
+
+  // Logs endpoint
+  http.get(`${API_BASE}/logs`, ({ request }) => {
+    const url = new URL(request.url);
+    const limit = parseInt(url.searchParams.get("limit") || "50");
+    const offset = parseInt(url.searchParams.get("offset") || "0");
+    const level = url.searchParams.get("level")?.toUpperCase();
+    const search = url.searchParams.get("search")?.toLowerCase();
+
+    let filteredLogs = [...mockLogEntries];
+
+    // Filter by level
+    if (level) {
+      filteredLogs = filteredLogs.filter((log) => log.level === level);
+    }
+
+    // Filter by search
+    if (search) {
+      filteredLogs = filteredLogs.filter(
+        (log) =>
+          log.message.toLowerCase().includes(search) ||
+          log.logger.toLowerCase().includes(search)
+      );
+    }
+
+    const total = filteredLogs.length;
+    const paginatedLogs = filteredLogs.slice(offset, offset + limit);
+    const hasMore = offset + limit < total;
+
+    const response: LogsResponse = {
+      logs: paginatedLogs,
+      total,
+      limit,
+      offset,
+      has_more: hasMore,
+      filters: {
+        level: level as LogsResponse["filters"]["level"],
+        search: search || null,
+      },
+    };
+
+    return HttpResponse.json(response);
   }),
 ];
 

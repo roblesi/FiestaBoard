@@ -344,6 +344,35 @@ export interface ConfigValidationResponse {
   errors: string[];
 }
 
+// Logs types
+export type LogLevel = "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL";
+
+export interface LogEntry {
+  timestamp: string;
+  level: LogLevel;
+  logger: string;
+  message: string;
+}
+
+export interface LogsParams {
+  limit?: number;
+  offset?: number;
+  level?: LogLevel;
+  search?: string;
+}
+
+export interface LogsResponse {
+  logs: LogEntry[];
+  total: number;
+  limit: number;
+  offset: number;
+  has_more: boolean;
+  filters: {
+    level: LogLevel | null;
+    search: string | null;
+  };
+}
+
 export type FeatureName = 
   | "weather"
   | "datetime"
@@ -474,6 +503,17 @@ export const api = {
   deactivateRotation: () =>
     fetchApi<ActionResponse>("/rotations/deactivate", { method: "POST" }),
   getActiveRotation: () => fetchApi<RotationStateResponse>("/rotations/active"),
+
+  // Logs endpoints
+  getLogs: (params: LogsParams = {}) => {
+    const searchParams = new URLSearchParams();
+    if (params.limit !== undefined) searchParams.set("limit", String(params.limit));
+    if (params.offset !== undefined) searchParams.set("offset", String(params.offset));
+    if (params.level) searchParams.set("level", params.level);
+    if (params.search) searchParams.set("search", params.search);
+    const query = searchParams.toString();
+    return fetchApi<LogsResponse>(`/logs${query ? `?${query}` : ""}`);
+  },
 
   // Configuration endpoints
   getFullConfig: () => fetchApi<FullConfig>("/config/full"),
