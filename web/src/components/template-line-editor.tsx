@@ -996,11 +996,9 @@ export function TemplateLineEditor({
         // Rebuild segments array
         const rebuiltSegments: Segment[] = [];
         let insertDone = false;
-        let skipNext = false;
         
         for (let i = 0; i < segmentsRef.current.length; i++) {
           if (i === fromIndex) {
-            skipNext = true;
             continue;
           }
           

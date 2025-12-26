@@ -11,13 +11,10 @@ import { toast } from "sonner";
 import { 
   LayoutGrid, 
   Plus, 
-  Play, 
-  Trash2, 
   FileText, 
   Grid3X3, 
   Code2,
   ChevronRight,
-  Eye,
   X
 } from "lucide-react";
 import { useState } from "react";
@@ -38,7 +35,7 @@ interface PageSelectorProps {
 export function PageSelector({ onCreateNew, onEditPage }: PageSelectorProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [expandedPage, setExpandedPage] = useState<string | null>(null);
+  const [expandedPage, _setExpandedPage] = useState<string | null>(null);
   const [previewData, setPreviewData] = useState<PagePreviewResponse | null>(null);
 
   // Fetch pages
@@ -49,7 +46,7 @@ export function PageSelector({ onCreateNew, onEditPage }: PageSelectorProps) {
   });
 
   // Delete page mutation
-  const deleteMutation = useMutation({
+  const _deleteMutation = useMutation({
     mutationFn: (pageId: string) => api.deletePage(pageId),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["pages"] });
@@ -74,7 +71,7 @@ export function PageSelector({ onCreateNew, onEditPage }: PageSelectorProps) {
   });
 
   // Send page mutation
-  const sendMutation = useMutation({
+  const _sendMutation = useMutation({
     mutationFn: (pageId: string) => api.sendPage(pageId),
     onSuccess: (data) => {
       if (data.sent_to_board) {
@@ -89,7 +86,7 @@ export function PageSelector({ onCreateNew, onEditPage }: PageSelectorProps) {
   });
 
   // Preview page mutation
-  const previewMutation = useMutation({
+  const _previewMutation = useMutation({
     mutationFn: (pageId: string) => api.previewPage(pageId),
     onSuccess: (data) => {
       setPreviewData(data);

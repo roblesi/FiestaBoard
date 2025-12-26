@@ -1,12 +1,13 @@
 import { EditPageClient } from "./edit-page-client";
 
 // Required for static export with dynamic routes
-export function generateStaticParams() {
-  // Return empty array - we handle routing client-side
-  return [];
+// Generate a placeholder page for static export - actual routing is handled client-side
+export async function generateStaticParams() {
+  return [{ id: '_placeholder' }];
 }
 
-export default function EditPage({ params }: { params: { id: string } }) {
-  return <EditPageClient pageId={params.id} />;
+export default async function EditPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params;
+  return <EditPageClient pageId={resolvedParams.id} />;
 }
 

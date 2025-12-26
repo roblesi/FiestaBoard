@@ -307,7 +307,7 @@ describe("LogsViewer Component", () => {
   });
 
   it("manual refresh button refetches logs", async () => {
-    const user = userEvent.setup();
+    const _user = userEvent.setup();
     renderWithProviders(<LogsViewer />);
 
     await waitFor(() => {

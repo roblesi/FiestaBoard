@@ -26,8 +26,6 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
-  FileText,
-  Braces,
   ChevronDown,
 } from "lucide-react";
 import {
@@ -202,13 +200,13 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
   };
 
   // Get raw text representation (6 lines joined by newlines)
-  const getRawText = (): string => {
+  const _getRawText = (): string => {
     return getTemplateWithAlignments().join("\n");
   };
 
   // Parse raw text back into template lines and alignments
   // Enforces exactly 6 lines - truncates extras, pads if fewer
-  const parseRawText = (rawText: string) => {
+  const _parseRawText = (rawText: string) => {
     // Split and limit to exactly 6 lines
     let lines = rawText.split("\n");
     

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DragEvent } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { api } from "@/lib/api";
-import { ChevronDown, X, Bike } from "lucide-react";
+import { ChevronDown, Bike } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { VESTABOARD_COLORS } from "@/lib/vestaboard-colors";
@@ -73,7 +73,7 @@ function CollapsibleSection({
 // Variable pill component - matches editor badge style
 function VariablePill({
   label,
-  value,
+  value: _value,
   onInsert,
   onDragStart,
 }: {

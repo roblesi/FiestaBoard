@@ -2,7 +2,6 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
@@ -41,7 +40,7 @@ export function OutputTargetSelector() {
   const updateMutation = useMutation({
     mutationFn: (target: "ui" | "board" | "both") =>
       api.updateOutputSettings(target),
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["output-settings"] });
       queryClient.invalidateQueries({ queryKey: ["status"] });
       toast.success("Output target updated");
