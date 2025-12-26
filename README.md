@@ -369,3 +369,6 @@ The Vestaboard displays various screens in rotation:
 - [API Research](./docs/reference/API_RESEARCH.md)
 - [Character Codes](./docs/reference/VESTABOARD_CHARACTER_CODES.md)
 
+
+---
+Made with ❤️ in San Francisco.
