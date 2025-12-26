@@ -13,6 +13,7 @@ import { ChevronDown, ChevronUp, Save, Eye, EyeOff, AlertCircle, Copy, Check, Pl
 import { Label } from "@/components/ui/label";
 import { api, FeatureName } from "@/lib/api";
 import { LucideIcon } from "lucide-react";
+import { ComponentType } from "react";
 import { VESTABOARD_COLORS, AVAILABLE_COLORS as VESTA_AVAILABLE_COLORS, VestaboardColorName } from "@/lib/vestaboard-colors";
 import { BayWheelsStationFinder } from "./baywheels-station-finder";
 
@@ -73,7 +74,7 @@ interface FeatureCardProps {
   featureName: FeatureName;
   title: string;
   description: string;
-  icon: LucideIcon;
+  icon: LucideIcon | ComponentType<{ className?: string }>;
   fields: FeatureField[];
   outputs?: OutputParameter[];
   initialConfig?: Record<string, unknown>;

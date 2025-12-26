@@ -18,6 +18,40 @@ import {
   Car,
   Moon,
 } from "lucide-react";
+import { LucideIcon } from "lucide-react";
+
+// Vulcan salute component - uses emoji with CSS filter to match icon theme
+// Converts emoji to grayscale so it matches the monochrome icon style
+const VulcanSalute = ({ className }: { className?: string }) => {
+  // Check if it should be primary (enabled) or muted (disabled)
+  const isPrimary = className?.includes('text-primary');
+  const isMuted = className?.includes('text-muted-foreground');
+  
+  // Apply grayscale filter to remove yellow color and match icon style
+  // Use brightness to match the theme
+  const filter = isMuted 
+    ? 'grayscale(100%) brightness(0.6)' // Dimmer for muted state
+    : 'grayscale(100%) brightness(0)'; // Black for primary/enabled state
+  
+  return (
+    <span 
+      className={className}
+      style={{ 
+        fontSize: '1.25rem', 
+        lineHeight: '1.25rem', 
+        display: 'inline-flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        width: '1.25rem', 
+        height: '1.25rem',
+        filter: filter,
+        color: 'currentColor'
+      }}
+    >
+      🖖
+    </span>
+  );
+};
 
 // Output parameter definition
 export interface OutputParameter {
@@ -34,7 +68,7 @@ const FEATURE_DEFINITIONS: Record<
   {
     title: string;
     description: string;
-    icon: typeof Cloud;
+    icon: LucideIcon | typeof VulcanSalute;
     fields: FeatureField[];
     outputs: OutputParameter[];
     hasRefreshInterval?: boolean;
@@ -220,7 +254,7 @@ const FEATURE_DEFINITIONS: Record<
   star_trek_quotes: {
     title: "Star Trek Quotes",
     description: "Display random quotes",
-    icon: Sparkles,
+    icon: VulcanSalute,
     hasRefreshInterval: false, // Changes per rotation
     fields: [
       {
