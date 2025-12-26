@@ -19,6 +19,12 @@ export function localTimeToUTC(localTime: string, timezone: string): string {
     // Parse local time
     const [hours, minutes] = localTime.split(':').map(Number);
     
+    // Validate parsed values
+    if (isNaN(hours) || isNaN(minutes)) {
+      console.error('Error converting local time to UTC: Invalid time format');
+      return '00:00+00:00';
+    }
+    
     // Create a date object for today at this time in the specified timezone
     const now = new Date();
     const localDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes);
@@ -27,10 +33,16 @@ export function localTimeToUTC(localTime: string, timezone: string): string {
     const utcDate = fromZonedTime(localDate, timezone);
     
     // Format as HH:MM+00:00
-    const utcHours = utcDate.getUTCHours().toString().padStart(2, '0');
-    const utcMinutes = utcDate.getUTCMinutes().toString().padStart(2, '0');
+    const utcHours = utcDate.getUTCHours();
+    const utcMinutes = utcDate.getUTCMinutes();
     
-    return `${utcHours}:${utcMinutes}+00:00`;
+    // Check for NaN after conversion
+    if (isNaN(utcHours) || isNaN(utcMinutes)) {
+      console.error('Error converting local time to UTC: Invalid result');
+      return '00:00+00:00';
+    }
+    
+    return `${utcHours.toString().padStart(2, '0')}:${utcMinutes.toString().padStart(2, '0')}+00:00`;
   } catch (error) {
     console.error('Error converting local time to UTC:', error);
     return '00:00+00:00';
@@ -50,6 +62,12 @@ export function utcToLocalTime(utcIso: string, timezone: string): string {
     const timePart = utcIso.split('+')[0].split('-')[0]; // Get HH:MM part
     const [hours, minutes] = timePart.split(':').map(Number);
     
+    // Validate parsed values
+    if (isNaN(hours) || isNaN(minutes)) {
+      console.error('Error converting UTC to local time: Invalid time format');
+      return '00:00';
+    }
+    
     // Create a UTC date object for today at this time
     const now = new Date();
     const utcDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hours, minutes));
@@ -58,10 +76,16 @@ export function utcToLocalTime(utcIso: string, timezone: string): string {
     const localDate = toZonedTime(utcDate, timezone);
     
     // Format as HH:MM
-    const localHours = localDate.getHours().toString().padStart(2, '0');
-    const localMinutes = localDate.getMinutes().toString().padStart(2, '0');
+    const localHours = localDate.getHours();
+    const localMinutes = localDate.getMinutes();
     
-    return `${localHours}:${localMinutes}`;
+    // Check for NaN after conversion
+    if (isNaN(localHours) || isNaN(localMinutes)) {
+      console.error('Error converting UTC to local time: Invalid result');
+      return '00:00';
+    }
+    
+    return `${localHours.toString().padStart(2, '0')}:${localMinutes.toString().padStart(2, '0')}`;
   } catch (error) {
     console.error('Error converting UTC to local time:', error);
     return '00:00';
