@@ -8,10 +8,12 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { ChevronDown, ChevronUp, Save, Eye, EyeOff, AlertCircle, Copy, Check, Plus, Trash2, ArrowUp, ArrowDown, MapPin, Loader2 } from "lucide-react";
-import { api, FeatureName } from "@/lib/api";
+import { ChevronDown, ChevronUp, Save, Eye, EyeOff, AlertCircle, Copy, Check, Plus, Trash2, ArrowUp, ArrowDown, MapPin, Loader2, X } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { api, FeatureName, BayWheelsStation } from "@/lib/api";
 import { LucideIcon } from "lucide-react";
 import { VESTABOARD_COLORS, AVAILABLE_COLORS as VESTA_AVAILABLE_COLORS, VestaboardColorName } from "@/lib/vestaboard-colors";
+import { BayWheelsStationFinder } from "./baywheels-station-finder";
 
 export interface FeatureField {
   key: string;
@@ -75,6 +77,75 @@ interface FeatureCardProps {
   outputs?: OutputParameter[];
   initialConfig?: Record<string, unknown>;
   isLoading?: boolean;
+}
+
+// Selected Stations Display Component (for Bay Wheels)
+function SelectedStationsDisplay({
+  stationIds,
+  stationNames,
+  onRemove,
+}: {
+  stationIds: string[];
+  stationNames: string[];
+  onRemove: (stationId: string) => void;
+}) {
+  const [loadedNames, setLoadedNames] = useState<Map<string, string>>(new Map());
+  
+  // Fetch station names if not available
+  useEffect(() => {
+    const fetchNames = async () => {
+      const missingIds = stationIds.filter((id, index) => !stationNames[index] || stationNames[index] === id);
+      if (missingIds.length > 0) {
+        try {
+          const allStations = await api.listBayWheelsStations();
+          const newMap = new Map<string, string>();
+          allStations.stations.forEach(station => {
+            if (stationIds.includes(station.station_id)) {
+              // Prefer name, then address, then ID
+              const displayName = station.name || station.address || station.station_id;
+              newMap.set(station.station_id, displayName);
+            }
+          });
+          setLoadedNames(newMap);
+        } catch (err) {
+          console.debug("Failed to fetch station names:", err);
+        }
+      }
+    };
+    fetchNames();
+  }, [stationIds, stationNames]);
+
+  return (
+    <div className="space-y-2">
+      <Label className="text-xs font-medium">Selected Stations</Label>
+      <div className="flex flex-wrap gap-2">
+        {stationIds.map((stationId, index) => {
+          // Try to get name from: 1) stationNames array, 2) loadedNames map, 3) fallback to ID
+          const nameFromArray = stationNames[index];
+          const nameFromMap = loadedNames.get(stationId);
+          const displayName = nameFromArray && nameFromArray !== stationId 
+            ? nameFromArray 
+            : (nameFromMap || stationId);
+          
+          return (
+            <Badge key={stationId} variant="secondary" className="flex items-center gap-1 max-w-full">
+              <span className="text-xs font-mono text-muted-foreground shrink-0">[{index}]</span>
+              <span className="truncate" title={displayName}>{displayName}</span>
+              <button
+                onClick={() => onRemove(stationId)}
+                className="ml-1 hover:text-destructive shrink-0"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          );
+        })}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Use <code className="bg-muted px-1 rounded">baywheels.stations.{`{index}`}.electric_bikes</code> in templates (e.g., stations.0, stations.1)
+      </p>
+    </div>
+  );
 }
 
 // Color Rules Editor Component
@@ -504,6 +575,74 @@ export function FeatureCard({
 
       {expanded && (
         <CardContent className="pt-0 space-y-6">
+          {/* Bay Wheels Station Finder */}
+          {(featureName as string) === "baywheels" && (
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium text-muted-foreground">Stations</h4>
+              <BayWheelsStationFinder
+                selectedStationIds={(formData.station_ids as string[]) || (formData.station_id ? [formData.station_id as string] : [])}
+                onStationsSelected={(stations) => {
+                  // Migrate from old station_id to new station_ids format
+                  const newData = { ...formData };
+                  if (stations.length > 0) {
+                    const stationIds = stations.map(s => s.station_id);
+                    const stationNames = stations.map(s => s.name);
+                    newData.station_ids = stationIds;
+                    newData.station_names = stationNames; // Store names for display
+                    // Keep station_id for backward compatibility if only one station
+                    if (stationIds.length === 1) {
+                      newData.station_id = stationIds[0];
+                      newData.station_name = stationNames[0];
+                    } else {
+                      delete newData.station_id;
+                      delete newData.station_name;
+                    }
+                  } else {
+                    delete newData.station_ids;
+                    delete newData.station_names;
+                    delete newData.station_id;
+                    delete newData.station_name;
+                  }
+                  setFormData(newData);
+                  setHasChanges(true);
+                }}
+                maxStations={4}
+              />
+              {/* Show currently selected stations */}
+              {((formData.station_ids as string[]) || (formData.station_id ? [formData.station_id as string] : [])).length > 0 && (
+                <SelectedStationsDisplay
+                  stationIds={(formData.station_ids as string[]) || (formData.station_id ? [formData.station_id as string] : [])}
+                  stationNames={(formData.station_names as string[]) || (formData.station_name ? [formData.station_name as string] : [])}
+                  onRemove={(stationId) => {
+                    const currentIds = (formData.station_ids as string[]) || (formData.station_id ? [formData.station_id as string] : []);
+                    const currentNames = (formData.station_names as string[]) || (formData.station_name ? [formData.station_name as string] : []);
+                    const newIds = currentIds.filter((id) => id !== stationId);
+                    const newNames = currentNames.filter((_, i) => currentIds[i] !== stationId);
+                    const newData = { ...formData };
+                    if (newIds.length > 0) {
+                      newData.station_ids = newIds;
+                      newData.station_names = newNames;
+                      if (newIds.length === 1) {
+                        newData.station_id = newIds[0];
+                        newData.station_name = newNames[0];
+                      } else {
+                        delete newData.station_id;
+                        delete newData.station_name;
+                      }
+                    } else {
+                      delete newData.station_ids;
+                      delete newData.station_names;
+                      delete newData.station_id;
+                      delete newData.station_name;
+                    }
+                    setFormData(newData);
+                    setHasChanges(true);
+                  }}
+                />
+              )}
+            </div>
+          )}
+
           {/* Settings Section */}
           {fields.length > 0 && (
             <div className="space-y-4">

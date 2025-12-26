@@ -137,7 +137,7 @@ describe("API Contract Tests", () => {
         template: [
           "{{weather.temperature}}",
           "{{datetime.time}}",
-          "{red}Alert{/}",
+          "{{red}}Alert{{/}}",
           "",
           "",
           "Line 6",

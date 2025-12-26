@@ -10,7 +10,7 @@ export type SegmentType = "text" | "variable" | "color";
 
 export interface Segment {
   type: SegmentType;
-  value: string; // Raw value: "{{weather.temp}}" or "{blue}" or "plain text"
+  value: string; // Raw value: "{{weather.temp}}" or "{{blue}}" or "plain text"
   display: string; // Display text: "weather.temp" or "blue" or "plain text"
 }
 
@@ -35,59 +35,39 @@ const KNOWN_COLORS = new Set(Object.keys(COLOR_MAP));
 
 /**
  * Parse a template string into segments
- * Handles: {{variable}}, {color}, and plain text
+ * Handles: {{variable}}, {{color}}, and plain text
  */
 export function parseTemplate(template: string): Segment[] {
   const segments: Segment[] = [];
   let remaining = template;
 
   while (remaining.length > 0) {
-    // Try to match a variable {{...}}
-    const varMatch = remaining.match(/^\{\{([^}]+)\}\}/);
-    if (varMatch) {
-      segments.push({
-        type: "variable",
-        value: varMatch[0],
-        display: varMatch[1],
-      });
-      remaining = remaining.slice(varMatch[0].length);
-      continue;
-    }
-
-    // Try to match a color {colorName}
-    const colorMatch = remaining.match(/^\{([a-zA-Z]+)\}/);
-    if (colorMatch && KNOWN_COLORS.has(colorMatch[1].toLowerCase())) {
-      segments.push({
-        type: "color",
-        value: colorMatch[0],
-        display: colorMatch[1].toLowerCase(),
-      });
-      remaining = remaining.slice(colorMatch[0].length);
+    // Try to match a double-bracket token {{...}}
+    const doubleMatch = remaining.match(/^\{\{([^}]+)\}\}/);
+    if (doubleMatch) {
+      const content = doubleMatch[1];
+      
+      // Check if it's a color
+      if (KNOWN_COLORS.has(content.toLowerCase())) {
+        segments.push({
+          type: "color",
+          value: doubleMatch[0],
+          display: content.toLowerCase(),
+        });
+      } else {
+        // It's a variable
+        segments.push({
+          type: "variable",
+          value: doubleMatch[0],
+          display: content,
+        });
+      }
+      remaining = remaining.slice(doubleMatch[0].length);
       continue;
     }
 
     // Find the next special token
-    const nextVar = remaining.indexOf("{{");
-    const nextColor = remaining.search(/\{([a-zA-Z]+)\}/);
-    
-    // Check if the color match is actually a known color
-    let validNextColor = -1;
-    if (nextColor !== -1) {
-      const colorCheckMatch = remaining.slice(nextColor).match(/^\{([a-zA-Z]+)\}/);
-      if (colorCheckMatch && KNOWN_COLORS.has(colorCheckMatch[1].toLowerCase())) {
-        validNextColor = nextColor;
-      }
-    }
-
-    // Find the earliest next token
-    let nextToken = -1;
-    if (nextVar !== -1 && validNextColor !== -1) {
-      nextToken = Math.min(nextVar, validNextColor);
-    } else if (nextVar !== -1) {
-      nextToken = nextVar;
-    } else if (validNextColor !== -1) {
-      nextToken = validNextColor;
-    }
+    const nextToken = remaining.indexOf("{{");
 
     if (nextToken === -1) {
       // No more tokens, rest is plain text
@@ -798,6 +778,11 @@ export function TemplateLineEditor({
     // Reconstruct the value from DOM
     const newSegments: Segment[] = [];
     
+    // Check if we have direct text nodes (browser created during typing)
+    const hasDirectTextNodes = Array.from(container.childNodes).some(
+      n => n.nodeType === Node.TEXT_NODE && n.parentNode === container && (n.textContent?.replace(/\u200B/g, "") || "")
+    );
+    
     const processNode = (node: Node) => {
       if (node instanceof HTMLElement && node.dataset.dropzone === "true") {
         return; // Skip drop zones
@@ -817,9 +802,11 @@ export function TemplateLineEditor({
         return;
       }
       if (node instanceof HTMLElement && node.dataset.textSegment === "true") {
-        // Text segment - get its content
+        // Text segment span - but skip if we have direct text nodes (those are newer)
+        if (hasDirectTextNodes) {
+          return; // Skip stale React-rendered spans
+        }
         const text = node.textContent || "";
-        // Strip any zero-width spaces that might have crept in
         const cleanText = text.replace(/\u200B/g, "");
         if (cleanText) {
           newSegments.push({
@@ -830,9 +817,18 @@ export function TemplateLineEditor({
         }
         return;
       }
-      if (node.nodeType === Node.TEXT_NODE) {
+      if (node instanceof HTMLElement && node.dataset.badge === "true") {
+        // Badge - preserve the original segment
+        const segmentValue = node.dataset.segmentValue || "";
+        const originalSegment = segmentsRef.current.find(s => s.value === segmentValue);
+        if (originalSegment) {
+          newSegments.push(originalSegment);
+        }
+        return;
+      }
+      if (node.nodeType === Node.TEXT_NODE && node.parentNode === container) {
+        // Direct text node (browser created during typing)
         const text = node.textContent || "";
-        // Strip zero-width spaces
         const cleanText = text.replace(/\u200B/g, "");
         if (cleanText) {
           newSegments.push({
@@ -841,18 +837,27 @@ export function TemplateLineEditor({
             display: cleanText,
           });
         }
-      } else if (node instanceof HTMLElement && node.dataset.badge === "true") {
-        const segmentValue = node.dataset.segmentValue || "";
-        const originalSegment = segmentsRef.current.find(s => s.value === segmentValue);
-        if (originalSegment) {
-          newSegments.push(originalSegment);
-        }
       }
     };
     
     container.childNodes.forEach(processNode);
 
-    const newValue = segmentsToString(newSegments);
+    // Merge adjacent text segments to prevent duplication
+    const mergedSegments: Segment[] = [];
+    for (const segment of newSegments) {
+      if (segment.type === "text" && mergedSegments.length > 0) {
+        const lastSegment = mergedSegments[mergedSegments.length - 1];
+        if (lastSegment.type === "text") {
+          // Merge with previous text segment
+          lastSegment.value += segment.value;
+          lastSegment.display += segment.display;
+          continue;
+        }
+      }
+      mergedSegments.push(segment);
+    }
+
+    const newValue = segmentsToString(mergedSegments);
     if (newValue !== value) {
       shouldRestoreCursorRef.current = true;
       onChange(newValue);
@@ -1159,9 +1164,9 @@ export function TemplateLineEditor({
     
     segments.forEach((segment, index) => {
       if (segment.type === "text") {
-        // Text segments rendered as plain text
+        // Text segments rendered in a span wrapper
         items.push(
-          <span key={`text-${index}`} data-text-segment="true">
+          <span key={`text-${index}`} data-text-segment="true" suppressContentEditableWarning>
             {segment.value}
           </span>
         );

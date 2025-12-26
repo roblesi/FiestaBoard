@@ -136,8 +136,9 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         },
         "baywheels": {
             "enabled": False,
-            "station_id": "",  # Bay Wheels/GBFS station ID
-            "station_name": "",  # Display name for the station
+            "station_id": "",  # Bay Wheels/GBFS station ID (backward compatibility)
+            "station_ids": [],  # List of station IDs to monitor (up to 4)
+            "station_name": "",  # Display name for the station (backward compatibility)
             "refresh_seconds": 60,  # 1 minute for bike availability
             "color_rules": {
                 # Status colors based on electric bike availability

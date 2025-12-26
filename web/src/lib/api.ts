@@ -280,9 +280,25 @@ export interface MuniFeatureConfig {
 
 export interface BayWheelsFeatureConfig {
     enabled: boolean;
-    station_id: string;
-    station_name: string;
+    station_id?: string;  // Backward compatibility
+    station_ids?: string[];  // New multi-station support
+    station_name?: string;  // Backward compatibility
     refresh_seconds: number;
+}
+
+export interface BayWheelsStation {
+    station_id: string;
+    name: string;
+    lat?: number;
+    lon?: number;
+    address?: string;
+    capacity?: number;
+    distance_km?: number;
+    num_bikes_available?: number;
+    electric_bikes?: number;
+    classic_bikes?: number;
+    num_docks_available?: number;
+    is_renting?: boolean;
 }
 
 export interface SurfFeatureConfig {
@@ -372,7 +388,12 @@ export type FeatureName =
   | "home_assistant"
   | "apple_music"
   | "guest_wifi"
-  | "star_trek_quotes";
+  | "star_trek_quotes"
+  | "baywheels"
+  | "muni"
+  | "surf"
+  | "traffic"
+  | "air_fog";
 
 // API client with typed methods
 async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
@@ -504,4 +525,36 @@ export const api = {
       body: JSON.stringify(config),
     }),
   validateConfig: () => fetchApi<ConfigValidationResponse>("/config/validate"),
+
+  // Bay Wheels station search endpoints
+  listBayWheelsStations: () =>
+    fetchApi<{ stations: BayWheelsStation[]; total: number }>("/baywheels/stations"),
+  findNearbyBayWheelsStations: (lat: number, lng: number, radius?: number, limit?: number) => {
+    const params = new URLSearchParams({
+      lat: lat.toString(),
+      lng: lng.toString(),
+      ...(radius !== undefined && { radius: radius.toString() }),
+      ...(limit !== undefined && { limit: limit.toString() }),
+    });
+    return fetchApi<{
+      stations: BayWheelsStation[];
+      count: number;
+      search_location: { lat: number; lng: number };
+      radius_km: number;
+    }>(`/baywheels/stations/nearby?${params}`);
+  },
+  searchBayWheelsStationsByAddress: (address: string, radius?: number, limit?: number) => {
+    const params = new URLSearchParams({
+      address,
+      ...(radius !== undefined && { radius: radius.toString() }),
+      ...(limit !== undefined && { limit: limit.toString() }),
+    });
+    return fetchApi<{
+      stations: BayWheelsStation[];
+      count: number;
+      search_address: string;
+      geocoded_location: { lat: number; lng: number; display_name: string };
+      radius_km: number;
+    }>(`/baywheels/stations/search?${params}`);
+  },
 };

@@ -575,9 +575,11 @@ class DisplayService:
                 error="Bay Wheels not configured or disabled"
             )
         
-        raw_data = self.baywheels_source.fetch_station_status()
+        # Get aggregate stats for all stations
+        aggregate = self.baywheels_source.get_aggregate_stats()
+        stations = aggregate.get("stations", [])
         
-        if not raw_data:
+        if not stations:
             return DisplayResult(
                 display_type="baywheels",
                 formatted="Bay Wheels: Unavailable",
@@ -586,12 +588,54 @@ class DisplayService:
                 error="Failed to fetch Bay Wheels data"
             )
         
-        # Format the display using the configured station name
-        station_name = Config.BAYWHEELS_STATION_NAME or raw_data.get("station_name", "STATION")
-        electric = raw_data.get("electric_bikes", 0)
-        total = raw_data.get("num_bikes_available", 0)
+        # Build raw data with all template variables
+        raw_data = {
+            "total_electric": aggregate.get("total_electric", 0),
+            "total_classic": aggregate.get("total_classic", 0),
+            "total_bikes": aggregate.get("total_bikes", 0),
+            "station_count": aggregate.get("station_count", 0),
+            "stations": stations,
+        }
         
-        formatted = f"E-BIKES @ {station_name}: {electric} (Total: {total})"
+        # Add best station info
+        best_station = self.baywheels_source.get_best_station()
+        if best_station:
+            raw_data["best_station_name"] = best_station.get("station_name", "")
+            raw_data["best_station_electric"] = best_station.get("electric_bikes", 0)
+            raw_data["best_station_id"] = best_station.get("station_id", "")
+        else:
+            raw_data["best_station_name"] = ""
+            raw_data["best_station_electric"] = 0
+            raw_data["best_station_id"] = ""
+        
+        # For backward compatibility, also include first station data at top level
+        if stations:
+            first_station = stations[0]
+            raw_data["station_id"] = first_station.get("station_id", "")
+            raw_data["station_name"] = first_station.get("station_name", "")
+            raw_data["electric_bikes"] = first_station.get("electric_bikes", 0)
+            raw_data["classic_bikes"] = first_station.get("classic_bikes", 0)
+            raw_data["num_bikes_available"] = first_station.get("num_bikes_available", 0)
+            raw_data["is_renting"] = first_station.get("is_renting", False)
+            raw_data["status_color"] = first_station.get("status_color", "red")
+        else:
+            # Fallback values
+            raw_data["station_id"] = ""
+            raw_data["station_name"] = ""
+            raw_data["electric_bikes"] = 0
+            raw_data["classic_bikes"] = 0
+            raw_data["num_bikes_available"] = 0
+            raw_data["is_renting"] = False
+            raw_data["status_color"] = "red"
+        
+        # Format the display - show aggregate by default
+        if len(stations) > 1:
+            formatted = f"E-BIKES: {raw_data['total_electric']} ({raw_data['station_count']} STATIONS)"
+        else:
+            station_name = raw_data.get("station_name", "STATION")
+            electric = raw_data.get("electric_bikes", 0)
+            total = raw_data.get("num_bikes_available", 0)
+            formatted = f"E-BIKES @ {station_name}: {electric} (Total: {total})"
         
         return DisplayResult(
             display_type="baywheels",

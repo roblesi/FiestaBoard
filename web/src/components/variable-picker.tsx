@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DragEvent } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { api } from "@/lib/api";
-import { ChevronDown, X } from "lucide-react";
+import { ChevronDown, X, Bike } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { VESTABOARD_COLORS } from "@/lib/vestaboard-colors";
@@ -59,8 +60,8 @@ function CollapsibleSection({
       </button>
       <div
         className={cn(
-          "overflow-hidden transition-all duration-200",
-          isOpen ? "max-h-96 pb-3" : "max-h-0"
+          "overflow-y-auto transition-all duration-200",
+          isOpen ? "max-h-[600px] pb-3" : "max-h-0"
         )}
       >
         {children}
@@ -130,6 +131,17 @@ function ColorPill({
   );
 }
 
+interface BayWheelsStationData {
+  station_id: string;
+  station_name: string;
+  electric_bikes: number;
+  classic_bikes: number;
+  num_bikes_available: number;
+  status_color: string;
+  is_renting: boolean;
+  num_docks_available: number;
+}
+
 export function VariablePicker({
   onInsert,
   showColors = true,
@@ -137,6 +149,21 @@ export function VariablePicker({
   const { data: templateVars, isLoading } = useQuery({
     queryKey: ["template-variables"],
     queryFn: api.getTemplateVariables,
+  });
+
+  // Fetch live BayWheels station data
+  const { data: baywheelsData } = useQuery({
+    queryKey: ["baywheels-live-data"],
+    queryFn: async () => {
+      try {
+        const display = await api.getDisplayRaw("baywheels");
+        return display.data as { stations?: BayWheelsStationData[] };
+      } catch {
+        return null;
+      }
+    },
+    refetchInterval: 30000, // Refresh every 30 seconds
+    enabled: templateVars?.variables?.baywheels !== undefined,
   });
 
   const handleCopy = (text: string) => {
@@ -156,6 +183,13 @@ export function VariablePicker({
     e.dataTransfer.effectAllowed = "copy";
     e.dataTransfer.setData("text/plain", value);
     e.dataTransfer.setData("application/x-template-variable", value);
+  };
+
+  // Helper to get status emoji
+  const getStatusEmoji = (electricBikes: number) => {
+    if (electricBikes < 2) return "🔴";
+    if (electricBikes > 5) return "🟢";
+    return "🟡";
   };
 
   if (isLoading) {
@@ -188,24 +222,103 @@ export function VariablePicker({
           {/* Data Variables - collapsible by category */}
           <div className="pb-2">
             <h4 className="text-sm font-semibold mb-2">Data Variables</h4>
-            {Object.entries(templateVars.variables).map(([category, vars]) => (
-              <CollapsibleSection key={category} title={category} defaultOpen={true}>
-                <div className="flex flex-wrap gap-1.5">
-                  {vars.map((variable) => {
-                    const varValue = `{{${category}.${variable}}}`;
-                    return (
-                      <VariablePill
-                        key={variable}
-                        label={variable}
-                        value={varValue}
-                        onInsert={() => handleInsert(varValue)}
-                        onDragStart={(e) => handleDragStart(e, varValue)}
-                      />
-                    );
-                  })}
-                </div>
-              </CollapsibleSection>
-            ))}
+            {Object.entries(templateVars.variables).map(([category, vars]) => {
+              // Special handling for BayWheels with live station data
+              if (category === "baywheels" && baywheelsData?.stations && baywheelsData.stations.length > 0) {
+                return (
+                  <CollapsibleSection key={category} title={category} defaultOpen={true}>
+                    <div className="space-y-3">
+                      {/* Aggregate/General Variables */}
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1.5">General</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {vars.filter(v => !v.startsWith("stations.")).map((variable) => {
+                            const varValue = `{{${category}.${variable}}}`;
+                            return (
+                              <VariablePill
+                                key={variable}
+                                label={variable}
+                                value={varValue}
+                                onInsert={() => handleInsert(varValue)}
+                                onDragStart={(e) => handleDragStart(e, varValue)}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Individual Stations Accordion */}
+                      <div className="space-y-1.5">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Bike className="h-3 w-3" />
+                          Stations ({baywheelsData.stations.length})
+                        </p>
+                        <div className="max-h-[400px] overflow-y-auto pr-1">
+                          <Accordion type="single" collapsible className="w-full">
+                            {baywheelsData.stations.map((station, index) => (
+                            <AccordionItem key={station.station_id} value={`station-${index}`} className="border-b-0">
+                              <AccordionTrigger className="py-2 hover:no-underline">
+                                <div className="flex items-center gap-2 text-xs">
+                                  <span className="text-lg">{getStatusEmoji(station.electric_bikes)}</span>
+                                  <div className="text-left">
+                                    <div className="font-medium">{station.station_name}</div>
+                                    <div className="text-muted-foreground text-xs">
+                                      {station.electric_bikes}⚡ {station.classic_bikes}🚲 • Index: {index}
+                                    </div>
+                                  </div>
+                                </div>
+                              </AccordionTrigger>
+                              <AccordionContent>
+                                <div className="space-y-2 pt-2 pl-2">
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {["electric_bikes", "classic_bikes", "num_bikes_available", "status_color", "is_renting", "station_name"].map((field) => {
+                                      const varValue = `{{${category}.stations.${index}.${field}}}`;
+                                      return (
+                                        <VariablePill
+                                          key={field}
+                                          label={field}
+                                          value={varValue}
+                                          onInsert={() => handleInsert(varValue)}
+                                          onDragStart={(e) => handleDragStart(e, varValue)}
+                                        />
+                                      );
+                                    })}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                                    <code className="text-xs">stations.{index}.*</code>
+                                  </div>
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          ))}
+                          </Accordion>
+                        </div>
+                      </div>
+                    </div>
+                  </CollapsibleSection>
+                );
+              }
+
+              // Default handling for other categories
+              return (
+                <CollapsibleSection key={category} title={category} defaultOpen={true}>
+                  <div className="flex flex-wrap gap-1.5">
+                    {vars.map((variable) => {
+                      const varValue = `{{${category}.${variable}}}`;
+                      return (
+                        <VariablePill
+                          key={variable}
+                          label={variable}
+                          value={varValue}
+                          onInsert={() => handleInsert(varValue)}
+                          onDragStart={(e) => handleDragStart(e, varValue)}
+                        />
+                      );
+                    })}
+                  </div>
+                </CollapsibleSection>
+              );
+            })}
           </div>
 
           {/* Colors */}

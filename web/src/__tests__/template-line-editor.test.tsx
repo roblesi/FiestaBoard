@@ -40,26 +40,26 @@ describe("parseTemplate", () => {
   });
 
   it("parses a single color", () => {
-    const result = parseTemplate("{blue}");
+    const result = parseTemplate("{{blue}}");
     expect(result).toEqual([
-      { type: "color", value: "{blue}", display: "blue" },
+      { type: "color", value: "{{blue}}", display: "blue" },
     ]);
   });
 
   it("parses all known colors", () => {
     const colors = ["red", "orange", "yellow", "green", "blue", "violet", "white", "black"];
     for (const color of colors) {
-      const result = parseTemplate(`{${color}}`);
+      const result = parseTemplate(`{{${color}}}`);
       expect(result).toEqual([
-        { type: "color", value: `{${color}}`, display: color },
+        { type: "color", value: `{{${color}}}`, display: color },
       ]);
     }
   });
 
   it("parses mixed content: color + text + variable", () => {
-    const result = parseTemplate("{blue}WEATHER: {{weather.temperature}}F");
+    const result = parseTemplate("{{blue}}WEATHER: {{weather.temperature}}F");
     expect(result).toEqual([
-      { type: "color", value: "{blue}", display: "blue" },
+      { type: "color", value: "{{blue}}", display: "blue" },
       { type: "text", value: "WEATHER: ", display: "WEATHER: " },
       { type: "variable", value: "{{weather.temperature}}", display: "weather.temperature" },
       { type: "text", value: "F", display: "F" },
@@ -75,10 +75,10 @@ describe("parseTemplate", () => {
   });
 
   it("parses consecutive colors", () => {
-    const result = parseTemplate("{red}{blue}");
+    const result = parseTemplate("{{red}}{{blue}}");
     expect(result).toEqual([
-      { type: "color", value: "{red}", display: "red" },
-      { type: "color", value: "{blue}", display: "blue" },
+      { type: "color", value: "{{red}}", display: "red" },
+      { type: "color", value: "{{blue}}", display: "blue" },
     ]);
   });
 
@@ -91,12 +91,12 @@ describe("parseTemplate", () => {
   });
 
   it("parses complex template with multiple elements", () => {
-    const result = parseTemplate("{green}DATE: {{datetime.date}}{blue}TIME: {{datetime.time}}");
+    const result = parseTemplate("{{green}}DATE: {{datetime.date}}{{blue}}TIME: {{datetime.time}}");
     expect(result).toEqual([
-      { type: "color", value: "{green}", display: "green" },
+      { type: "color", value: "{{green}}", display: "green" },
       { type: "text", value: "DATE: ", display: "DATE: " },
       { type: "variable", value: "{{datetime.date}}", display: "datetime.date" },
-      { type: "color", value: "{blue}", display: "blue" },
+      { type: "color", value: "{{blue}}", display: "blue" },
       { type: "text", value: "TIME: ", display: "TIME: " },
       { type: "variable", value: "{{datetime.time}}", display: "datetime.time" },
     ]);

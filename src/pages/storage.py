@@ -214,3 +214,4 @@ class PageStorage:
         """Get the number of stored pages."""
         return len(self._pages)
 
+

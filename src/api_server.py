@@ -830,6 +830,229 @@ async def send_display(
 
 
 # =============================================================================
+# Bay Wheels Station Search Endpoints
+# =============================================================================
+
+@app.get("/baywheels/stations")
+async def list_all_baywheels_stations():
+    """
+    List all Bay Wheels stations with current status.
+    
+    Returns all stations from the GBFS feed with their current bike availability.
+    """
+    from src.data_sources.baywheels import BayWheelsSource, STATION_STATUS_URL
+    import requests
+    
+    try:
+        # Get station information
+        station_info = BayWheelsSource._get_station_information()
+        
+        # Get current status
+        response = requests.get(STATION_STATUS_URL, timeout=10)
+        response.raise_for_status()
+        status_data = response.json()
+        stations_status = {s.get("station_id"): s for s in status_data.get("data", {}).get("stations", [])}
+        
+        # Combine information and status
+        result = []
+        for station_id, info in (station_info or {}).items():
+            status = stations_status.get(station_id, {})
+            
+            # Count bike types
+            electric = 0
+            classic = 0
+            for vt in status.get("vehicle_types_available", []):
+                vt_id = vt.get("vehicle_type_id", "").lower()
+                count = vt.get("count", 0)
+                if "electric" in vt_id or "boost" in vt_id:
+                    electric += count
+                elif "classic" in vt_id:
+                    classic += count
+                else:
+                    classic += count
+            
+            result.append({
+                "station_id": station_id,
+                "name": info.get("name", station_id),
+                "lat": info.get("lat"),
+                "lon": info.get("lon"),
+                "address": info.get("address", ""),
+                "capacity": info.get("capacity", 0),
+                "num_bikes_available": status.get("num_bikes_available", 0),
+                "electric_bikes": electric,
+                "classic_bikes": classic,
+                "num_docks_available": status.get("num_docks_available", 0),
+                "is_renting": status.get("is_renting", 1) == 1,
+            })
+        
+        return {
+            "stations": result,
+            "total": len(result)
+        }
+    except Exception as e:
+        logger.error(f"Error listing Bay Wheels stations: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/baywheels/stations/nearby")
+async def find_nearby_baywheels_stations(
+    lat: float = Query(..., description="Latitude"),
+    lng: float = Query(..., description="Longitude"),
+    radius: float = Query(2.0, description="Search radius in kilometers"),
+    limit: int = Query(10, description="Maximum number of results")
+):
+    """
+    Find Bay Wheels stations near a location.
+    
+    Args:
+        lat: Latitude
+        lng: Longitude
+        radius: Search radius in kilometers (default 2.0)
+        limit: Maximum number of results (default 10)
+    
+    Returns:
+        List of nearby stations sorted by distance
+    """
+    from src.data_sources.baywheels import BayWheelsSource, STATION_STATUS_URL
+    import requests
+    
+    try:
+        stations = BayWheelsSource.find_stations_near_location(lat, lng, radius, limit)
+        
+        # Get current status for these stations
+        response = requests.get(STATION_STATUS_URL, timeout=10)
+        response.raise_for_status()
+        status_data = response.json()
+        stations_status = {s.get("station_id"): s for s in status_data.get("data", {}).get("stations", [])}
+        
+        # Add status information to each station
+        for station in stations:
+            station_id = station["station_id"]
+            status = stations_status.get(station_id, {})
+            
+            # Count bike types
+            electric = 0
+            classic = 0
+            for vt in status.get("vehicle_types_available", []):
+                vt_id = vt.get("vehicle_type_id", "").lower()
+                count = vt.get("count", 0)
+                if "electric" in vt_id or "boost" in vt_id:
+                    electric += count
+                elif "classic" in vt_id:
+                    classic += count
+                else:
+                    classic += count
+            
+            station["num_bikes_available"] = status.get("num_bikes_available", 0)
+            station["electric_bikes"] = electric
+            station["classic_bikes"] = classic
+            station["num_docks_available"] = status.get("num_docks_available", 0)
+            station["is_renting"] = status.get("is_renting", 1) == 1
+        
+        return {
+            "stations": stations,
+            "count": len(stations),
+            "search_location": {"lat": lat, "lng": lng},
+            "radius_km": radius
+        }
+    except Exception as e:
+        logger.error(f"Error finding nearby Bay Wheels stations: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/baywheels/stations/search")
+async def search_baywheels_stations_by_address(
+    address: str = Query(..., description="Address to search near"),
+    radius: float = Query(2.0, description="Search radius in kilometers"),
+    limit: int = Query(10, description="Maximum number of results")
+):
+    """
+    Find Bay Wheels stations near an address.
+    
+    Uses OpenStreetMap Nominatim for geocoding (free, no API key required).
+    
+    Args:
+        address: Address string (e.g., "123 Main St, San Francisco, CA")
+        radius: Search radius in kilometers (default 2.0)
+        limit: Maximum number of results (default 10)
+    
+    Returns:
+        List of nearby stations sorted by distance
+    """
+    from src.data_sources.baywheels import BayWheelsSource, STATION_STATUS_URL
+    import requests
+    
+    try:
+        # Geocode address using Nominatim
+        geocode_url = "https://nominatim.openstreetmap.org/search"
+        geocode_params = {
+            "q": address,
+            "format": "json",
+            "limit": 1
+        }
+        
+        geocode_response = requests.get(geocode_url, params=geocode_params, timeout=10)
+        geocode_response.raise_for_status()
+        geocode_data = geocode_response.json()
+        
+        if not geocode_data:
+            raise HTTPException(status_code=404, detail=f"Address not found: {address}")
+        
+        location = geocode_data[0]
+        lat = float(location["lat"])
+        lng = float(location["lon"])
+        
+        # Find nearby stations
+        stations = BayWheelsSource.find_stations_near_location(lat, lng, radius, limit)
+        
+        # Get current status for these stations
+        response = requests.get(STATION_STATUS_URL, timeout=10)
+        response.raise_for_status()
+        status_data = response.json()
+        stations_status = {s.get("station_id"): s for s in status_data.get("data", {}).get("stations", [])}
+        
+        # Add status information to each station
+        for station in stations:
+            station_id = station["station_id"]
+            status = stations_status.get(station_id, {})
+            
+            # Count bike types
+            electric = 0
+            classic = 0
+            for vt in status.get("vehicle_types_available", []):
+                vt_id = vt.get("vehicle_type_id", "").lower()
+                count = vt.get("count", 0)
+                if "electric" in vt_id or "boost" in vt_id:
+                    electric += count
+                elif "classic" in vt_id:
+                    classic += count
+                else:
+                    classic += count
+            
+            station["num_bikes_available"] = status.get("num_bikes_available", 0)
+            station["electric_bikes"] = electric
+            station["classic_bikes"] = classic
+            station["num_docks_available"] = status.get("num_docks_available", 0)
+            station["is_renting"] = status.get("is_renting", 1) == 1
+        
+        return {
+            "stations": stations,
+            "count": len(stations),
+            "search_address": address,
+            "geocoded_location": {"lat": lat, "lng": lng, "display_name": location.get("display_name", "")},
+            "radius_km": radius
+        }
+    except HTTPException:
+        raise
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error geocoding address: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail=f"Geocoding service unavailable: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error searching Bay Wheels stations: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
 # Settings Endpoints
 # =============================================================================
 
@@ -1224,7 +1447,7 @@ async def get_template_variables():
         "syntax_examples": {
             "variable": "{{weather.temperature}}",
             "variable_with_filter": "{{weather.temperature|pad:3}}",
-            "color_inline": "{red}Warning{/}",
+            "color_inline": "{{red}} Warning {{red}}",
             "color_code": "{63}",
             "symbol": "{sun}",
             "wrap": "{{star_trek.quote|wrap}}",

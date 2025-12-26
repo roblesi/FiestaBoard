@@ -14,6 +14,9 @@ services:
     volumes:
       # Persist data (including config and logs) to local filesystem
       - ./data:/app/data
+      # Mount source code for development (hot reload)
+      - ./src:/app/src
+      - ./tests:/app/tests
     logging:
       driver: "json-file"
       options:

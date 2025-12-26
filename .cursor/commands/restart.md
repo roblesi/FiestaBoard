@@ -6,3 +6,4 @@ Stop, rebuild (with --no-cache), and restart all Docker containers using docker-
 
 This does a full clean rebuild. Use /build if you just want to rebuild images without restarting, or /start if containers are already built. After completion, show the user how to view logs.
 
+

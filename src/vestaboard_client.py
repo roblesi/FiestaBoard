@@ -20,13 +20,12 @@ from typing import Optional, List, Tuple, Literal
 
 logger = logging.getLogger(__name__)
 
-# Regex pattern to match color markers like {63}, {red}, {/red}, {/}
+# Regex pattern to match color markers like {{63}}, {{red}}
 COLOR_MARKER_PATTERN = re.compile(
-    r'\{(?:' +
+    r'\{\{(?:' +
     r'6[3-9]|70|' +  # Numeric codes 63-70
-    r'red|orange|yellow|green|blue|violet|purple|white|black|' +  # Named colors
-    r'/(?:red|orange|yellow|green|blue|violet|purple|white|black)?'  # End tags
-    r')\}',
+    r'red|orange|yellow|green|blue|violet|purple|white|black'  # Named colors
+    r')\}\}',
     re.IGNORECASE
 )
 
@@ -34,8 +33,8 @@ COLOR_MARKER_PATTERN = re.compile(
 def strip_color_markers(text: str) -> str:
     """Strip color marker codes from text.
     
-    Removes markers like {63}, {red}, {/red}, {/} that are used for
-    color formatting but would display as literal text on the board
+    Removes markers like {{63}}, {{red}} that are used for
+    color tile formatting but would display as literal text on the board
     when using send_text().
     
     Args:
@@ -131,7 +130,7 @@ class VestaboardClient:
         Send plain text message to Vestaboard.
         
         Note: This method automatically:
-        - Strips color markers (like {63} or {red}) - text API doesn't support colors
+        - Strips color markers (like {{63}} or {{red}}) - text API doesn't support colors
         - Converts to UPPERCASE - Vestaboard only displays uppercase letters
         
         For transition animations or color support, use send_characters() instead.

@@ -19,14 +19,12 @@ def reset_singletons():
     from src.settings import service as settings_service
     from src.pages import service as pages_service
     from src.templates import engine as template_engine
-    from src.rotations import service as rotations_service
     
     # Reset all singletons before the test
     displays_service._display_service = None
     settings_service._settings_service = None
     pages_service._page_service = None
     template_engine._template_engine = None
-    rotations_service._rotation_service = None
     
     yield
     
@@ -35,7 +33,6 @@ def reset_singletons():
     settings_service._settings_service = None
     pages_service._page_service = None
     template_engine._template_engine = None
-    rotations_service._rotation_service = None
 
 
 @pytest.fixture
@@ -49,4 +46,5 @@ def mock_config():
     """
     from unittest.mock import patch
     return patch
+
 

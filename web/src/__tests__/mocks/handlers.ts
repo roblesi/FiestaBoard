@@ -167,8 +167,8 @@ export const mockTemplateVariables: TemplateVariables = {
   syntax_examples: {
     variable: "{{weather.temperature}}",
     variable_with_filter: "{{weather.temperature|pad:3}}",
-    color_inline: "{red}Warning{/}",
-    color_code: "{63}",
+    color_inline: "{{red}}Warning{{/}}",
+    color_code: "{{63}}",
     symbol: "{sun}",
     fill_space: "Left{{fill_space}}Right",
   },
