@@ -48,6 +48,7 @@ docker-compose down
 - 🖖 **Star Trek Quotes**: Random quotes from TNG, Voyager, and DS9 with configurable ratio
 - 🎵 **Apple Music**: "Now Playing" display (artist + song) when music is playing
 - 📶 **Guest WiFi**: Display WiFi credentials for guests (easily toggled on/off)
+- 🌙 **Silence Schedule**: Configure a time window when the Vestaboard won't send updates (e.g., 8pm-7am)
 
 ### System Features
 - 📄 **Page-Based Display**: Create and select pages via the web UI
@@ -106,6 +107,7 @@ See [CODESPACES_SETUP.md](./docs/setup/CODESPACES_SETUP.md) for detailed instruc
    HOME_ASSISTANT_ENABLED=false
    APPLE_MUSIC_ENABLED=false
    GUEST_WIFI_ENABLED=false
+   SILENCE_SCHEDULE_ENABLED=false
    ```
 
 4. **Build and run with Docker Compose**:
@@ -177,6 +179,13 @@ All configuration is done via environment variables in `.env`:
 - `GUEST_WIFI_ENABLED`: Display guest WiFi credentials (default: `false`)
 - `GUEST_WIFI_SSID`: Network name
 - `GUEST_WIFI_PASSWORD`: Network password
+
+#### Silence Schedule
+- `SILENCE_SCHEDULE_ENABLED`: Enable silence schedule (default: `false`)
+- `SILENCE_SCHEDULE_START_TIME`: When silence mode starts (default: `20:00` / 8pm)
+- `SILENCE_SCHEDULE_END_TIME`: When silence mode ends (default: `07:00` / 7am)
+
+The silence schedule prevents the Vestaboard from sending updates during the configured time window. Times are in your local timezone (configured via `TIMEZONE`). The window can span midnight (e.g., 8pm to 7am).
 
 See `env.example` for all available options.
 
@@ -331,6 +340,17 @@ See [GUEST_WIFI_SETUP.md](./docs/features/GUEST_WIFI_SETUP.md) for:
 - Display format
 - Security considerations
 
+### Silence Schedule
+Configure a time window when the Vestaboard won't send updates. Perfect for quiet hours (e.g., 8pm to 7am).
+
+**Features:**
+- Set custom start and end times (24-hour format)
+- Times are in your configured timezone
+- Supports windows that span midnight (e.g., 8pm to 7am)
+- Configure via web UI or environment variables
+
+**Example:** Set `SILENCE_SCHEDULE_START_TIME=20:00` and `SILENCE_SCHEDULE_END_TIME=07:00` to prevent updates between 8pm and 7am.
+
 ## Future Features
 
 - 🚴 Baywheels station availability
@@ -352,6 +372,9 @@ The Vestaboard can display various screens:
 - **Star Trek Quotes**: Inspiring quotes from TNG, Voyager, and DS9
 - **Apple Music**: Currently playing artist and song
 - **Guest WiFi**: SSID and password for guests
+
+**System Features:**
+- **Silence Schedule**: Configure quiet hours when the board won't update (e.g., 8pm-7am)
 
 ## References
 
