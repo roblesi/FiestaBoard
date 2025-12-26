@@ -129,6 +129,14 @@ class VestaboardDisplayService:
             # Content changed, send to board
             logger.info(f"Active page content changed, sending to board: {active_page_id}")
             
+            # Check if we're in silence mode - absolute preference
+            if Config.is_silence_mode_active():
+                logger.info("Silence mode is active, skipping board update")
+                # Still update our cache so we don't keep trying
+                self._last_active_page_content = current_content
+                self._last_active_page_id = active_page_id
+                return False
+            
             if dev_mode:
                 logger.info("[DEV MODE] Would send active page (not actually sending)")
                 self._last_active_page_content = current_content

@@ -473,6 +473,16 @@ async def send_message(request: MessageRequest):
             "dev_mode": True
         }
     
+    # Check if we're in silence mode - absolute preference
+    if Config.is_silence_mode_active():
+        logger.info("Silence mode is active, skipping board update")
+        return {
+            "status": "success",
+            "message": "Message skipped (silence mode is active)",
+            "skipped": True,
+            "silence_mode": True
+        }
+    
     if not service.vb_client:
         raise HTTPException(status_code=503, detail="Vestaboard client not initialized")
     
@@ -1381,23 +1391,28 @@ async def send_page(page_id: str, target: Optional[str] = None):
     # Send to board if appropriate
     sent_to_board = False
     if send_to_board and not _dev_mode:
-        # Use page-level transitions if set, otherwise fall back to system defaults
-        system_transition = settings_service.get_transition_settings()
-        strategy = page.transition_strategy if page.transition_strategy else system_transition.strategy
-        interval_ms = page.transition_interval_ms if page.transition_interval_ms is not None else system_transition.step_interval_ms
-        step_size = page.transition_step_size if page.transition_step_size is not None else system_transition.step_size
-        
-        # Convert to board array for proper character/color support
-        board_array = text_to_board_array(result.formatted)
-        success, was_sent = service.vb_client.send_characters(
-            board_array,
-            strategy=strategy,
-            step_interval_ms=interval_ms,
-            step_size=step_size
-        )
-        sent_to_board = was_sent
-        if not success:
-            raise HTTPException(status_code=500, detail="Failed to send to board")
+        # Check if we're in silence mode - absolute preference
+        if Config.is_silence_mode_active():
+            logger.info("Silence mode is active, skipping board update")
+            sent_to_board = False
+        else:
+            # Use page-level transitions if set, otherwise fall back to system defaults
+            system_transition = settings_service.get_transition_settings()
+            strategy = page.transition_strategy if page.transition_strategy else system_transition.strategy
+            interval_ms = page.transition_interval_ms if page.transition_interval_ms is not None else system_transition.step_interval_ms
+            step_size = page.transition_step_size if page.transition_step_size is not None else system_transition.step_size
+            
+            # Convert to board array for proper character/color support
+            board_array = text_to_board_array(result.formatted)
+            success, was_sent = service.vb_client.send_characters(
+                board_array,
+                strategy=strategy,
+                step_interval_ms=interval_ms,
+                step_size=step_size
+            )
+            sent_to_board = was_sent
+            if not success:
+                raise HTTPException(status_code=500, detail="Failed to send to board")
     
     return {
         "status": "success",

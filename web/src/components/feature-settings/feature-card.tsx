@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TimePicker } from "@/components/ui/time-picker";
 import { toast } from "sonner";
 import { ChevronDown, ChevronUp, Save, Eye, EyeOff, AlertCircle, Copy, Check, Plus, Trash2, ArrowUp, ArrowDown, MapPin, Loader2, X } from "lucide-react";
 import { Label } from "@/components/ui/label";
@@ -18,7 +19,7 @@ import { BayWheelsStationFinder } from "./baywheels-station-finder";
 export interface FeatureField {
   key: string;
   label: string;
-  type: "text" | "password" | "select" | "number" | "location";
+  type: "text" | "password" | "select" | "number" | "location" | "time";
   placeholder?: string;
   options?: { value: string; label: string }[];
   required?: boolean;
@@ -419,10 +420,27 @@ export function FeatureCard({
   // Initialize form data from config
   useEffect(() => {
     if (initialConfig) {
-      setFormData(initialConfig);
+      // For silence_schedule, ensure default values are set if missing
+      if (featureName === "silence_schedule") {
+        setFormData({
+          enabled: initialConfig.enabled ?? false,
+          start_time: initialConfig.start_time ?? "20:00",
+          end_time: initialConfig.end_time ?? "07:00",
+        });
+      } else {
+        setFormData(initialConfig);
+      }
+      setHasChanges(false);
+    } else if (featureName === "silence_schedule") {
+      // Set default values for silence_schedule if no config exists
+      setFormData({
+        enabled: false,
+        start_time: "20:00",
+        end_time: "07:00",
+      });
       setHasChanges(false);
     }
-  }, [initialConfig]);
+  }, [initialConfig, featureName]);
 
   const enabled = formData.enabled as boolean ?? false;
 
@@ -740,6 +758,12 @@ export function FeatureCard({
                         </Button>
                       </div>
                     </div>
+                  ) : field.type === "time" ? (
+                    <TimePicker
+                      value={(formData[field.key] as string) ?? ""}
+                      onChange={(value) => handleChange(field.key, value)}
+                      placeholder={field.placeholder}
+                    />
                   ) : (
                     <input
                       type="text"
@@ -819,15 +843,17 @@ export function FeatureCard({
           )}
 
           {/* Color Rules Section */}
-          <ColorRulesEditor
-            featureName={featureName}
-            colorRules={(formData.color_rules as ColorRulesConfig) || {}}
-            onChange={(newRules) => {
-              handleChange("color_rules", newRules);
-            }}
-            onCopyVar={handleCopyVar}
-            copiedVar={copiedVar}
-          />
+          {featureName !== "silence_schedule" && (
+            <ColorRulesEditor
+              featureName={featureName}
+              colorRules={(formData.color_rules as ColorRulesConfig) || {}}
+              onChange={(newRules) => {
+                handleChange("color_rules", newRules);
+              }}
+              onCopyVar={handleCopyVar}
+              copiedVar={copiedVar}
+            />
+          )}
 
           {/* No config needed message */}
           {fields.length === 0 && outputs.length === 0 && (

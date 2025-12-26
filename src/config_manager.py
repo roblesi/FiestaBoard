@@ -164,6 +164,11 @@ DEFAULT_CONFIG: Dict[str, Any] = {
                 ],
             },
         },
+        "silence_schedule": {
+            "enabled": False,
+            "start_time": "20:00",  # 8pm
+            "end_time": "07:00",  # 7am
+        },
     },
     "general": {
         "refresh_interval_seconds": 300,
@@ -352,6 +357,9 @@ class ConfigManager:
             features = self._config.get("features", {})
             if feature_name in features:
                 return self._deep_copy(features[feature_name])
+            # If feature not in config but exists in defaults, return default
+            if feature_name in DEFAULT_CONFIG.get("features", {}):
+                return self._deep_copy(DEFAULT_CONFIG["features"][feature_name])
             return None
 
     def set_feature(self, feature_name: str, settings: Dict[str, Any]) -> bool:

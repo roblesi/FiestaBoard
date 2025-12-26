@@ -317,6 +317,11 @@ export interface TrafficFeatureConfig {
     refresh_seconds: number;
 }
 
+export interface SilenceScheduleFeatureConfig {
+  enabled: boolean;
+  start_time: string;
+  end_time: string;
+}
 
 export interface FeaturesConfig {
   weather: WeatherFeatureConfig;
@@ -330,6 +335,7 @@ export interface FeaturesConfig {
   surf: SurfFeatureConfig;
   baywheels: BayWheelsFeatureConfig;
   traffic: TrafficFeatureConfig;
+  silence_schedule: SilenceScheduleFeatureConfig;
 }
 
 export interface GeneralConfig {
@@ -393,7 +399,8 @@ export type FeatureName =
   | "muni"
   | "surf"
   | "traffic"
-  | "air_fog";
+  | "air_fog"
+  | "silence_schedule";
 
 // API client with typed methods
 async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
