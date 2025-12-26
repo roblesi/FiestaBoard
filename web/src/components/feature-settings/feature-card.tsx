@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -11,11 +11,12 @@ import { TimePicker } from "@/components/ui/time-picker";
 import { toast } from "sonner";
 import { ChevronDown, ChevronUp, Save, Eye, EyeOff, AlertCircle, Copy, Check, Plus, Trash2, ArrowUp, ArrowDown, MapPin, Loader2, X } from "lucide-react";
 import { Label } from "@/components/ui/label";
-import { api, FeatureName } from "@/lib/api";
+import { api, FeatureName, GeneralConfig } from "@/lib/api";
 import { LucideIcon } from "lucide-react";
 import { ComponentType } from "react";
 import { VESTABOARD_COLORS, AVAILABLE_COLORS as VESTA_AVAILABLE_COLORS, VestaboardColorName } from "@/lib/vestaboard-colors";
 import { BayWheelsStationFinder } from "./baywheels-station-finder";
+import { utcToLocalTime, localTimeToUTC } from "@/lib/timezone-utils";
 
 export interface FeatureField {
   key: string;
@@ -418,15 +419,35 @@ export function FeatureCard({
   const [copiedVar, setCopiedVar] = useState<string | null>(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
 
+  // Fetch general config to get user's timezone (needed for silence_schedule)
+  const { data: generalConfig } = useQuery<GeneralConfig>({
+    queryKey: ["generalConfig"],
+    queryFn: () => api.getGeneralConfig(),
+    enabled: featureName === "silence_schedule",
+  });
+
+  const userTimezone = generalConfig?.timezone || "America/Los_Angeles";
+
   // Initialize form data from config
   useEffect(() => {
     if (initialConfig) {
-      // For silence_schedule, ensure default values are set if missing
+      // For silence_schedule, convert UTC times to local times for display
       if (featureName === "silence_schedule") {
+        const startTimeUtc = initialConfig.start_time as string;
+        const endTimeUtc = initialConfig.end_time as string;
+        
+        // Convert from UTC ISO format (e.g., "04:00+00:00") to local HH:MM
+        const startTimeLocal = startTimeUtc && userTimezone
+          ? utcToLocalTime(startTimeUtc, userTimezone) || "20:00"
+          : "20:00";
+        const endTimeLocal = endTimeUtc && userTimezone
+          ? utcToLocalTime(endTimeUtc, userTimezone) || "07:00"
+          : "07:00";
+
         setFormData({
           enabled: initialConfig.enabled ?? false,
-          start_time: initialConfig.start_time ?? "20:00",
-          end_time: initialConfig.end_time ?? "07:00",
+          start_time: startTimeLocal,
+          end_time: endTimeLocal,
         });
       } else {
         setFormData(initialConfig);
@@ -441,7 +462,7 @@ export function FeatureCard({
       });
       setHasChanges(false);
     }
-  }, [initialConfig, featureName]);
+  }, [initialConfig, featureName, userTimezone]);
 
   const enabled = formData.enabled as boolean ?? false;
 
@@ -477,7 +498,27 @@ export function FeatureCard({
 
   // Handle save
   const handleSave = () => {
-    updateMutation.mutate(formData);
+    // For silence_schedule, convert local times to UTC before saving
+    if (featureName === "silence_schedule") {
+      const startTimeLocal = formData.start_time as string;
+      const endTimeLocal = formData.end_time as string;
+
+      const startTimeUtc = localTimeToUTC(startTimeLocal, userTimezone);
+      const endTimeUtc = localTimeToUTC(endTimeLocal, userTimezone);
+
+      if (!startTimeUtc || !endTimeUtc) {
+        toast.error("Invalid time format for silence schedule");
+        return;
+      }
+
+      updateMutation.mutate({
+        ...formData,
+        start_time: startTimeUtc,
+        end_time: endTimeUtc,
+      });
+    } else {
+      updateMutation.mutate(formData);
+    }
   };
 
   // Copy template variable

@@ -1,0 +1,317 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { TimePicker } from "@/components/ui/time-picker";
+import { toast } from "sonner";
+import { Settings, Save, Clock, FlaskConical, Moon } from "lucide-react";
+import { api } from "@/lib/api";
+import { TimezonePicker } from "@/components/ui/timezone-picker";
+import { formatInTimeZone } from "date-fns-tz";
+import { useStatus, useToggleDevMode } from "@/hooks/use-vestaboard";
+import { utcToLocalTime, localTimeToUTC } from "@/lib/timezone-utils";
+
+export function GeneralSettings() {
+  const queryClient = useQueryClient();
+  const [hasChanges, setHasChanges] = useState(false);
+  const [timezone, setTimezone] = useState("America/Los_Angeles");
+  const [silenceEnabled, setSilenceEnabled] = useState(false);
+  const [silenceStartTime, setSilenceStartTime] = useState("20:00");
+  const [silenceEndTime, setSilenceEndTime] = useState("07:00");
+
+  // Fetch general config
+  const { data: generalConfig, isLoading: isLoadingConfig } = useQuery({
+    queryKey: ["generalConfig"],
+    queryFn: api.getGeneralConfig,
+  });
+
+  // Fetch silence schedule config
+  const { data: silenceConfig, isLoading: isLoadingSilence } = useQuery({
+    queryKey: ["features-config", "silence_schedule"],
+    queryFn: () => api.getFeatureConfig("silence_schedule"),
+  });
+
+  // Fetch service status
+  const { data: status, isLoading: isLoadingStatus } = useStatus();
+  const devModeMutation = useToggleDevMode();
+
+  // Initialize form data when config loads
+  useEffect(() => {
+    if (generalConfig) {
+      setTimezone(generalConfig.timezone || "America/Los_Angeles");
+    }
+  }, [generalConfig]);
+
+  // Initialize silence schedule when config loads
+  useEffect(() => {
+    if (silenceConfig && generalConfig?.timezone) {
+      const userTimezone = generalConfig.timezone;
+      
+      setSilenceEnabled(silenceConfig.enabled ?? false);
+      
+      // Convert UTC times to local for display
+      const startUtc = silenceConfig.start_time as string;
+      const endUtc = silenceConfig.end_time as string;
+      
+      if (startUtc && endUtc) {
+        const startLocal = utcToLocalTime(startUtc, userTimezone) || "20:00";
+        const endLocal = utcToLocalTime(endUtc, userTimezone) || "07:00";
+        setSilenceStartTime(startLocal);
+        setSilenceEndTime(endLocal);
+      }
+      
+      setHasChanges(false);
+    }
+  }, [silenceConfig, generalConfig?.timezone]);
+
+  // Update general config mutation
+  const updateGeneralMutation = useMutation({
+    mutationFn: api.updateGeneralConfig,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["generalConfig"] });
+      queryClient.invalidateQueries({ queryKey: ["config"] });
+      toast.success("Settings saved successfully");
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to save settings: ${error.message}`);
+    },
+  });
+
+  // Update silence schedule mutation
+  const updateSilenceMutation = useMutation({
+    mutationFn: (data: Record<string, unknown>) => 
+      api.updateFeatureConfig("silence_schedule", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["features-config"] });
+      queryClient.invalidateQueries({ queryKey: ["config"] });
+      toast.success("Settings saved successfully");
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to save silence schedule: ${error.message}`);
+    },
+  });
+
+  const handleTimezoneChange = (newTimezone: string) => {
+    setTimezone(newTimezone);
+    setHasChanges(true);
+  };
+
+  const handleSilenceToggle = async (checked: boolean) => {
+    setSilenceEnabled(checked);
+    // Immediately save when toggling
+    const startUtc = localTimeToUTC(silenceStartTime, timezone);
+    const endUtc = localTimeToUTC(silenceEndTime, timezone);
+    
+    if (startUtc && endUtc) {
+      await updateSilenceMutation.mutateAsync({
+        enabled: checked,
+        start_time: startUtc,
+        end_time: endUtc,
+      });
+    }
+  };
+
+  const handleSilenceTimeChange = (field: "start" | "end", value: string) => {
+    if (field === "start") {
+      setSilenceStartTime(value);
+    } else {
+      setSilenceEndTime(value);
+    }
+    setHasChanges(true);
+  };
+
+  const handleSave = async () => {
+    const promises = [];
+    
+    // Save timezone if changed
+    promises.push(
+      updateGeneralMutation.mutateAsync({ timezone })
+    );
+    
+    // Save silence schedule if changed
+    const startUtc = localTimeToUTC(silenceStartTime, timezone);
+    const endUtc = localTimeToUTC(silenceEndTime, timezone);
+    
+    if (startUtc && endUtc) {
+      promises.push(
+        updateSilenceMutation.mutateAsync({
+          enabled: silenceEnabled,
+          start_time: startUtc,
+          end_time: endUtc,
+        })
+      );
+    }
+    
+    await Promise.all(promises);
+    setHasChanges(false);
+  };
+
+  const handleDevModeToggle = async (checked: boolean) => {
+    try {
+      const result = await devModeMutation.mutateAsync(checked);
+      toast.success(result.message || `Dev mode ${checked ? "enabled" : "disabled"}`);
+    } catch {
+      toast.error("Failed to toggle dev mode");
+    }
+  };
+
+  // Get current time in selected timezone for display
+  const getCurrentTimeInTimezone = () => {
+    try {
+      const now = new Date();
+      return formatInTimeZone(now, timezone, "h:mm:ss a zzz");
+    } catch {
+      return "Invalid timezone";
+    }
+  };
+
+  const isLoading = isLoadingConfig || isLoadingStatus || isLoadingSilence;
+  const isRunning = status?.running ?? false;
+  const devMode = status?.config_summary?.dev_mode ?? false;
+  const isSaving = updateGeneralMutation.isPending || updateSilenceMutation.isPending;
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            General Settings
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-[400px] w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              General Settings
+            </CardTitle>
+            <CardDescription>
+              Configure global settings and service control
+            </CardDescription>
+          </div>
+          <Badge variant={isRunning ? "default" : "secondary"} className="text-xs">
+            {isRunning ? "● Running" : "○ Stopped"}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Dev Mode Toggle */}
+        <div className="flex items-center gap-3 pb-6 border-b">
+          <FlaskConical className="h-4 w-4 text-muted-foreground shrink-0" />
+          <Switch
+            checked={devMode}
+            onCheckedChange={handleDevModeToggle}
+            disabled={devModeMutation.isPending}
+            id="dev-mode"
+          />
+          <label htmlFor="dev-mode" className="text-sm cursor-pointer flex-1">
+            Dev Mode{" "}
+            <span className="text-muted-foreground">
+              {devMode ? "(preview only)" : ""}
+            </span>
+          </label>
+        </div>
+
+        {/* Timezone Setting */}
+        <div className="space-y-3 pb-6 border-b">
+          <div>
+            <Label htmlFor="timezone" className="text-sm font-medium">
+              Timezone
+            </Label>
+            <p className="text-xs text-muted-foreground mt-1">
+              All times in the application will be displayed in this timezone
+            </p>
+          </div>
+          
+          <TimezonePicker
+            value={timezone}
+            onChange={handleTimezoneChange}
+          />
+          
+          {/* Current time display */}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Clock className="h-4 w-4" />
+            <span>Current time: {getCurrentTimeInTimezone()}</span>
+          </div>
+        </div>
+
+        {/* Silence Schedule */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <Moon className="h-4 w-4 text-muted-foreground shrink-0" />
+            <Switch
+              checked={silenceEnabled}
+              onCheckedChange={handleSilenceToggle}
+              disabled={isSaving}
+              id="silence-enabled"
+            />
+            <div className="flex-1">
+              <label htmlFor="silence-enabled" className="text-sm font-medium cursor-pointer">
+                Silence Schedule
+              </label>
+              <p className="text-xs text-muted-foreground">
+                Prevent Vestaboard updates during specified hours
+              </p>
+            </div>
+          </div>
+
+          {silenceEnabled && (
+            <div className="ml-7 space-y-4 pt-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="silence-start" className="text-xs">Start Time</Label>
+                  <TimePicker
+                    value={silenceStartTime}
+                    onChange={(val) => handleSilenceTimeChange("start", val)}
+                    disabled={isSaving}
+                  />
+                  <p className="text-xs text-muted-foreground">When silence begins</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="silence-end" className="text-xs">End Time</Label>
+                  <TimePicker
+                    value={silenceEndTime}
+                    onChange={(val) => handleSilenceTimeChange("end", val)}
+                    disabled={isSaving}
+                  />
+                  <p className="text-xs text-muted-foreground">When silence ends</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Save Button */}
+        {hasChanges && (
+          <div className="flex justify-end pt-4 border-t">
+            <Button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="gap-2"
+            >
+              <Save className="h-4 w-4" />
+              {isSaving ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+

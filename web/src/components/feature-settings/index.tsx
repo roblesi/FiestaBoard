@@ -502,31 +502,6 @@ const FEATURE_DEFINITIONS: Record<
       { name: "formatted", description: "Pre-formatted message", example: "DOWNTOWN: 25m (+5m)", maxChars: 22, typical: "12-22 chars" },
     ],
   },
-  silence_schedule: {
-    title: "Silence Schedule",
-    description: "Time window when the Vestaboard won't send updates (times are in your local timezone)",
-    icon: Moon,
-    hasRefreshInterval: false,
-    fields: [
-      {
-        key: "start_time",
-        label: "Start Time",
-        type: "time",
-        placeholder: "20:00",
-        required: true,
-        description: "When silence mode starts (local timezone, e.g., 8:00 PM)",
-      },
-      {
-        key: "end_time",
-        label: "End Time",
-        type: "time",
-        placeholder: "07:00",
-        required: true,
-        description: "When silence mode ends (local timezone, e.g., 7:00 AM)",
-      },
-    ],
-    outputs: [], // Silence schedule doesn't have template outputs
-  },
 };
 
 export function FeatureSettings() {

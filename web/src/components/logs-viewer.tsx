@@ -1,6 +1,6 @@
 "use client";
 
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,6 +9,7 @@ import { Copy, RefreshCw, Terminal, Search, Filter, ChevronDown, Loader2 } from 
 import { toast } from "sonner";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { api, LogLevel, LogEntry, LogsResponse } from "@/lib/api";
+import { formatLogTimestamp, formatLogTimestampFull, getTimezoneAbbreviation } from "@/lib/timezone-utils";
 
 const LOG_LEVEL_COLORS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   DEBUG: "secondary",
@@ -28,6 +29,15 @@ export function LogsViewer() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const observerTarget = useRef<HTMLDivElement>(null);
+
+  // Fetch user's configured timezone
+  const { data: generalConfig } = useQuery({
+    queryKey: ["generalConfig"],
+    queryFn: api.getGeneralConfig,
+  });
+
+  const userTimezone = generalConfig?.timezone || "America/Los_Angeles";
+  const timezoneAbbr = getTimezoneAbbreviation(userTimezone);
 
   // Debounce search input
   useEffect(() => {
@@ -99,21 +109,11 @@ export function LogsViewer() {
     if (!allLogs.length) return;
 
     const logsText = allLogs
-      .map((log) => `[${log.timestamp}] ${log.level} - ${log.logger} - ${log.message}`)
+      .map((log) => `[${formatLogTimestampFull(log.timestamp, userTimezone)}] ${log.level} - ${log.logger} - ${log.message}`)
       .join("\n");
 
     navigator.clipboard.writeText(logsText);
     toast.success("Logs copied to clipboard");
-  };
-
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  };
-
-  const formatFullTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
-    return date.toLocaleString();
   };
 
   if (isLoading) {
@@ -144,6 +144,9 @@ export function LogsViewer() {
               <Badge variant="secondary" className="text-xs">
                 {totalLogs}
               </Badge>
+              <span className="text-xs text-muted-foreground font-normal">
+                ({timezoneAbbr})
+              </span>
             </CardTitle>
             <div className="flex gap-2 flex-wrap">
               <Button
@@ -222,7 +225,11 @@ export function LogsViewer() {
             {allLogs.length > 0 ? (
               <>
                 {allLogs.map((log, idx) => (
-                  <LogRow key={`${log.timestamp}-${idx}`} log={log} formatTimestamp={formatTimestamp} formatFullTimestamp={formatFullTimestamp} />
+                  <LogRow 
+                    key={`${log.timestamp}-${idx}`} 
+                    log={log} 
+                    userTimezone={userTimezone}
+                  />
                 ))}
 
                 {/* Intersection observer target */}
@@ -265,20 +272,18 @@ export function LogsViewer() {
 // Separate component for log row to optimize rendering
 function LogRow({
   log,
-  formatTimestamp,
-  formatFullTimestamp,
+  userTimezone,
 }: {
   log: LogEntry;
-  formatTimestamp: (ts: string) => string;
-  formatFullTimestamp: (ts: string) => string;
+  userTimezone: string;
 }) {
   return (
     <div
       className="flex flex-wrap sm:flex-nowrap gap-1 sm:gap-2 hover:bg-muted/50 px-1.5 py-1 sm:py-0.5 rounded group"
-      title={formatFullTimestamp(log.timestamp)}
+      title={formatLogTimestampFull(log.timestamp, userTimezone)}
     >
       <span className="text-muted-foreground shrink-0 tabular-nums">
-        {formatTimestamp(log.timestamp)}
+        {formatLogTimestamp(log.timestamp, userTimezone)}
       </span>
       <Badge
         variant={LOG_LEVEL_COLORS[log.level] || "secondary"}
