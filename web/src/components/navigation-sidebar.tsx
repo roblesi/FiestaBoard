@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Home, FileText, Settings, Terminal, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -59,6 +60,13 @@ export function NavigationSidebar() {
       <header className="lg:hidden fixed top-0 left-0 right-0 z-[100] border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-2 min-w-0 flex-1">
+            <Image
+              src="/icons/favicon-32x32.png"
+              alt="FiestaBoard"
+              width={32}
+              height={32}
+              className="flex-shrink-0"
+            />
             <h1 className="text-lg font-semibold tracking-tight whitespace-nowrap truncate">FiestaBoard</h1>
             <ServiceStatus />
           </div>
@@ -127,7 +135,16 @@ export function NavigationSidebar() {
         <div className="flex h-full flex-col">
           {/* Header */}
           <div className="flex items-center justify-between border-b px-6 py-4">
-            <h1 className="text-xl font-semibold tracking-tight">FiestaBoard</h1>
+            <div className="flex items-center gap-2">
+              <Image
+                src="/icons/favicon-32x32.png"
+                alt="FiestaBoard"
+                width={32}
+                height={32}
+                className="flex-shrink-0"
+              />
+              <h1 className="text-xl font-semibold tracking-tight">FiestaBoard</h1>
+            </div>
             <ServiceStatus />
           </div>
 

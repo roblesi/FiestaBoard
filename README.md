@@ -345,7 +345,7 @@ MIT
 
 ## Screenshots
 
-The Vestaboard displays various screens in rotation:
+The Vestaboard can display various screens:
 
 - **Weather + DateTime**: Current conditions with temperature and text-based weather icons
 - **Home Assistant**: House status with green ([G]) and red ([R]) indicators

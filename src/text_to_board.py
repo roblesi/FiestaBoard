@@ -25,12 +25,13 @@ COLOR_CODES = {
     "black": 70,
 }
 
-# Parse color markers: {63}, {red}, {/red}, {/}
+# Parse color markers: {63}, {red}, {/red}, {/} - each produces a single colored tile
+# Note: Single brackets are used after template normalization to avoid conflicting with {{variable}} syntax
 COLOR_MARKER_PATTERN = re.compile(
     r'\{(?:'
     r'(6[3-9]|70)|'  # Numeric codes 63-70
     r'(red|orange|yellow|green|blue|violet|purple|white|black)|'  # Named colors
-    r'/(red|orange|yellow|green|blue|violet|purple|white|black)?'  # End tags
+    r'(/(?:red|orange|yellow|green|blue|violet|purple|white|black)?)'  # End tags {/} or {/red}
     r')\}',
     re.IGNORECASE
 )
@@ -76,7 +77,7 @@ def text_to_board_array(text: str, use_color_tiles: bool = True) -> List[List[in
                 # Color marker found
                 numeric_code = match.group(1)
                 named_color = match.group(2)
-                end_tag = match.group(3) is not None or (match.group(0) == "{/}")
+                end_tag = match.group(3)
                 
                 if end_tag:
                     # End tags are ignored (just skip them)

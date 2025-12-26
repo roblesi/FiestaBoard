@@ -4,7 +4,7 @@ Vestaboard supports:
 - Characters: A-Z, 0-9, and limited punctuation (codes 0-62)
 - Color tiles: Red, Orange, Yellow, Green, Blue, Violet, White, Black (codes 63-70)
 
-Color markers like {red} or {66} create SOLID COLOR TILES, not colored text.
+Color markers like {{red}} or {{66}} create SOLID COLOR TILES, not colored text.
 Use them as decorative indicators followed by a space, e.g., "{green} SSID: network"
 """
 
@@ -125,7 +125,7 @@ class MessageFormatter:
         lines = []
         
         # Header with violet tile indicator for music
-        lines.append("{violet} Now Playing")
+        lines.append("{{violet}} Now Playing")
         
         # Artist and Track
         artist = music_data.get("artist", "")
@@ -171,16 +171,16 @@ class MessageFormatter:
         lines = []
         
         # Header with green tile indicator
-        lines.append("{green} Guest WiFi")
+        lines.append("{{green}} Guest WiFi")
         lines.append("")
         
         # SSID with blue tile indicator
-        ssid_line = f"{{blue}} {ssid}"
-        lines.append(ssid_line[:self.MAX_COLS + 6])  # +6 for {blue} marker
+        ssid_line = f"{{{{blue}}}} {ssid}"
+        lines.append(ssid_line[:self.MAX_COLS + 8])  # +8 for {{blue}} marker
         
         # Password with violet tile indicator
-        pass_line = f"{{violet}} {password}"
-        lines.append(pass_line[:self.MAX_COLS + 8])  # +8 for {violet} marker
+        pass_line = f"{{{{violet}}}} {password}"
+        lines.append(pass_line[:self.MAX_COLS + 10])  # +10 for {{violet}} marker
         
         # Ensure we don't exceed 6 rows
         return "\n".join(lines[:self.MAX_ROWS])
@@ -208,9 +208,9 @@ class MessageFormatter:
         
         # Series name and color mapping
         series_config = {
-            "tng": {"name": "TNG", "color": "{yellow}"},
-            "voyager": {"name": "VOY", "color": "{blue}"},
-            "ds9": {"name": "DS9", "color": "{red}"}
+            "tng": {"name": "TNG", "color": "{{yellow}}"},
+            "voyager": {"name": "VOY", "color": "{{blue}}"},
+            "ds9": {"name": "DS9", "color": "{{red}}"}
         }
         config = series_config.get(series, {"name": series.upper(), "color": ""})
         series_display = config["name"]
@@ -268,24 +268,24 @@ class MessageFormatter:
             
             # Determine status text and color indicator
             if error or state == "unavailable":
-                indicator = "{yellow}"  # Warning/unknown
+                indicator = "{{yellow}}"  # Warning/unknown
                 status_text = "?"
             elif state in ["on", "open", "unlocked"]:
-                indicator = "{red}"  # Needs attention
+                indicator = "{{red}}"  # Needs attention
                 # Convert to friendly text
                 if state == "on" and ("door" in entity_id.lower() or "window" in entity_id.lower()):
                     status_text = "open"
                 else:
                     status_text = state
             elif state in ["off", "closed", "locked"]:
-                indicator = "{green}"  # Secure/good
+                indicator = "{{green}}"  # Secure/good
                 # Convert to friendly text
                 if state == "off" and ("door" in entity_id.lower() or "window" in entity_id.lower()):
                     status_text = "closed"
                 else:
                     status_text = state
             else:
-                indicator = "{yellow}"  # Unknown state
+                indicator = "{{yellow}}"  # Unknown state
                 status_text = state[:6]  # Truncate unknown states
             
             # Format: "{color} Name: status"
@@ -384,20 +384,20 @@ class MessageFormatter:
             temp: Temperature in Fahrenheit
             
         Returns:
-            Color marker string (e.g., "{red}" for hot)
+            Color marker string (e.g., "{{red}}" for hot)
         """
         if temp >= 90:
-            return "{red}"     # Very hot
+            return "{{red}}"     # Very hot
         elif temp >= 80:
-            return "{orange}"  # Hot
+            return "{{orange}}"  # Hot
         elif temp >= 70:
-            return "{yellow}"  # Warm
+            return "{{yellow}}"  # Warm
         elif temp >= 60:
-            return "{green}"   # Comfortable
+            return "{{green}}"   # Comfortable
         elif temp >= 45:
-            return "{blue}"    # Cool
+            return "{{blue}}"    # Cool
         else:
-            return "{violet}"  # Cold
+            return "{{violet}}"  # Cold
     
     def split_into_lines(self, text: str, max_lines: int = MAX_ROWS) -> List[str]:
         """
@@ -467,9 +467,9 @@ class MessageFormatter:
         
         # Header with transit icon indicator
         if is_delayed:
-            lines.append("{red} MUNI Transit")
+            lines.append("{{red}} MUNI Transit")
         else:
-            lines.append("{blue} MUNI Transit")
+            lines.append("{{blue}} MUNI Transit")
         
         # Stop name (if available and fits)
         if stop_name:
@@ -484,7 +484,7 @@ class MessageFormatter:
                 
                 if is_full:
                     # Orange marker for full trains
-                    times.append(f"{{orange}}{mins}")
+                    times.append(f"{{{{orange}}}}{mins}")
                 else:
                     times.append(str(mins))
             
@@ -499,7 +499,7 @@ class MessageFormatter:
             
             # Apply delay color if needed
             if is_delayed:
-                arrival_line = f"{{red}}{arrival_line}"
+                arrival_line = f"{{{{red}}}}{arrival_line}"
             
             lines.append(arrival_line[:self.MAX_COLS + 10])  # Account for color markers
         else:

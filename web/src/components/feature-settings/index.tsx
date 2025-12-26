@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
-import { api, FeaturesConfig } from "@/lib/api";
+import { api, FeaturesConfig, FeatureName } from "@/lib/api";
 import { FeatureCard, FeatureField } from "./feature-card";
 import {
   Cloud,
@@ -11,7 +11,6 @@ import {
   Music,
   Wifi,
   Sparkles,
-  RotateCw,
   Wind,
   TrainFront,
   Waves,
@@ -387,21 +386,6 @@ const FEATURE_DEFINITIONS: Record<
     defaultRefreshSeconds: 60,
     fields: [
       {
-        key: "station_id",
-        label: "Station ID",
-        type: "text",
-        placeholder: "e.g., abc123",
-        required: true,
-        description: "GBFS station ID from Bay Wheels",
-      },
-      {
-        key: "station_name",
-        label: "Display Name",
-        type: "text",
-        placeholder: "19th St Station",
-        description: "Friendly name for the station",
-      },
-      {
         key: "refresh_seconds",
         label: "Refresh Interval (seconds)",
         type: "number",
@@ -410,11 +394,22 @@ const FEATURE_DEFINITIONS: Record<
       },
     ],
     outputs: [
-      { name: "electric_bikes", description: "Electric bikes available", example: "5", maxChars: 2, typical: "1-2 digits" },
-      { name: "classic_bikes", description: "Classic bikes available", example: "8", maxChars: 2, typical: "1-2 digits" },
-      { name: "num_bikes_available", description: "Total bikes", example: "13", maxChars: 2, typical: "1-2 digits" },
-      { name: "station_name", description: "Station name", example: "19TH", maxChars: 10, typical: "4-10 chars" },
-      { name: "status_color", description: "Availability color", example: "{66}", maxChars: 4, typical: "Color tile" },
+      { name: "electric_bikes", description: "Electric bikes (first station)", example: "5", maxChars: 2, typical: "1-2 digits" },
+      { name: "classic_bikes", description: "Classic bikes (first station)", example: "8", maxChars: 2, typical: "1-2 digits" },
+      { name: "num_bikes_available", description: "Total bikes (first station)", example: "13", maxChars: 2, typical: "1-2 digits" },
+      { name: "station_name", description: "Station name (first station)", example: "19TH", maxChars: 10, typical: "4-10 chars" },
+      { name: "status_color", description: "Availability color (first station)", example: "{66}", maxChars: 4, typical: "Color tile" },
+      { name: "total_electric", description: "Total e-bikes (all stations)", example: "15", maxChars: 2, typical: "1-2 digits" },
+      { name: "total_classic", description: "Total classic bikes (all stations)", example: "20", maxChars: 2, typical: "1-2 digits" },
+      { name: "total_bikes", description: "Total bikes (all stations)", example: "35", maxChars: 2, typical: "1-2 digits" },
+      { name: "station_count", description: "Number of tracked stations", example: "3", maxChars: 1, typical: "1 digit" },
+      { name: "best_station_name", description: "Station with most e-bikes", example: "19TH ST", maxChars: 10, typical: "4-10 chars" },
+      { name: "best_station_electric", description: "E-bikes at best station", example: "8", maxChars: 2, typical: "1-2 digits" },
+      { name: "stations.0.electric_bikes", description: "E-bikes at first station", example: "5", maxChars: 2, typical: "1-2 digits" },
+      { name: "stations.0.station_name", description: "Name of first station", example: "19TH ST", maxChars: 10, typical: "4-10 chars" },
+      { name: "stations.1.electric_bikes", description: "E-bikes at second station", example: "3", maxChars: 2, typical: "1-2 digits" },
+      { name: "stations.2.electric_bikes", description: "E-bikes at third station", example: "7", maxChars: 2, typical: "1-2 digits" },
+      { name: "stations.3.electric_bikes", description: "E-bikes at fourth station", example: "2", maxChars: 2, typical: "1-2 digits" },
     ],
   },
   traffic: {
@@ -472,22 +467,6 @@ const FEATURE_DEFINITIONS: Record<
       { name: "formatted", description: "Pre-formatted message", example: "DOWNTOWN: 25m (+5m)", maxChars: 22, typical: "12-22 chars" },
     ],
   },
-  rotation: {
-    title: "Rotation",
-    description: "Rotate between displays",
-    icon: RotateCw,
-    hasRefreshInterval: false,
-    fields: [
-      {
-        key: "default_duration",
-        label: "Default Duration (seconds)",
-        type: "number",
-        placeholder: "300",
-        description: "How long each display shows before rotating",
-      },
-    ],
-    outputs: [], // Rotation doesn't have template outputs
-  },
 };
 
 export function FeatureSettings() {
@@ -517,7 +496,7 @@ export function FeatureSettings() {
         return (
           <FeatureCard
             key={featureName}
-            featureName={featureName as keyof FeaturesConfig}
+            featureName={featureName as FeatureName}
             title={definition.title}
             description={definition.description}
             icon={definition.icon}

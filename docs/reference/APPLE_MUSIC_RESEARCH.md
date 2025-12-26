@@ -203,7 +203,7 @@ iPhone/Mac → Shortcuts → Webhook → Docker Service → Vestaboard
    - No track playing
    - Streaming content issues
 4. Format output for Vestaboard (6x22 grid)
-5. Add to message rotation
+5. Display on Vestaboard
 
 ### Phase 2: Hybrid Approach (if Linux Docker)
 

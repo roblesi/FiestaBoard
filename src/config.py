@@ -158,20 +158,6 @@ class Config:
         """Refresh interval in seconds."""
         return cls._get_general().get("refresh_interval_seconds", 300)
     
-    # ==================== Rotation Configuration ====================
-    
-    @classmethod
-    @property
-    def ROTATION_ENABLED(cls) -> bool:
-        """Whether rotation is enabled."""
-        return cls._get_feature("rotation").get("enabled", True)
-    
-    @classmethod
-    @property
-    def ROTATION_DEFAULT_DURATION(cls) -> int:
-        """Default rotation duration in seconds."""
-        return cls._get_feature("rotation").get("default_duration", 300)
-    
     # ==================== Star Trek Quotes Configuration ====================
     
     @classmethod
@@ -391,13 +377,42 @@ class Config:
     @classmethod
     @property
     def BAYWHEELS_STATION_ID(cls) -> str:
-        """Bay Wheels station ID to monitor."""
+        """Bay Wheels station ID to monitor (backward compatibility - returns first ID)."""
+        station_ids = cls.BAYWHEELS_STATION_IDS
+        if station_ids:
+            return station_ids[0] if isinstance(station_ids, list) else station_ids
+        # Fallback to old config format
         return cls._get_feature("baywheels").get("station_id", "")
     
     @classmethod
     @property
+    def BAYWHEELS_STATION_IDS(cls) -> List[str]:
+        """Bay Wheels station IDs to monitor (list)."""
+        feature_config = cls._get_feature("baywheels")
+        
+        # Check for new station_ids array format
+        station_ids = feature_config.get("station_ids")
+        if station_ids:
+            if isinstance(station_ids, list):
+                return station_ids
+            elif isinstance(station_ids, str):
+                return [station_ids]
+        
+        # Fallback to old station_id format for backward compatibility
+        station_id = feature_config.get("station_id", "")
+        if station_id:
+            # Migrate single station_id to array format
+            if isinstance(station_id, list):
+                return station_id
+            elif isinstance(station_id, str):
+                return [station_id]
+        
+        return []
+    
+    @classmethod
+    @property
     def BAYWHEELS_STATION_NAME(cls) -> str:
-        """Display name for the Bay Wheels station."""
+        """Display name for the Bay Wheels station (backward compatibility)."""
         return cls._get_feature("baywheels").get("station_name", "19TH")
     
     @classmethod
@@ -502,7 +517,6 @@ class Config:
             # Service enabled flags (for UI display)
             "datetime_enabled": cls.DATETIME_ENABLED,
             "weather_enabled": cls.WEATHER_ENABLED and bool(cls.WEATHER_API_KEY),
-            "rotation_enabled": cls.ROTATION_ENABLED,
             "apple_music_enabled": cls.APPLE_MUSIC_ENABLED,
             "guest_wifi_enabled": cls.GUEST_WIFI_ENABLED,
             "home_assistant_enabled": cls.HOME_ASSISTANT_ENABLED,

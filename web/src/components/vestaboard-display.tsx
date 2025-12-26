@@ -13,7 +13,8 @@ function parseLine(line: string): Token[] {
   let i = 0;
   
   while (i < line.length) {
-    // Check for color markers: {63}, {red}, {/red}, {/}
+    // Check for single-bracket color markers: {63}, {red}, {/red}, {/}
+    // (After template rendering, colors are normalized to single brackets)
     if (line[i] === "{") {
       const closingBrace = line.indexOf("}", i);
       if (closingBrace !== -1) {

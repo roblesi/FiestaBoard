@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { VariablePicker } from "@/components/variable-picker";
 import { VestaboardDisplay } from "@/components/vestaboard-display";
-import { TemplateLineEditor } from "@/components/template-line-editor";
 import {
   Sheet,
   SheetContent,
@@ -107,9 +106,10 @@ function calculateMaxLineLength(line: string, maxLengths: Record<string, number>
 
   let result = line;
 
-  // Remove color markers (they become single tiles, count as 1 char each)
-  result = result.replace(/\{(red|orange|yellow|green|blue|violet|purple|white|black|6[3-9]|70)\}/gi, "C");
-  result = result.replace(/\{\/(red|orange|yellow|green|blue|violet|purple|white|black)?\}/gi, "");
+  // Remove color markers from user input (double brackets in template, single brackets after render)
+  // In templates users type {{red}}, but we count them the same as the rendered {63}
+  result = result.replace(/\{\{(red|orange|yellow|green|blue|violet|purple|white|black|6[3-9]|70)\}\}/gi, "C");
+  result = result.replace(/\{\{\/(red|orange|yellow|green|blue|violet|purple|white|black)?\}\}/gi, "");
 
   // Replace symbols with placeholder (1-2 chars)
   result = result.replace(/\{(sun|star|cloud|rain|snow|storm|fog|partly|heart|check|x)\}/gi, "XX");
@@ -149,7 +149,6 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
   const [preview, setPreview] = useState<string | null>(null);
   const [showMobileVariablePicker, setShowMobileVariablePicker] = useState(false);
   const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null);
-  const [isRawMode, setIsRawMode] = useState(false);
   
   // Transition settings state
   const [transitionStrategy, setTransitionStrategy] = useState<string | null>(null);
@@ -322,6 +321,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
     }, 500); // 500ms debounce
 
     return () => clearTimeout(timeoutId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templateLines, lineAlignments]);
 
   // Insert variable/text - appends to the active line
@@ -418,57 +418,18 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
 
             {/* Template line editors */}
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-xs sm:text-sm font-medium">Template Lines</label>
-                {/* View mode toggle */}
-                <div className="flex items-center gap-1.5 bg-muted/50 rounded-md p-0.5">
-                  <button
-                    type="button"
-                    onClick={() => setIsRawMode(false)}
-                    className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-colors ${
-                      !isRawMode
-                        ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                    title="Visual editor with badges"
-                  >
-                    <FileText className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Visual</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsRawMode(true)}
-                    className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-colors ${
-                      isRawMode
-                        ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                    title="Raw template syntax"
-                  >
-                    <Braces className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Raw</span>
-                  </button>
-                </div>
-              </div>
+              <label className="text-xs sm:text-sm font-medium">Template Lines</label>
 
               {/* Helper text */}
               <div className="p-2 sm:p-3 bg-muted/50 rounded-md text-xs space-y-1">
                 <div className="flex items-start gap-2 text-muted-foreground">
                   <Info className="h-3 w-3 mt-0.5 shrink-0" />
-                  {isRawMode ? (
-                    <span>Edit raw template syntax. Use {"{{variable}}"} for variables and {"{color}"} for colors. Alignment prefixes: {"{center}"}, {"{right}"}.</span>
-                  ) : (
-                    <>
-                      <span className="hidden sm:inline">Click or drag variables from the sidebar. Badges can be reordered by dragging.</span>
-                      <span className="sm:hidden">Tap &quot;Variables&quot; button to insert template variables.</span>
-                    </>
-                  )}
+                  <span>Type template syntax like {"{{weather.temp}}"} or {"{{red}}"} for color tiles. Click variables in sidebar to insert them.</span>
                 </div>
               </div>
 
-              {/* Visual Editor - 6 template lines */}
-              {!isRawMode && (
-                <div className="flex flex-col gap-2 sm:gap-2 w-full">
+              {/* Template lines */}
+              <div className="flex flex-col gap-2 sm:gap-2 w-full">
                   {templateLines.map((line, i) => {
                     const maxLengths = variablesData?.max_lengths || {};
                     const warning = getLineLengthWarning(line, maxLengths);
@@ -482,17 +443,23 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
                         {/* Combined input + alignment buttons container */}
                         <div className="flex flex-1 min-w-0">
                           <div className="flex-1 relative min-w-0">
-                            <TemplateLineEditor
+                            <input
+                              type="text"
                               value={line}
-                              onChange={(newValue) => {
+                              onChange={(e) => {
                                 const newLines = [...templateLines];
-                                newLines[i] = newValue;
+                                newLines[i] = e.target.value;
                                 setTemplateLines(newLines);
                               }}
                               onFocus={() => setActiveLineIndex(i)}
-                              placeholder={`Line ${i + 1}`}
-                              isActive={activeLineIndex === i}
-                              hasWarning={warning.hasWarning}
+                              placeholder={`Line ${i + 1} - Use {{variable}} syntax`}
+                              className={`w-full min-w-0 min-h-[2.25rem] sm:min-h-[2rem] px-2 sm:px-3 py-1.5 text-sm font-mono rounded-l border-y border-l bg-background transition-colors focus:outline-none ${
+                                activeLineIndex === i 
+                                  ? "border-primary ring-1 ring-primary" 
+                                  : warning.hasWarning 
+                                    ? "border-yellow-500" 
+                                    : "border-input"
+                              }`}
                             />
                             {warning.hasWarning && (
                               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none" title={`Line may render up to ${warning.maxLength} chars (max 22)`}>
@@ -556,47 +523,6 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
                     );
                   })}
                 </div>
-              )}
-
-              {/* Raw Editor - textarea with line numbers */}
-              {isRawMode && (
-                <div className="w-full">
-                  <div className="flex rounded-md border bg-background overflow-hidden focus-within:ring-1 focus-within:ring-primary">
-                    {/* Line numbers */}
-                    <div className="flex flex-col py-2 px-2 bg-muted/30 border-r text-xs font-mono text-muted-foreground select-none shrink-0">
-                      {[1, 2, 3, 4, 5, 6].map((num) => (
-                        <div key={num} className="h-[1.625rem] flex items-center justify-end pr-1 min-w-[1.5rem]">
-                          {num}
-                        </div>
-                      ))}
-                    </div>
-                    {/* Textarea - no word wrap for proper line number alignment */}
-                    <div className="flex-1 overflow-x-auto">
-                      <textarea
-                        value={getRawText()}
-                        onChange={(e) => parseRawText(e.target.value)}
-                        onKeyDown={(e) => {
-                          // Prevent Enter if already at 6 lines
-                          if (e.key === "Enter") {
-                            const currentLines = getRawText().split("\n").length;
-                            if (currentLines >= 6) {
-                              e.preventDefault();
-                            }
-                          }
-                        }}
-                        placeholder={`Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6`}
-                        rows={6}
-                        spellCheck={false}
-                        wrap="off"
-                        className="w-full min-w-full px-3 py-2 text-sm font-mono bg-transparent resize-none focus:outline-none leading-[1.625rem] whitespace-pre overflow-x-auto"
-                      />
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1.5">
-                    Each line corresponds to a row on the Vestaboard (max 22 characters rendered).
-                  </p>
-                </div>
-              )}
 
               {/* Live preview */}
               <div className="mt-4">

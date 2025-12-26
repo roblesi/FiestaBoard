@@ -24,8 +24,6 @@ from .settings.service import get_settings_service, VALID_STRATEGIES, VALID_OUTP
 from .pages.service import get_page_service, DeleteResult
 from .pages.models import PageCreate, PageUpdate
 from .templates.engine import get_template_engine
-from .rotations.service import get_rotation_service
-from .rotations.models import RotationCreate, RotationUpdate
 from .text_to_board import text_to_board_array
 
 logger = logging.getLogger(__name__)
@@ -832,6 +830,229 @@ async def send_display(
 
 
 # =============================================================================
+# Bay Wheels Station Search Endpoints
+# =============================================================================
+
+@app.get("/baywheels/stations")
+async def list_all_baywheels_stations():
+    """
+    List all Bay Wheels stations with current status.
+    
+    Returns all stations from the GBFS feed with their current bike availability.
+    """
+    from src.data_sources.baywheels import BayWheelsSource, STATION_STATUS_URL
+    import requests
+    
+    try:
+        # Get station information
+        station_info = BayWheelsSource._get_station_information()
+        
+        # Get current status
+        response = requests.get(STATION_STATUS_URL, timeout=10)
+        response.raise_for_status()
+        status_data = response.json()
+        stations_status = {s.get("station_id"): s for s in status_data.get("data", {}).get("stations", [])}
+        
+        # Combine information and status
+        result = []
+        for station_id, info in (station_info or {}).items():
+            status = stations_status.get(station_id, {})
+            
+            # Count bike types
+            electric = 0
+            classic = 0
+            for vt in status.get("vehicle_types_available", []):
+                vt_id = vt.get("vehicle_type_id", "").lower()
+                count = vt.get("count", 0)
+                if "electric" in vt_id or "boost" in vt_id:
+                    electric += count
+                elif "classic" in vt_id:
+                    classic += count
+                else:
+                    classic += count
+            
+            result.append({
+                "station_id": station_id,
+                "name": info.get("name", station_id),
+                "lat": info.get("lat"),
+                "lon": info.get("lon"),
+                "address": info.get("address", ""),
+                "capacity": info.get("capacity", 0),
+                "num_bikes_available": status.get("num_bikes_available", 0),
+                "electric_bikes": electric,
+                "classic_bikes": classic,
+                "num_docks_available": status.get("num_docks_available", 0),
+                "is_renting": status.get("is_renting", 1) == 1,
+            })
+        
+        return {
+            "stations": result,
+            "total": len(result)
+        }
+    except Exception as e:
+        logger.error(f"Error listing Bay Wheels stations: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/baywheels/stations/nearby")
+async def find_nearby_baywheels_stations(
+    lat: float = Query(..., description="Latitude"),
+    lng: float = Query(..., description="Longitude"),
+    radius: float = Query(2.0, description="Search radius in kilometers"),
+    limit: int = Query(10, description="Maximum number of results")
+):
+    """
+    Find Bay Wheels stations near a location.
+    
+    Args:
+        lat: Latitude
+        lng: Longitude
+        radius: Search radius in kilometers (default 2.0)
+        limit: Maximum number of results (default 10)
+    
+    Returns:
+        List of nearby stations sorted by distance
+    """
+    from src.data_sources.baywheels import BayWheelsSource, STATION_STATUS_URL
+    import requests
+    
+    try:
+        stations = BayWheelsSource.find_stations_near_location(lat, lng, radius, limit)
+        
+        # Get current status for these stations
+        response = requests.get(STATION_STATUS_URL, timeout=10)
+        response.raise_for_status()
+        status_data = response.json()
+        stations_status = {s.get("station_id"): s for s in status_data.get("data", {}).get("stations", [])}
+        
+        # Add status information to each station
+        for station in stations:
+            station_id = station["station_id"]
+            status = stations_status.get(station_id, {})
+            
+            # Count bike types
+            electric = 0
+            classic = 0
+            for vt in status.get("vehicle_types_available", []):
+                vt_id = vt.get("vehicle_type_id", "").lower()
+                count = vt.get("count", 0)
+                if "electric" in vt_id or "boost" in vt_id:
+                    electric += count
+                elif "classic" in vt_id:
+                    classic += count
+                else:
+                    classic += count
+            
+            station["num_bikes_available"] = status.get("num_bikes_available", 0)
+            station["electric_bikes"] = electric
+            station["classic_bikes"] = classic
+            station["num_docks_available"] = status.get("num_docks_available", 0)
+            station["is_renting"] = status.get("is_renting", 1) == 1
+        
+        return {
+            "stations": stations,
+            "count": len(stations),
+            "search_location": {"lat": lat, "lng": lng},
+            "radius_km": radius
+        }
+    except Exception as e:
+        logger.error(f"Error finding nearby Bay Wheels stations: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/baywheels/stations/search")
+async def search_baywheels_stations_by_address(
+    address: str = Query(..., description="Address to search near"),
+    radius: float = Query(2.0, description="Search radius in kilometers"),
+    limit: int = Query(10, description="Maximum number of results")
+):
+    """
+    Find Bay Wheels stations near an address.
+    
+    Uses OpenStreetMap Nominatim for geocoding (free, no API key required).
+    
+    Args:
+        address: Address string (e.g., "123 Main St, San Francisco, CA")
+        radius: Search radius in kilometers (default 2.0)
+        limit: Maximum number of results (default 10)
+    
+    Returns:
+        List of nearby stations sorted by distance
+    """
+    from src.data_sources.baywheels import BayWheelsSource, STATION_STATUS_URL
+    import requests
+    
+    try:
+        # Geocode address using Nominatim
+        geocode_url = "https://nominatim.openstreetmap.org/search"
+        geocode_params = {
+            "q": address,
+            "format": "json",
+            "limit": 1
+        }
+        
+        geocode_response = requests.get(geocode_url, params=geocode_params, timeout=10)
+        geocode_response.raise_for_status()
+        geocode_data = geocode_response.json()
+        
+        if not geocode_data:
+            raise HTTPException(status_code=404, detail=f"Address not found: {address}")
+        
+        location = geocode_data[0]
+        lat = float(location["lat"])
+        lng = float(location["lon"])
+        
+        # Find nearby stations
+        stations = BayWheelsSource.find_stations_near_location(lat, lng, radius, limit)
+        
+        # Get current status for these stations
+        response = requests.get(STATION_STATUS_URL, timeout=10)
+        response.raise_for_status()
+        status_data = response.json()
+        stations_status = {s.get("station_id"): s for s in status_data.get("data", {}).get("stations", [])}
+        
+        # Add status information to each station
+        for station in stations:
+            station_id = station["station_id"]
+            status = stations_status.get(station_id, {})
+            
+            # Count bike types
+            electric = 0
+            classic = 0
+            for vt in status.get("vehicle_types_available", []):
+                vt_id = vt.get("vehicle_type_id", "").lower()
+                count = vt.get("count", 0)
+                if "electric" in vt_id or "boost" in vt_id:
+                    electric += count
+                elif "classic" in vt_id:
+                    classic += count
+                else:
+                    classic += count
+            
+            station["num_bikes_available"] = status.get("num_bikes_available", 0)
+            station["electric_bikes"] = electric
+            station["classic_bikes"] = classic
+            station["num_docks_available"] = status.get("num_docks_available", 0)
+            station["is_renting"] = status.get("is_renting", 1) == 1
+        
+        return {
+            "stations": stations,
+            "count": len(stations),
+            "search_address": address,
+            "geocoded_location": {"lat": lat, "lng": lng, "display_name": location.get("display_name", "")},
+            "radius_km": radius
+        }
+    except HTTPException:
+        raise
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error geocoding address: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail=f"Geocoding service unavailable: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error searching Bay Wheels stations: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
 # Settings Endpoints
 # =============================================================================
 
@@ -1226,7 +1447,7 @@ async def get_template_variables():
         "syntax_examples": {
             "variable": "{{weather.temperature}}",
             "variable_with_filter": "{{weather.temperature|pad:3}}",
-            "color_inline": "{red}Warning{/}",
+            "color_inline": "{{red}} Warning {{red}}",
             "color_code": "{63}",
             "symbol": "{sun}",
             "wrap": "{{star_trek.quote|wrap}}",
@@ -1298,134 +1519,6 @@ async def render_template(request: dict):
     except Exception as e:
         logger.error(f"Template rendering error: {e}", exc_info=True)
         raise HTTPException(status_code=400, detail=f"Template rendering failed: {str(e)}")
-
-
-# =============================================================================
-# Rotation Endpoints
-# =============================================================================
-
-@app.get("/rotations")
-async def list_rotations():
-    """List all rotation configurations."""
-    rotation_service = get_rotation_service()
-    rotations = rotation_service.list_rotations()
-    active = rotation_service.get_active_rotation()
-    
-    return {
-        "rotations": [r.model_dump() for r in rotations],
-        "total": len(rotations),
-        "active_rotation_id": active.id if active else None
-    }
-
-
-@app.post("/rotations")
-async def create_rotation(rotation_data: RotationCreate):
-    """
-    Create a new rotation configuration.
-    
-    Rotations define sequences of pages to display with timing.
-    """
-    rotation_service = get_rotation_service()
-    
-    try:
-        rotation = rotation_service.create_rotation(rotation_data)
-        return {
-            "status": "success",
-            "rotation": rotation.model_dump()
-        }
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@app.get("/rotations/active")
-async def get_active_rotation():
-    """Get the currently active rotation and its state."""
-    rotation_service = get_rotation_service()
-    state = rotation_service.get_rotation_state()
-    
-    return state
-
-
-@app.get("/rotations/{rotation_id}")
-async def get_rotation(rotation_id: str):
-    """Get a rotation by ID."""
-    rotation_service = get_rotation_service()
-    rotation = rotation_service.get_rotation(rotation_id)
-    
-    if not rotation:
-        raise HTTPException(status_code=404, detail=f"Rotation not found: {rotation_id}")
-    
-    # Check for missing pages
-    missing = rotation_service.validate_rotation_pages(rotation)
-    
-    return {
-        **rotation.model_dump(),
-        "missing_pages": missing
-    }
-
-
-@app.put("/rotations/{rotation_id}")
-async def update_rotation(rotation_id: str, rotation_data: RotationUpdate):
-    """Update an existing rotation."""
-    rotation_service = get_rotation_service()
-    
-    try:
-        rotation = rotation_service.update_rotation(rotation_id, rotation_data)
-        if not rotation:
-            raise HTTPException(status_code=404, detail=f"Rotation not found: {rotation_id}")
-        
-        return {
-            "status": "success",
-            "rotation": rotation.model_dump()
-        }
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@app.delete("/rotations/{rotation_id}")
-async def delete_rotation(rotation_id: str):
-    """Delete a rotation."""
-    rotation_service = get_rotation_service()
-    
-    if not rotation_service.delete_rotation(rotation_id):
-        raise HTTPException(status_code=404, detail=f"Rotation not found: {rotation_id}")
-    
-    return {"status": "success", "message": f"Rotation {rotation_id} deleted"}
-
-
-@app.post("/rotations/{rotation_id}/activate")
-async def activate_rotation(rotation_id: str):
-    """
-    Activate a rotation.
-    
-    The active rotation determines which pages cycle on the Vestaboard.
-    Validates that all pages in the rotation exist before activating.
-    """
-    rotation_service = get_rotation_service()
-    
-    try:
-        if not rotation_service.activate_rotation(rotation_id):
-            raise HTTPException(status_code=404, detail=f"Rotation not found: {rotation_id}")
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    
-    return {
-        "status": "success",
-        "message": f"Rotation {rotation_id} activated",
-        "state": rotation_service.get_rotation_state()
-    }
-
-
-@app.post("/rotations/deactivate")
-async def deactivate_rotation():
-    """Deactivate the current rotation."""
-    rotation_service = get_rotation_service()
-    rotation_service.deactivate_rotation()
-    
-    return {
-        "status": "success",
-        "message": "Rotation deactivated"
-    }
 
 
 @app.get("/dev-mode")

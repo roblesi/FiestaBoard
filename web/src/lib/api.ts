@@ -21,7 +21,6 @@ export interface ConfigSummary {
   apple_music_enabled: boolean;
   guest_wifi_enabled: boolean;
   star_trek_quotes_enabled: boolean;
-  rotation_enabled: boolean;
   dev_mode: boolean;
   transition_strategy?: string | null;
   transition_interval_ms?: number | null;
@@ -210,53 +209,6 @@ export interface TemplateRenderResponse {
   line_count: number;
 }
 
-// Rotation types
-export interface RotationEntry {
-  page_id: string;
-  duration_override?: number;
-}
-
-export interface Rotation {
-  id: string;
-  name: string;
-  pages: RotationEntry[];
-  default_duration: number;
-  enabled: boolean;
-  created_at: string;
-  updated_at?: string;
-}
-
-export interface RotationCreate {
-  name: string;
-  pages: RotationEntry[];
-  default_duration?: number;
-  enabled?: boolean;
-}
-
-export interface RotationUpdate {
-  name?: string;
-  pages?: RotationEntry[];
-  default_duration?: number;
-  enabled?: boolean;
-}
-
-export interface RotationsResponse {
-  rotations: Rotation[];
-  total: number;
-  active_rotation_id: string | null;
-}
-
-export interface RotationStateResponse {
-  active: boolean;
-  rotation_id: string | null;
-  rotation_name: string | null;
-  current_page_index: number | null;
-  current_page_id: string | null;
-  time_on_page: number | null;
-  page_duration: number | null;
-  total_pages?: number;
-}
-
 // Configuration types
 export interface VestaboardConfig {
   api_mode: "local" | "cloud";
@@ -328,9 +280,25 @@ export interface MuniFeatureConfig {
 
 export interface BayWheelsFeatureConfig {
     enabled: boolean;
-    station_id: string;
-    station_name: string;
+    station_id?: string;  // Backward compatibility
+    station_ids?: string[];  // New multi-station support
+    station_name?: string;  // Backward compatibility
     refresh_seconds: number;
+}
+
+export interface BayWheelsStation {
+    station_id: string;
+    name: string;
+    lat?: number;
+    lon?: number;
+    address?: string;
+    capacity?: number;
+    distance_km?: number;
+    num_bikes_available?: number;
+    electric_bikes?: number;
+    classic_bikes?: number;
+    num_docks_available?: number;
+    is_renting?: boolean;
 }
 
 export interface SurfFeatureConfig {
@@ -349,10 +317,6 @@ export interface TrafficFeatureConfig {
     refresh_seconds: number;
 }
 
-export interface RotationFeatureConfig {
-  enabled: boolean;
-  default_duration: number;
-}
 
 export interface FeaturesConfig {
   weather: WeatherFeatureConfig;
@@ -366,7 +330,6 @@ export interface FeaturesConfig {
   surf: SurfFeatureConfig;
   baywheels: BayWheelsFeatureConfig;
   traffic: TrafficFeatureConfig;
-  rotation: RotationFeatureConfig;
 }
 
 export interface GeneralConfig {
@@ -426,7 +389,11 @@ export type FeatureName =
   | "apple_music"
   | "guest_wifi"
   | "star_trek_quotes"
-  | "rotation";
+  | "baywheels"
+  | "muni"
+  | "surf"
+  | "traffic"
+  | "air_fog";
 
 // API client with typed methods
 async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
@@ -525,31 +492,6 @@ export const api = {
       body: JSON.stringify({ template }),
     }),
 
-  // Rotations endpoints
-  getRotations: () => fetchApi<RotationsResponse>("/rotations"),
-  getRotation: (rotationId: string) =>
-    fetchApi<Rotation & { missing_pages: string[] }>(`/rotations/${rotationId}`),
-  createRotation: (rotation: RotationCreate) =>
-    fetchApi<{ status: string; rotation: Rotation }>("/rotations", {
-      method: "POST",
-      body: JSON.stringify(rotation),
-    }),
-  updateRotation: (rotationId: string, rotation: RotationUpdate) =>
-    fetchApi<{ status: string; rotation: Rotation }>(`/rotations/${rotationId}`, {
-      method: "PUT",
-      body: JSON.stringify(rotation),
-    }),
-  deleteRotation: (rotationId: string) =>
-    fetchApi<ActionResponse>(`/rotations/${rotationId}`, { method: "DELETE" }),
-  activateRotation: (rotationId: string) =>
-    fetchApi<{ status: string; message: string; state: RotationStateResponse }>(
-      `/rotations/${rotationId}/activate`,
-      { method: "POST" }
-    ),
-  deactivateRotation: () =>
-    fetchApi<ActionResponse>("/rotations/deactivate", { method: "POST" }),
-  getActiveRotation: () => fetchApi<RotationStateResponse>("/rotations/active"),
-
   // Logs endpoints
   getLogs: (params: LogsParams = {}) => {
     const searchParams = new URLSearchParams();
@@ -583,4 +525,36 @@ export const api = {
       body: JSON.stringify(config),
     }),
   validateConfig: () => fetchApi<ConfigValidationResponse>("/config/validate"),
+
+  // Bay Wheels station search endpoints
+  listBayWheelsStations: () =>
+    fetchApi<{ stations: BayWheelsStation[]; total: number }>("/baywheels/stations"),
+  findNearbyBayWheelsStations: (lat: number, lng: number, radius?: number, limit?: number) => {
+    const params = new URLSearchParams({
+      lat: lat.toString(),
+      lng: lng.toString(),
+      ...(radius !== undefined && { radius: radius.toString() }),
+      ...(limit !== undefined && { limit: limit.toString() }),
+    });
+    return fetchApi<{
+      stations: BayWheelsStation[];
+      count: number;
+      search_location: { lat: number; lng: number };
+      radius_km: number;
+    }>(`/baywheels/stations/nearby?${params}`);
+  },
+  searchBayWheelsStationsByAddress: (address: string, radius?: number, limit?: number) => {
+    const params = new URLSearchParams({
+      address,
+      ...(radius !== undefined && { radius: radius.toString() }),
+      ...(limit !== undefined && { limit: limit.toString() }),
+    });
+    return fetchApi<{
+      stations: BayWheelsStation[];
+      count: number;
+      search_address: string;
+      geocoded_location: { lat: number; lng: number; display_name: string };
+      radius_km: number;
+    }>(`/baywheels/stations/search?${params}`);
+  },
 };

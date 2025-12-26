@@ -2,19 +2,21 @@
 
 Template syntax:
 - Data binding: {{source.field}} e.g., {{weather.temperature}}, {{datetime.time}}
-- Colors (inline): {red}Text{/red} or {63} for raw color codes
+- Colors: {{red}}, {{blue}}, etc. - Single colored tile (not text wrapping)
 - Symbols: {sun}, {cloud}, {rain}
 - Formatting: {{value|pad:3}}, {{value|upper}}, {{value|lower}}, {{value|wrap}}
 
-Color codes:
-- {red} or {63} - Red tile
-- {orange} or {64} - Orange tile
-- {yellow} or {65} - Yellow tile
-- {green} or {66} - Green tile
-- {blue} or {67} - Blue tile
-- {violet} or {68} - Violet tile
-- {white} or {69} - White tile
-- {black} or {70} - Black tile
+Color tiles (each produces one solid color tile):
+- {{red}} or {{63}} - Red tile
+- {{orange}} or {{64}} - Orange tile
+- {{yellow}} or {{65}} - Yellow tile
+- {{green}} or {{66}} - Green tile
+- {{blue}} or {{67}} - Blue tile
+- {{violet}} or {{68}} - Violet tile
+- {{white}} or {{69}} - White tile
+- {{black}} or {{70}} - Black tile
+
+Example: "{{red}} ALERT {{red}}" produces [red tile] ALERT [red tile]
 
 Special filters:
 - |wrap - Wraps long content across multiple lines, filling empty lines below
@@ -67,7 +69,12 @@ AVAILABLE_VARIABLES = {
     "air_fog": ["aqi", "air_status", "air_color", "fog_status", "fog_color", "is_foggy", "visibility", "formatted"],
     "muni": ["line", "stop_name", "arrivals", "is_delayed", "delay_description", "formatted"],
     "surf": ["wave_height", "swell_period", "quality", "quality_color", "formatted"],
-    "baywheels": ["electric_bikes", "classic_bikes", "num_bikes_available", "is_renting", "station_name", "status_color"],
+    "baywheels": [
+        "electric_bikes", "classic_bikes", "num_bikes_available", "is_renting", "station_name", "status_color",
+        "total_electric", "total_classic", "total_bikes", "station_count",
+        "best_station_name", "best_station_electric", "best_station_id",
+        "stations"
+    ],
     "traffic": ["duration_minutes", "delay_minutes", "traffic_status", "traffic_color", "destination_name", "formatted"],
 }
 
@@ -126,6 +133,23 @@ VARIABLE_MAX_LENGTHS = {
     "baywheels.is_renting": 3,  # Yes/No
     "baywheels.station_name": 10,
     "baywheels.status_color": 4,  # Color tile
+    "baywheels.total_electric": 2,
+    "baywheels.total_classic": 2,
+    "baywheels.total_bikes": 2,
+    "baywheels.station_count": 1,
+    "baywheels.best_station_name": 10,
+    "baywheels.best_station_electric": 2,
+    "baywheels.best_station_id": 15,
+    "baywheels.stations.0.electric_bikes": 2,
+    "baywheels.stations.0.station_name": 10,
+    "baywheels.stations.0.classic_bikes": 2,
+    "baywheels.stations.0.status_color": 4,
+    "baywheels.stations.1.electric_bikes": 2,
+    "baywheels.stations.1.station_name": 10,
+    "baywheels.stations.2.electric_bikes": 2,
+    "baywheels.stations.2.station_name": 10,
+    "baywheels.stations.3.electric_bikes": 2,
+    "baywheels.stations.3.station_name": 10,
     "traffic.duration_minutes": 3,  # e.g., "45"
     "traffic.delay_minutes": 3,  # e.g., "+12"
     "traffic.traffic_status": 8,  # LIGHT, MODERATE, HEAVY
@@ -136,8 +160,7 @@ VARIABLE_MAX_LENGTHS = {
 
 # Regex patterns
 VAR_PATTERN = re.compile(r'\{\{([^}]+)\}\}')  # {{source.field}} or {{source.field|filter}}
-COLOR_START_PATTERN = re.compile(r'\{(red|orange|yellow|green|blue|violet|purple|white|black|6[3-9]|70)\}', re.IGNORECASE)
-COLOR_END_PATTERN = re.compile(r'\{/(red|orange|yellow|green|blue|violet|purple|white|black)?\}', re.IGNORECASE)
+COLOR_PATTERN = re.compile(r'\{\{(red|orange|yellow|green|blue|violet|purple|white|black|6[3-9]|70)\}\}', re.IGNORECASE)
 SYMBOL_PATTERN = re.compile(r'\{(sun|star|cloud|rain|snow|storm|fog|partly|heart|check|x)\}', re.IGNORECASE)
 ALIGNMENT_PATTERN = re.compile(r'^\{(left|center|right)\}', re.IGNORECASE)
 FILL_SPACE_PATTERN = re.compile(r'\{\{fill_space\}\}', re.IGNORECASE)
@@ -188,7 +211,7 @@ class TemplateEngine:
         """Render template with data context.
         
         Args:
-            template: Template string with {{variables}} and {colors}
+            template: Template string with {{variables}} and {{colors}}
             context: Optional pre-fetched context data. If not provided,
                      data will be fetched from display sources.
         
@@ -200,16 +223,15 @@ class TemplateEngine:
         
         result = template
         
-        # Process variables first
+        # Process colors FIRST (before variables) to prevent VAR_PATTERN from matching them
+        # This converts {{red}} to {{63}}, etc.
+        result = self._normalize_colors(result)
+        
+        # Process variables
         result = self._render_variables(result, context)
         
-        # Process symbols
+        # Process symbols (single brackets like {sun})
         result = self._render_symbols(result)
-        
-        # Process colors (keep color markers for now - they'll be interpreted by UI/board)
-        # Note: Color rendering depends on the output target
-        # For text output, we keep the color codes as markers
-        result = self._normalize_colors(result)
         
         return result
     
@@ -646,6 +668,10 @@ class TemplateEngine:
         Also supports _color suffix to get just the color tile for a field.
         e.g., {{weather.temperature_color}} returns {65} based on temperature value.
         
+        Supports array access:
+        - {{baywheels.stations.0.electric_bikes}} - Access first station's e-bikes
+        - {{baywheels.stations.1.station_name}} - Access second station's name
+        
         Special variables:
         - fill_space: Returns a placeholder that will be expanded later
         
@@ -673,13 +699,36 @@ class TemplateEngine:
         if source not in context:
             return "???"  # Source not available (API failed, not configured, etc.)
         
-        # Navigate to the field
+        # Navigate to the field, supporting array access
         value = context[source]
         for part in parts[1:]:
             if isinstance(value, dict):
                 value = value.get(part, value.get(part.lower()))
                 if value is None:
                     return "???"  # Field not found in data
+            elif isinstance(value, list):
+                # Handle array access: stations.0 or stations[0]
+                try:
+                    # Try to parse as integer index
+                    if part.isdigit():
+                        index = int(part)
+                        if 0 <= index < len(value):
+                            value = value[index]
+                        else:
+                            return "???"  # Index out of range
+                    else:
+                        # Try bracket notation: stations[0]
+                        if '[' in part and ']' in part:
+                            index_str = part[part.index('[') + 1:part.index(']')]
+                            index = int(index_str)
+                            if 0 <= index < len(value):
+                                value = value[index]
+                            else:
+                                return "???"  # Index out of range
+                        else:
+                            return "???"  # Invalid array access
+                except (ValueError, IndexError):
+                    return "???"  # Invalid index
             else:
                 return "???"  # Invalid path
         
@@ -822,9 +871,9 @@ class TemplateEngine:
         """Normalize color markers to consistent format.
         
         Converts named colors to code format for consistency.
-        e.g., {red} -> {63}
+        e.g., {{red}} -> {63} (single brackets so VAR_PATTERN won't match them)
         """
-        def replace_color_start(match):
+        def replace_color(match):
             color = match.group(1).lower()
             if color.isdigit():
                 return f"{{{color}}}"
@@ -833,13 +882,7 @@ class TemplateEngine:
                 return f"{{{code}}}"
             return match.group(0)
         
-        # Normalize start tags
-        result = COLOR_START_PATTERN.sub(replace_color_start, template)
-        
-        # Normalize end tags to just {/}
-        result = COLOR_END_PATTERN.sub("{/}", result)
-        
-        return result
+        return COLOR_PATTERN.sub(replace_color, template)
     
     def _extract_alignment(self, line: str) -> tuple:
         """Extract alignment directive from a line.

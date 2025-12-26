@@ -295,3 +295,4 @@ class TestLogFilePersistence:
                 entry = json.loads(line.strip())
                 assert isinstance(entry, dict)
 
+
