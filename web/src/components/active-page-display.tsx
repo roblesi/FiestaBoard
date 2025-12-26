@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useMemo } from "react";
 import { useActivePage, useSetActivePage, usePages, usePagePreview } from "@/hooks/use-vestaboard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,7 +56,7 @@ export function ActivePageDisplay() {
   
   // Get the active page ID
   const activePageId = activePageData?.page_id || null;
-  const pages = pagesData?.pages || [];
+  const pages = useMemo(() => pagesData?.pages || [], [pagesData?.pages]);
   
   // Fetch preview of active page with auto-refresh every 30 seconds
   const { 

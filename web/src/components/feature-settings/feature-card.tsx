@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { ChevronDown, ChevronUp, Save, Eye, EyeOff, AlertCircle, Copy, Check, Plus, Trash2, ArrowUp, ArrowDown, MapPin, Loader2, X } from "lucide-react";
 import { Label } from "@/components/ui/label";
-import { api, FeatureName, BayWheelsStation } from "@/lib/api";
+import { api, FeatureName } from "@/lib/api";
 import { LucideIcon } from "lucide-react";
 import { VESTABOARD_COLORS, AVAILABLE_COLORS as VESTA_AVAILABLE_COLORS, VestaboardColorName } from "@/lib/vestaboard-colors";
 import { BayWheelsStationFinder } from "./baywheels-station-finder";

@@ -58,6 +58,7 @@ The only code that may run locally:
 - `/logs` - View Docker container logs
 - `/test-api` - Run API tests in Docker
 - `/test-web` - Run web tests in Docker
+- `/deploy-to-nas` - Deploy to Synology NAS (builds images, transfers to NAS, starts containers)
 
 ### When Suggesting Commands
 
