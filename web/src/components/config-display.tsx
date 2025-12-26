@@ -14,17 +14,51 @@ import {
   Sparkles,
   RotateCw,
 } from "lucide-react";
+import { ComponentType } from "react";
+
+// Vulcan salute component - uses emoji with CSS filter to match icon theme
+// Converts emoji to grayscale so it matches the monochrome icon style
+const VulcanSalute = ({ className }: { className?: string }) => {
+  // Check if it should be primary (enabled) or muted (disabled)
+  const isPrimary = className?.includes('text-primary');
+  const isMuted = className?.includes('text-muted-foreground');
+  
+  // Apply grayscale filter to remove yellow color and match icon style
+  // Use brightness to match the theme
+  const filter = isMuted 
+    ? 'grayscale(100%) brightness(0.6)' // Dimmer for muted state
+    : 'grayscale(100%) brightness(0)'; // Black for primary/enabled state
+  
+  return (
+    <span 
+      className={className}
+      style={{ 
+        fontSize: '1rem', 
+        lineHeight: '1rem', 
+        display: 'inline-flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        width: '1rem', 
+        height: '1rem',
+        filter: filter,
+        color: 'currentColor'
+      }}
+    >
+      🖖
+    </span>
+  );
+};
 
 // Config item display with icon - use short labels for compact display
-const configItems = [
+const configItems: Array<{ key: ServiceKey; label: string; icon: ComponentType<{ className?: string }> }> = [
   { key: "datetime_enabled" as ServiceKey, label: "Date", icon: Calendar },
   { key: "weather_enabled" as ServiceKey, label: "Weather", icon: Cloud },
   { key: "home_assistant_enabled" as ServiceKey, label: "Home", icon: Home },
   { key: "apple_music_enabled" as ServiceKey, label: "Music", icon: Music },
   { key: "guest_wifi_enabled" as ServiceKey, label: "WiFi", icon: Wifi },
-  { key: "star_trek_quotes_enabled" as ServiceKey, label: "Quotes", icon: Sparkles },
+  { key: "star_trek_quotes_enabled" as ServiceKey, label: "Quotes", icon: VulcanSalute },
   { key: "rotation_enabled" as ServiceKey, label: "Rotation", icon: RotateCw },
-] as const;
+];
 
 export function ConfigDisplay() {
   const { data, isLoading } = useConfig();
