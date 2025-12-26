@@ -158,20 +158,6 @@ class Config:
         """Refresh interval in seconds."""
         return cls._get_general().get("refresh_interval_seconds", 300)
     
-    # ==================== Rotation Configuration ====================
-    
-    @classmethod
-    @property
-    def ROTATION_ENABLED(cls) -> bool:
-        """Whether rotation is enabled."""
-        return cls._get_feature("rotation").get("enabled", True)
-    
-    @classmethod
-    @property
-    def ROTATION_DEFAULT_DURATION(cls) -> int:
-        """Default rotation duration in seconds."""
-        return cls._get_feature("rotation").get("default_duration", 300)
-    
     # ==================== Star Trek Quotes Configuration ====================
     
     @classmethod
@@ -502,7 +488,6 @@ class Config:
             # Service enabled flags (for UI display)
             "datetime_enabled": cls.DATETIME_ENABLED,
             "weather_enabled": cls.WEATHER_ENABLED and bool(cls.WEATHER_API_KEY),
-            "rotation_enabled": cls.ROTATION_ENABLED,
             "apple_music_enabled": cls.APPLE_MUSIC_ENABLED,
             "guest_wifi_enabled": cls.GUEST_WIFI_ENABLED,
             "home_assistant_enabled": cls.HOME_ASSISTANT_ENABLED,

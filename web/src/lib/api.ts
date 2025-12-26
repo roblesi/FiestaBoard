@@ -21,7 +21,6 @@ export interface ConfigSummary {
   apple_music_enabled: boolean;
   guest_wifi_enabled: boolean;
   star_trek_quotes_enabled: boolean;
-  rotation_enabled: boolean;
   dev_mode: boolean;
   transition_strategy?: string | null;
   transition_interval_ms?: number | null;
@@ -210,53 +209,6 @@ export interface TemplateRenderResponse {
   line_count: number;
 }
 
-// Rotation types
-export interface RotationEntry {
-  page_id: string;
-  duration_override?: number;
-}
-
-export interface Rotation {
-  id: string;
-  name: string;
-  pages: RotationEntry[];
-  default_duration: number;
-  enabled: boolean;
-  created_at: string;
-  updated_at?: string;
-}
-
-export interface RotationCreate {
-  name: string;
-  pages: RotationEntry[];
-  default_duration?: number;
-  enabled?: boolean;
-}
-
-export interface RotationUpdate {
-  name?: string;
-  pages?: RotationEntry[];
-  default_duration?: number;
-  enabled?: boolean;
-}
-
-export interface RotationsResponse {
-  rotations: Rotation[];
-  total: number;
-  active_rotation_id: string | null;
-}
-
-export interface RotationStateResponse {
-  active: boolean;
-  rotation_id: string | null;
-  rotation_name: string | null;
-  current_page_index: number | null;
-  current_page_id: string | null;
-  time_on_page: number | null;
-  page_duration: number | null;
-  total_pages?: number;
-}
-
 // Configuration types
 export interface VestaboardConfig {
   api_mode: "local" | "cloud";
@@ -349,10 +301,6 @@ export interface TrafficFeatureConfig {
     refresh_seconds: number;
 }
 
-export interface RotationFeatureConfig {
-  enabled: boolean;
-  default_duration: number;
-}
 
 export interface FeaturesConfig {
   weather: WeatherFeatureConfig;
@@ -366,7 +314,6 @@ export interface FeaturesConfig {
   surf: SurfFeatureConfig;
   baywheels: BayWheelsFeatureConfig;
   traffic: TrafficFeatureConfig;
-  rotation: RotationFeatureConfig;
 }
 
 export interface GeneralConfig {
@@ -425,8 +372,7 @@ export type FeatureName =
   | "home_assistant"
   | "apple_music"
   | "guest_wifi"
-  | "star_trek_quotes"
-  | "rotation";
+  | "star_trek_quotes";
 
 // API client with typed methods
 async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
@@ -524,31 +470,6 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ template }),
     }),
-
-  // Rotations endpoints
-  getRotations: () => fetchApi<RotationsResponse>("/rotations"),
-  getRotation: (rotationId: string) =>
-    fetchApi<Rotation & { missing_pages: string[] }>(`/rotations/${rotationId}`),
-  createRotation: (rotation: RotationCreate) =>
-    fetchApi<{ status: string; rotation: Rotation }>("/rotations", {
-      method: "POST",
-      body: JSON.stringify(rotation),
-    }),
-  updateRotation: (rotationId: string, rotation: RotationUpdate) =>
-    fetchApi<{ status: string; rotation: Rotation }>(`/rotations/${rotationId}`, {
-      method: "PUT",
-      body: JSON.stringify(rotation),
-    }),
-  deleteRotation: (rotationId: string) =>
-    fetchApi<ActionResponse>(`/rotations/${rotationId}`, { method: "DELETE" }),
-  activateRotation: (rotationId: string) =>
-    fetchApi<{ status: string; message: string; state: RotationStateResponse }>(
-      `/rotations/${rotationId}/activate`,
-      { method: "POST" }
-    ),
-  deactivateRotation: () =>
-    fetchApi<ActionResponse>("/rotations/deactivate", { method: "POST" }),
-  getActiveRotation: () => fetchApi<RotationStateResponse>("/rotations/active"),
 
   // Logs endpoints
   getLogs: (params: LogsParams = {}) => {

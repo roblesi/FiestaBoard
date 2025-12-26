@@ -160,10 +160,10 @@ Display priority order:
 
 1. **Guest WiFi** (highest) - When enabled
 2. **Apple Music** - When music is playing
-3. **Home Assistant** - Rotates with Weather/DateTime
-4. **Weather + DateTime** - Normal rotation
+3. **Home Assistant** - Can be set as active page
+4. **Weather + DateTime** - Can be set as active page
 
-Home Assistant rotates with Weather/DateTime, so you'll see both throughout the day.
+You can select which page is active from the Pages UI.
 
 ## Troubleshooting
 
@@ -220,9 +220,10 @@ Home Assistant rotates with Weather/DateTime, so you'll see both throughout the 
    docker-compose logs | grep -i "home\|assistant"
    ```
 
-3. **Verify rotation:**
-   - Home Assistant rotates with Weather/DateTime
-   - May take a few refresh cycles to appear
+3. **Set as active page:**
+   - Go to Pages in the web UI
+   - Select your Home Assistant page as active
+   - Content will refresh automatically
 
 ## Advanced Configuration
 

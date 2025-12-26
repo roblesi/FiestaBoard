@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
-import { api, FeaturesConfig } from "@/lib/api";
+import { api, FeaturesConfig, FeatureName } from "@/lib/api";
 import { FeatureCard, FeatureField } from "./feature-card";
 import {
   Cloud,
@@ -11,7 +11,6 @@ import {
   Music,
   Wifi,
   Sparkles,
-  RotateCw,
   Wind,
   TrainFront,
   Waves,
@@ -472,22 +471,6 @@ const FEATURE_DEFINITIONS: Record<
       { name: "formatted", description: "Pre-formatted message", example: "DOWNTOWN: 25m (+5m)", maxChars: 22, typical: "12-22 chars" },
     ],
   },
-  rotation: {
-    title: "Rotation",
-    description: "Rotate between displays",
-    icon: RotateCw,
-    hasRefreshInterval: false,
-    fields: [
-      {
-        key: "default_duration",
-        label: "Default Duration (seconds)",
-        type: "number",
-        placeholder: "300",
-        description: "How long each display shows before rotating",
-      },
-    ],
-    outputs: [], // Rotation doesn't have template outputs
-  },
 };
 
 export function FeatureSettings() {
@@ -517,7 +500,7 @@ export function FeatureSettings() {
         return (
           <FeatureCard
             key={featureName}
-            featureName={featureName as keyof FeaturesConfig}
+            featureName={featureName as FeatureName}
             title={definition.title}
             description={definition.description}
             icon={definition.icon}
