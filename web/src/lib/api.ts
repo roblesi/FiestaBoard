@@ -304,18 +304,49 @@ export interface GuestWifiFeatureConfig {
 }
 
 export interface StarTrekQuotesFeatureConfig {
-  enabled: boolean;
-  ratio: string;
+    enabled: boolean;
+    ratio: string;
 }
 
 export interface AirFogFeatureConfig {
+    enabled: boolean;
+    purpleair_api_key: string;
+    openweathermap_api_key: string;
+    purpleair_sensor_id: string;
+    latitude: number;
+    longitude: number;
+    refresh_seconds: number;
+}
+
+export interface MuniFeatureConfig {
+    enabled: boolean;
+    api_key: string;
+    stop_code: string;
+    line_name: string;
+    refresh_seconds: number;
+}
+
+export interface BayWheelsFeatureConfig {
+    enabled: boolean;
+    station_id: string;
+    station_name: string;
+    refresh_seconds: number;
+}
+
+export interface SurfFeatureConfig {
   enabled: boolean;
-  purpleair_api_key: string;
-  openweathermap_api_key: string;
-  purpleair_sensor_id: string;
   latitude: number;
   longitude: number;
   refresh_seconds: number;
+}
+
+export interface TrafficFeatureConfig {
+    enabled: boolean;
+    api_key: string;
+    origin: string;
+    destination: string;
+    destination_name: string;
+    refresh_seconds: number;
 }
 
 export interface RotationFeatureConfig {
@@ -331,6 +362,10 @@ export interface FeaturesConfig {
   guest_wifi: GuestWifiFeatureConfig;
   star_trek_quotes: StarTrekQuotesFeatureConfig;
   air_fog: AirFogFeatureConfig;
+  muni: MuniFeatureConfig;
+  surf: SurfFeatureConfig;
+  baywheels: BayWheelsFeatureConfig;
+  traffic: TrafficFeatureConfig;
   rotation: RotationFeatureConfig;
 }
 

@@ -65,6 +65,10 @@ AVAILABLE_VARIABLES = {
     "star_trek": ["quote", "character", "series", "series_color"],
     "guest_wifi": ["ssid", "password"],
     "air_fog": ["aqi", "air_status", "air_color", "fog_status", "fog_color", "is_foggy", "visibility", "formatted"],
+    "muni": ["line", "stop_name", "arrivals", "is_delayed", "delay_description", "formatted"],
+    "surf": ["wave_height", "swell_period", "quality", "quality_color", "formatted"],
+    "baywheels": ["electric_bikes", "classic_bikes", "num_bikes_available", "is_renting", "station_name", "status_color"],
+    "traffic": ["duration_minutes", "delay_minutes", "traffic_status", "traffic_color", "destination_name", "formatted"],
 }
 
 # Maximum character lengths for each variable (for validation)
@@ -105,6 +109,29 @@ VARIABLE_MAX_LENGTHS = {
     "air_fog.is_foggy": 3,  # Yes/No
     "air_fog.visibility": 5,  # e.g., "1.2mi"
     "air_fog.formatted": 22,  # Pre-formatted message
+    "muni.line": 12,
+    "muni.stop_name": 22,
+    "muni.arrivals": 15,
+    "muni.is_delayed": 3,
+    "muni.delay_description": 22,
+    "muni.formatted": 22,
+    "surf.wave_height": 4,  # e.g., "3.5"
+    "surf.swell_period": 4,  # e.g., "12.5"
+    "surf.quality": 9,  # EXCELLENT, GOOD, FAIR, POOR
+    "surf.quality_color": 4,  # Color tile
+    "surf.formatted": 22,  # Pre-formatted message
+    "baywheels.electric_bikes": 2,
+    "baywheels.classic_bikes": 2,
+    "baywheels.num_bikes_available": 2,
+    "baywheels.is_renting": 3,  # Yes/No
+    "baywheels.station_name": 10,
+    "baywheels.status_color": 4,  # Color tile
+    "traffic.duration_minutes": 3,  # e.g., "45"
+    "traffic.delay_minutes": 3,  # e.g., "+12"
+    "traffic.traffic_status": 8,  # LIGHT, MODERATE, HEAVY
+    "traffic.traffic_color": 4,  # Color tile
+    "traffic.destination_name": 10,  # e.g., "DOWNTOWN"
+    "traffic.formatted": 22,  # Pre-formatted message
 }
 
 # Regex patterns
@@ -466,7 +493,7 @@ class TemplateEngine:
         context = {}
         
         # Fetch from each source
-        sources = ["weather", "datetime", "home_assistant", "apple_music", "star_trek", "guest_wifi"]
+        sources = ["weather", "datetime", "home_assistant", "apple_music", "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels", "traffic"]
         
         for source in sources:
             try:
@@ -527,6 +554,11 @@ class TemplateEngine:
             "apple_music": "apple_music",
             "star_trek": "star_trek_quotes",
             "guest_wifi": "guest_wifi",
+            "air_fog": "air_fog",
+            "muni": "muni",
+            "surf": "surf",
+            "baywheels": "baywheels",
+            "traffic": "traffic",
         }
         
         feature_name = feature_map.get(source)
@@ -679,6 +711,11 @@ class TemplateEngine:
             "apple_music": "apple_music",
             "star_trek": "star_trek_quotes",
             "guest_wifi": "guest_wifi",
+            "air_fog": "air_fog",
+            "muni": "muni",
+            "surf": "surf",
+            "baywheels": "baywheels",
+            "traffic": "traffic",
         }
         
         feature_name = feature_map.get(source)
@@ -924,7 +961,7 @@ class TemplateEngine:
             List of source names that are configured
         """
         available = []
-        sources = ["weather", "datetime", "home_assistant", "apple_music", "star_trek", "guest_wifi"]
+        sources = ["weather", "datetime", "home_assistant", "apple_music", "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels", "traffic"]
         
         for source in sources:
             try:
@@ -1033,6 +1070,11 @@ class TemplateEngine:
                     "weather": "weather",
                     "star_trek": "star_trek_quotes",
                     "home_assistant": "home_assistant",
+                    "air_fog": "air_fog",
+                    "muni": "muni",
+                    "surf": "surf",
+                    "baywheels": "baywheels",
+                    "traffic": "traffic",
                 }
                 feature = feature_map.get(source)
                 if feature:

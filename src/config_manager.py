@@ -112,6 +112,57 @@ DEFAULT_CONFIG: Dict[str, Any] = {
                 ],
             },
         },
+        "muni": {
+            "enabled": False,
+            "api_key": "",  # 511.org API key
+            "stop_code": "",  # Muni stop code (e.g., "15726")
+            "line_name": "",  # Optional line filter (e.g., "N" for N-Judah)
+            "refresh_seconds": 60,  # 1 minute for transit data
+            "color_rules": {},
+        },
+        "surf": {
+            "enabled": False,
+            "latitude": 37.7599,  # Ocean Beach, SF
+            "longitude": -122.5121,  # Ocean Beach, SF
+            "refresh_seconds": 1800,  # 30 minutes for surf conditions
+            "color_rules": {
+                "quality": [
+                    {"condition": "==", "value": "EXCELLENT", "color": "green"},
+                    {"condition": "==", "value": "GOOD", "color": "yellow"},
+                    {"condition": "==", "value": "FAIR", "color": "orange"},
+                    {"condition": "==", "value": "POOR", "color": "red"},
+                ],
+            },
+        },
+        "baywheels": {
+            "enabled": False,
+            "station_id": "",  # Bay Wheels/GBFS station ID
+            "station_name": "",  # Display name for the station
+            "refresh_seconds": 60,  # 1 minute for bike availability
+            "color_rules": {
+                # Status colors based on electric bike availability
+                "electric_bikes": [
+                    {"condition": "<", "value": 2, "color": "red"},
+                    {"condition": "<=", "value": 5, "color": "yellow"},
+                    {"condition": ">", "value": 5, "color": "green"},
+                ],
+            },
+        },
+        "traffic": {
+            "enabled": False,
+            "api_key": "",  # Google Routes API key (using api_key for consistency)
+            "origin": "",  # Origin address or lat,lng
+            "destination": "",  # Destination address or lat,lng
+            "destination_name": "DOWNTOWN",  # Display name for destination
+            "refresh_seconds": 300,  # 5 minutes
+            "color_rules": {
+                "traffic_status": [
+                    {"condition": "==", "value": "LIGHT", "color": "green"},
+                    {"condition": "==", "value": "MODERATE", "color": "yellow"},
+                    {"condition": "==", "value": "HEAVY", "color": "red"},
+                ],
+            },
+        },
         "rotation": {
             "enabled": True,
             "default_duration": 300,

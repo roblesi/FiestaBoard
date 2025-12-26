@@ -212,6 +212,32 @@ class Config:
         """Apple Music refresh interval."""
         return cls._get_feature("apple_music").get("refresh_seconds", 10)
     
+    # ==================== Surf Configuration ====================
+    
+    @classmethod
+    @property
+    def SURF_ENABLED(cls) -> bool:
+        """Whether surf data is enabled."""
+        return cls._get_feature("surf").get("enabled", False)
+    
+    @classmethod
+    @property
+    def SURF_LATITUDE(cls) -> float:
+        """Surf location latitude (default: Ocean Beach, SF)."""
+        return cls._get_feature("surf").get("latitude", 37.7599)
+    
+    @classmethod
+    @property
+    def SURF_LONGITUDE(cls) -> float:
+        """Surf location longitude (default: Ocean Beach, SF)."""
+        return cls._get_feature("surf").get("longitude", -122.5121)
+    
+    @classmethod
+    @property
+    def SURF_REFRESH_SECONDS(cls) -> int:
+        """Surf data refresh interval in seconds."""
+        return cls._get_feature("surf").get("refresh_seconds", 600)
+    
     # ==================== Guest WiFi Configuration ====================
     
     @classmethod
@@ -322,10 +348,105 @@ class Config:
         """Air/fog data refresh interval in seconds."""
         return cls._get_feature("air_fog").get("refresh_seconds", 300)
     
+    # ==================== Muni Transit Configuration ====================
+    
+    @classmethod
+    @property
+    def MUNI_ENABLED(cls) -> bool:
+        """Whether Muni transit is enabled."""
+        return cls._get_feature("muni").get("enabled", False)
+    
+    @classmethod
+    @property
+    def MUNI_API_KEY(cls) -> str:
+        """511.org API key."""
+        return cls._get_feature("muni").get("api_key", "")
+    
+    @classmethod
+    @property
+    def MUNI_STOP_CODE(cls) -> str:
+        """Muni stop code to monitor."""
+        return cls._get_feature("muni").get("stop_code", "")
+    
+    @classmethod
+    @property
+    def MUNI_LINE_NAME(cls) -> str:
+        """Optional line name filter (e.g., 'N' for N-Judah)."""
+        return cls._get_feature("muni").get("line_name", "")
+    
+    @classmethod
+    @property
+    def MUNI_REFRESH_SECONDS(cls) -> int:
+        """Muni data refresh interval in seconds."""
+        return cls._get_feature("muni").get("refresh_seconds", 60)
+    
+    # ==================== Bay Wheels Configuration ====================
+    
+    @classmethod
+    @property
+    def BAYWHEELS_ENABLED(cls) -> bool:
+        """Whether Bay Wheels integration is enabled."""
+        return cls._get_feature("baywheels").get("enabled", False)
+    
+    @classmethod
+    @property
+    def BAYWHEELS_STATION_ID(cls) -> str:
+        """Bay Wheels station ID to monitor."""
+        return cls._get_feature("baywheels").get("station_id", "")
+    
+    @classmethod
+    @property
+    def BAYWHEELS_STATION_NAME(cls) -> str:
+        """Display name for the Bay Wheels station."""
+        return cls._get_feature("baywheels").get("station_name", "19TH")
+    
+    @classmethod
+    @property
+    def BAYWHEELS_REFRESH_SECONDS(cls) -> int:
+        """Bay Wheels data refresh interval in seconds."""
+        return cls._get_feature("baywheels").get("refresh_seconds", 60)
+    
+    # ==================== Traffic Configuration ====================
+    
+    @classmethod
+    @property
+    def TRAFFIC_ENABLED(cls) -> bool:
+        """Whether traffic monitoring is enabled."""
+        return cls._get_feature("traffic").get("enabled", False)
+    
+    @classmethod
+    @property
+    def GOOGLE_ROUTES_API_KEY(cls) -> str:
+        """Google Routes API key."""
+        return cls._get_feature("traffic").get("api_key", "")
+    
+    @classmethod
+    @property
+    def TRAFFIC_ORIGIN(cls) -> str:
+        """Traffic route origin (address or lat,lng)."""
+        return cls._get_feature("traffic").get("origin", "")
+    
+    @classmethod
+    @property
+    def TRAFFIC_DESTINATION(cls) -> str:
+        """Traffic route destination (address or lat,lng)."""
+        return cls._get_feature("traffic").get("destination", "")
+    
+    @classmethod
+    @property
+    def TRAFFIC_DESTINATION_NAME(cls) -> str:
+        """Display name for traffic destination."""
+        return cls._get_feature("traffic").get("destination_name", "DOWNTOWN")
+    
+    @classmethod
+    @property
+    def TRAFFIC_REFRESH_SECONDS(cls) -> int:
+        """Traffic data refresh interval in seconds."""
+        return cls._get_feature("traffic").get("refresh_seconds", 300)
+    
     # ==================== Legacy/Unused Configuration ====================
     
     # These are kept for backward compatibility but not actively used
-    BAYWHEELS_ENABLED: bool = False
     USER_LATITUDE: float = 37.7749
     USER_LONGITUDE: float = -122.4194
     MAX_DISTANCE_MILES: float = 2.0
@@ -387,6 +508,10 @@ class Config:
             "home_assistant_enabled": cls.HOME_ASSISTANT_ENABLED,
             "star_trek_quotes_enabled": cls.STAR_TREK_QUOTES_ENABLED,
             "air_fog_enabled": cls.AIR_FOG_ENABLED,
+            "muni_enabled": cls.MUNI_ENABLED,
+            "surf_enabled": cls.SURF_ENABLED,
+            "baywheels_enabled": cls.BAYWHEELS_ENABLED,
+            "traffic_enabled": cls.TRAFFIC_ENABLED,
             # Vestaboard config
             "vb_api_mode": cls.VB_API_MODE,
             "vb_host": cls.VB_HOST if cls.VB_API_MODE.lower() == "local" else "cloud",
