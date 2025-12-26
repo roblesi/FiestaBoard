@@ -47,9 +47,12 @@ _log_lock = threading.Lock()
 
 
 def _create_log_entry(record: logging.LogRecord, formatted_message: str) -> Dict[str, Any]:
-    """Create a structured log entry from a log record."""
+    """Create a structured log entry from a log record with UTC timestamp."""
+    from .time_service import get_time_service
+    time_service = get_time_service()
+    
     return {
-        "timestamp": datetime.fromtimestamp(record.created).isoformat(),
+        "timestamp": time_service.create_utc_timestamp(),
         "level": record.levelname,
         "logger": record.name,
         "message": formatted_message
@@ -672,6 +675,96 @@ async def validate_config():
     return {
         "valid": is_valid,
         "errors": errors
+    }
+
+
+@app.get("/config/general")
+async def get_general_config():
+    """Get general configuration (timezone, refresh interval, etc.)."""
+    config_manager = get_config_manager()
+    return config_manager.get_general()
+
+
+@app.put("/config/general")
+async def update_general_config(request: dict):
+    """
+    Update general configuration.
+    
+    Body can include:
+    - timezone: IANA timezone name (e.g., "America/Los_Angeles")
+    - refresh_interval_seconds: Refresh interval in seconds
+    - output_target: Output target ("ui", "board", or "both")
+    """
+    config_manager = get_config_manager()
+    
+    # Get current general config
+    general_config = config_manager.get_general()
+    
+    # Update with provided values
+    if "timezone" in request:
+        general_config["timezone"] = request["timezone"]
+    if "refresh_interval_seconds" in request:
+        general_config["refresh_interval_seconds"] = request["refresh_interval_seconds"]
+    if "output_target" in request:
+        general_config["output_target"] = request["output_target"]
+    
+    # Save back
+    success = config_manager.set_general(general_config)
+    
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to update general configuration")
+    
+    return {
+        "status": "success",
+        "general": general_config
+    }
+
+
+@app.get("/silence-status")
+async def get_silence_status():
+    """
+    Get current silence mode status with UTC times.
+    
+    Returns:
+    - enabled: Whether silence schedule is enabled
+    - active: Whether silence mode is currently active
+    - start_time_utc: Start time in UTC ISO format
+    - end_time_utc: End time in UTC ISO format
+    - current_time_utc: Current UTC time
+    - next_change_utc: Time of next status change
+    """
+    from .time_service import get_time_service
+    
+    time_service = get_time_service()
+    config_manager = get_config_manager()
+    
+    # Trigger migration if needed
+    config_manager.migrate_silence_schedule_to_utc()
+    
+    silence_config = config_manager.get_feature("silence_schedule")
+    enabled = silence_config.get("enabled", False)
+    start_time = silence_config.get("start_time", "20:00+00:00")
+    end_time = silence_config.get("end_time", "07:00+00:00")
+    
+    # Check if currently active
+    active = False
+    if enabled:
+        active = time_service.is_time_in_window(start_time, end_time)
+    
+    # Get current UTC time
+    current_utc = time_service.get_current_utc()
+    current_time_utc = current_utc.strftime("%H:%M+00:00")
+    
+    # Determine next change time (simplified - just return start or end)
+    next_change_utc = end_time if active else start_time
+    
+    return {
+        "enabled": enabled,
+        "active": active,
+        "start_time_utc": start_time,
+        "end_time_utc": end_time,
+        "current_time_utc": current_time_utc,
+        "next_change_utc": next_change_utc
     }
 
 

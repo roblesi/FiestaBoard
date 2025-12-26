@@ -19,6 +19,9 @@ import type {
   RotationStateResponse,
   LogsResponse,
   LogEntry,
+  GeneralConfig,
+  SilenceStatus,
+  FeatureConfigResponse,
 } from "@/lib/api";
 
 const API_BASE = "http://localhost:8000";
@@ -257,6 +260,33 @@ export const mockLogsResponse: LogsResponse = {
   filters: {
     level: null,
     search: null,
+  },
+};
+
+// General config mock
+export const mockGeneralConfig: GeneralConfig = {
+  timezone: "America/Los_Angeles",
+  refresh_interval_seconds: 300,
+  output_target: "board",
+};
+
+// Silence status mock
+export const mockSilenceStatus: SilenceStatus = {
+  enabled: false,
+  active: false,
+  start_time_utc: "04:00+00:00", // 8PM PST
+  end_time_utc: "15:00+00:00", // 7AM PST
+  current_time_utc: "2025-12-26T18:30:00+00:00",
+  next_change_utc: "2025-12-27T04:00:00+00:00",
+};
+
+// Feature config mock for silence_schedule
+export const mockSilenceScheduleConfig: FeatureConfigResponse = {
+  feature: "silence_schedule",
+  config: {
+    enabled: false,
+    start_time: "04:00+00:00",
+    end_time: "15:00+00:00",
   },
 };
 
@@ -635,6 +665,51 @@ export const handlers = [
     };
 
     return HttpResponse.json(response);
+  }),
+
+  // General config endpoints
+  http.get(`${API_BASE}/config/general`, () => {
+    return HttpResponse.json(mockGeneralConfig);
+  }),
+
+  http.put(`${API_BASE}/config/general`, async ({ request }) => {
+    const body = await request.json() as Partial<GeneralConfig>;
+    const updatedConfig = {
+      ...mockGeneralConfig,
+      ...body,
+    };
+    return HttpResponse.json({
+      status: "success",
+      general: updatedConfig,
+    });
+  }),
+
+  // Feature config endpoints
+  http.get(`${API_BASE}/config/features/:featureName`, ({ params }) => {
+    const { featureName } = params;
+    if (featureName === "silence_schedule") {
+      return HttpResponse.json(mockSilenceScheduleConfig);
+    }
+    // Return generic config for other features
+    return HttpResponse.json({
+      feature: featureName,
+      config: {},
+    });
+  }),
+
+  http.put(`${API_BASE}/config/features/:featureName`, async ({ request, params }) => {
+    const { featureName } = params;
+    const body = await request.json() as Record<string, unknown>;
+    return HttpResponse.json({
+      status: "success",
+      feature: featureName,
+      config: body,
+    });
+  }),
+
+  // Silence status endpoint
+  http.get(`${API_BASE}/silence-status`, () => {
+    return HttpResponse.json(mockSilenceStatus);
   }),
 ];
 

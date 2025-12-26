@@ -5,9 +5,7 @@ ConfigManager (JSON file-based storage).
 """
 
 import logging
-from datetime import datetime, time
 from typing import Optional, List, Dict
-import pytz
 
 from .config_manager import get_config_manager
 
@@ -153,6 +151,12 @@ class Config:
         return cls._get_feature("datetime").get("enabled", True)
     
     # ==================== General Configuration ====================
+    
+    @classmethod
+    @property
+    def GENERAL_TIMEZONE(cls) -> str:
+        """General timezone configuration (used as default for all time displays)."""
+        return cls._get_general().get("timezone", "America/Los_Angeles")
     
     @classmethod
     @property
@@ -485,8 +489,8 @@ class Config:
     def is_silence_mode_active(cls) -> bool:
         """Check if we're currently in silence mode.
         
-        Uses the configured timezone from the datetime feature to ensure
-        the silence schedule operates in the correct timezone.
+        Uses TimeService to check if current UTC time is within the configured
+        silence window. Times are stored in UTC ISO format.
         
         Returns:
             True if silence schedule is enabled and current time is within the silence window.
@@ -495,37 +499,21 @@ class Config:
             return False
         
         try:
-            # Get the configured timezone (same as datetime feature)
-            timezone_str = cls.TIMEZONE
-            try:
-                tz = pytz.timezone(timezone_str)
-            except pytz.exceptions.UnknownTimeZoneError:
-                logger.warning(f"Unknown timezone: {timezone_str}, using system local time")
-                tz = None
+            # Trigger migration if needed (on first call)
+            from .config_manager import get_config_manager
+            config_manager = get_config_manager()
+            config_manager.migrate_silence_schedule_to_utc()
             
-            # Get current time in the configured timezone
-            if tz:
-                current_datetime = datetime.now(tz)
-            else:
-                # Fall back to system local time if timezone is invalid
-                current_datetime = datetime.now()
+            # Get times (should now be in UTC ISO format)
+            start_time = cls.SILENCE_SCHEDULE_START_TIME
+            end_time = cls.SILENCE_SCHEDULE_END_TIME
             
-            current_time = current_datetime.time()
+            # Use TimeService to check if we're in the window
+            from .time_service import get_time_service
+            time_service = get_time_service()
             
-            # Parse start and end times
-            start_hour, start_minute = map(int, cls.SILENCE_SCHEDULE_START_TIME.split(":"))
-            end_hour, end_minute = map(int, cls.SILENCE_SCHEDULE_END_TIME.split(":"))
+            return time_service.is_time_in_window(start_time, end_time)
             
-            start_time = time(start_hour, start_minute)
-            end_time = time(end_hour, end_minute)
-            
-            # Handle case where silence window spans midnight (e.g., 20:00 to 07:00)
-            if start_time > end_time:
-                # Window spans midnight: current time must be >= start OR <= end
-                return current_time >= start_time or current_time <= end_time
-            else:
-                # Window is within same day: current time must be >= start AND <= end
-                return start_time <= current_time <= end_time
         except (ValueError, AttributeError) as e:
             logger.warning(f"Invalid silence schedule time format: {e}")
             return False

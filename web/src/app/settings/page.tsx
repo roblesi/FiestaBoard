@@ -1,8 +1,8 @@
 "use client";
 
-import { ServiceControls } from "@/components/service-controls";
 import { FeatureSettings } from "@/components/feature-settings";
 import { VestaboardSettings } from "@/components/feature-settings/vestaboard-settings";
+import { GeneralSettings } from "@/components/general-settings";
 
 export default function SettingsPage() {
   return (
@@ -15,33 +15,28 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-4 sm:gap-6 md:gap-8 w-full max-w-full">
-          {/* Main Settings */}
-          <div className="space-y-6 sm:space-y-8">
-            {/* Vestaboard Connection */}
-            <section>
-              <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Vestaboard Connection</h2>
-              <VestaboardSettings />
-            </section>
+        <div className="space-y-6 sm:space-y-8 max-w-4xl">
+          {/* General Settings & Service Control */}
+          <section>
+            <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">General Settings</h2>
+            <GeneralSettings />
+          </section>
 
-            {/* Feature Configuration */}
-            <section>
-              <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Features</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Enable and configure data sources for your Vestaboard display. 
-                Click a feature to expand its settings.
-              </p>
-              <FeatureSettings />
-            </section>
-          </div>
+          {/* Vestaboard Connection */}
+          <section>
+            <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Vestaboard Connection</h2>
+            <VestaboardSettings />
+          </section>
 
-          {/* Sidebar - Service Control */}
-          <div className="space-y-4 sm:space-y-6">
-            <section>
-              <h2 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">Service Control</h2>
-              <ServiceControls />
-            </section>
-          </div>
+          {/* Feature Configuration */}
+          <section>
+            <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Features</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Enable and configure data sources for your Vestaboard display. 
+              Click a feature to expand its settings.
+            </p>
+            <FeatureSettings />
+          </section>
         </div>
       </div>
     </div>

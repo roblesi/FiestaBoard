@@ -319,8 +319,8 @@ export interface TrafficFeatureConfig {
 
 export interface SilenceScheduleFeatureConfig {
   enabled: boolean;
-  start_time: string;
-  end_time: string;
+  start_time: string; // UTC ISO format (e.g., "04:00+00:00")
+  end_time: string;   // UTC ISO format (e.g., "15:00+00:00")
 }
 
 export interface FeaturesConfig {
@@ -339,8 +339,18 @@ export interface FeaturesConfig {
 }
 
 export interface GeneralConfig {
+  timezone: string; // IANA timezone (e.g., "America/Los_Angeles")
   refresh_interval_seconds: number;
   output_target: "ui" | "board" | "both";
+}
+
+export interface SilenceStatus {
+  enabled: boolean;
+  active: boolean;
+  start_time_utc: string;
+  end_time_utc: string;
+  current_time_utc: string;
+  next_change_utc: string;
 }
 
 export interface FullConfig {
@@ -564,4 +574,16 @@ export const api = {
       radius_km: number;
     }>(`/baywheels/stations/search?${params}`);
   },
+  
+  // General configuration
+  getGeneralConfig: () => fetchApi<GeneralConfig>("/config/general"),
+  updateGeneralConfig: (config: Partial<GeneralConfig>) =>
+    fetchApi<{ status: string; general: GeneralConfig }>("/config/general", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(config),
+    }),
+  
+  // Silence mode status
+  getSilenceStatus: () => fetchApi<SilenceStatus>("/silence-status"),
 };

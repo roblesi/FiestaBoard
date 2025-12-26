@@ -1,16 +1,15 @@
 """Date and time data source."""
 
 import logging
-from datetime import datetime
 from typing import Dict
-import pytz
 from ..config import Config
+from ..time_service import get_time_service
 
 logger = logging.getLogger(__name__)
 
 
 class DateTimeSource:
-    """Provides current date and time information."""
+    """Provides current date and time information using TimeService."""
     
     def __init__(self, timezone: str = "America/Los_Angeles"):
         """
@@ -19,11 +18,8 @@ class DateTimeSource:
         Args:
             timezone: Timezone name (e.g., "America/Los_Angeles")
         """
-        try:
-            self.timezone = pytz.timezone(timezone)
-        except pytz.exceptions.UnknownTimeZoneError:
-            logger.warning(f"Unknown timezone: {timezone}, using UTC")
-            self.timezone = pytz.UTC
+        self.timezone = timezone
+        self.time_service = get_time_service()
     
     def get_current_datetime(self) -> Dict[str, str]:
         """
@@ -32,7 +28,8 @@ class DateTimeSource:
         Returns:
             Dictionary with formatted date and time strings
         """
-        now = datetime.now(self.timezone)
+        # Use TimeService to get current time in configured timezone
+        now = self.time_service.get_current_time(self.timezone)
         
         return {
             "date": now.strftime("%Y-%m-%d"),
@@ -58,11 +55,10 @@ class DateTimeSource:
         Returns:
             Formatted datetime string
         """
-        now = datetime.now(self.timezone)
+        now = self.time_service.get_current_time(self.timezone)
         return now.strftime(format_string)
 
 
 def get_datetime_source() -> DateTimeSource:
     """Get configured datetime source instance."""
     return DateTimeSource(timezone=Config.TIMEZONE)
-

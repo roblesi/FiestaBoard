@@ -194,6 +194,19 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
     }
   }, [existingPage]);
 
+  // Auto-resize textareas when content changes
+  useEffect(() => {
+    // Wait for DOM to update, then resize all textareas
+    const timer = setTimeout(() => {
+      const textareas = document.querySelectorAll<HTMLTextAreaElement>('textarea[placeholder*="Use {{variable}} syntax"]');
+      textareas.forEach(textarea => {
+        textarea.style.height = 'auto';
+        textarea.style.height = `${textarea.scrollHeight}px`;
+      });
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [templateLines]);
+
   // Build template lines with alignment prefixes applied
   const getTemplateWithAlignments = (): string[] => {
     return templateLines.map((content, i) => applyAlignment(lineAlignments[i], content));
@@ -434,30 +447,39 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
                     const alignment = lineAlignments[i];
                     
                     return (
-                      <div key={i} className="flex items-stretch w-full min-w-0">
-                        <span className="text-xs text-muted-foreground w-5 shrink-0 flex items-center justify-end pr-1.5">
+                      <div key={i} className="flex items-start w-full min-w-0">
+                        <span className="text-xs text-muted-foreground w-5 shrink-0 flex items-start justify-end pr-1.5 pt-2">
                           {i + 1}
                         </span>
                         {/* Combined input + alignment buttons container */}
                         <div className="flex flex-1 min-w-0">
                           <div className="flex-1 relative min-w-0">
-                            <input
-                              type="text"
+                            <textarea
                               value={line}
                               onChange={(e) => {
                                 const newLines = [...templateLines];
                                 newLines[i] = e.target.value;
                                 setTemplateLines(newLines);
+                                
+                                // Auto-resize on change
+                                const target = e.target as HTMLTextAreaElement;
+                                target.style.height = 'auto';
+                                target.style.height = `${target.scrollHeight}px`;
                               }}
                               onFocus={() => setActiveLineIndex(i)}
                               placeholder={`Line ${i + 1} - Use {{variable}} syntax`}
-                              className={`w-full min-w-0 min-h-[2.25rem] sm:min-h-[2rem] px-2 sm:px-3 py-1.5 text-sm font-mono rounded-l border-y border-l bg-background transition-colors focus:outline-none ${
+                              rows={1}
+                              className={`w-full min-w-0 min-h-[2.25rem] sm:min-h-[2rem] px-2 sm:px-3 py-1.5 text-sm font-mono rounded-l border-y border-l bg-background transition-colors focus:outline-none resize-none whitespace-pre-wrap break-all ${
                                 activeLineIndex === i 
                                   ? "border-primary ring-1 ring-primary" 
                                   : warning.hasWarning 
                                     ? "border-yellow-500" 
                                     : "border-input"
                               }`}
+                              style={{
+                                height: 'auto',
+                                minHeight: '2.25rem',
+                              }}
                             />
                             {warning.hasWarning && (
                               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none" title={`Line may render up to ${warning.maxLength} chars (max 22)`}>
@@ -466,7 +488,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
                             )}
                           </div>
                           {/* Alignment toggle - joined to input */}
-                          <div className="flex rounded-r border-y border-r bg-muted/30 overflow-hidden shrink-0">
+                          <div className="flex rounded-r border-y border-r bg-muted/30 overflow-hidden shrink-0 self-start min-h-[2.25rem] sm:min-h-[2rem]">
                             <button
                               type="button"
                               onClick={() => {
