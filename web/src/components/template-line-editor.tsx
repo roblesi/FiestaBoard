@@ -135,6 +135,7 @@ function TemplateBadge({
         onDragEnd={onDragEnd}
         contentEditable={false}
         data-badge="true"
+        data-segment-type="color"
         data-segment-value={segment.value}
         style={{ backgroundColor: colorInfo.bg }}
         className={cn(
@@ -175,6 +176,7 @@ function TemplateBadge({
       onDragEnd={onDragEnd}
       contentEditable={false}
       data-badge="true"
+      data-segment-type="variable"
       data-segment-value={segment.value}
       className={cn(
         "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium cursor-grab select-none",
