@@ -120,6 +120,8 @@ DEFAULT_CONFIG: Dict[str, Any] = {
             "stop_names": [],  # List of stop names for display
             "line_name": "",  # Optional line filter (e.g., "N" for N-Judah)
             "refresh_seconds": 60,  # 1 minute for transit data
+            "transit_cache_enabled": True,  # Enable regional transit cache
+            "transit_cache_refresh_seconds": 90,  # Refresh regional cache every 90 seconds
             "color_rules": {},
         },
         "surf": {

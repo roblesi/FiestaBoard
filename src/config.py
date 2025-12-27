@@ -403,6 +403,18 @@ class Config:
         """Muni data refresh interval in seconds."""
         return cls._get_feature("muni").get("refresh_seconds", 60)
     
+    @classmethod
+    @property
+    def TRANSIT_CACHE_ENABLED(cls) -> bool:
+        """Whether regional transit cache is enabled."""
+        return cls._get_feature("muni").get("transit_cache_enabled", True)
+    
+    @classmethod
+    @property
+    def TRANSIT_CACHE_REFRESH_SECONDS(cls) -> int:
+        """Regional transit cache refresh interval in seconds."""
+        return cls._get_feature("muni").get("transit_cache_refresh_seconds", 90)
+    
     # ==================== Bay Wheels Configuration ====================
     
     @classmethod

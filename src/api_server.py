@@ -1226,51 +1226,41 @@ async def find_nearby_muni_stops(
         nearby_stops.sort(key=lambda x: x["distance_km"])
         nearby_stops = nearby_stops[:limit]
         
-        # Try to get routes serving each stop from StopMonitoring API
-        from src.config import Config
-        api_key = Config.MUNI_API_KEY
-        
-        for stop in nearby_stops:
-            try:
-                # Query StopMonitoring for this stop to get routes
-                url = "http://api.511.org/transit/StopMonitoring"
-                params = {
-                    "api_key": api_key,
-                    "agency": "SF",
-                    "stopCode": stop["stop_code"],
-                    "format": "json"
-                }
+        # Try to get routes serving each stop from regional transit cache
+        try:
+            from src.data_sources.transit_cache import get_transit_cache
+            cache = get_transit_cache()
+            
+            if cache.is_ready():
+                # Get all cached stop codes for SF agency
+                all_sf_stops = cache.get_all_stops_for_agency("SF")
                 
-                response = requests.get(url, params=params, timeout=5)
-                if response.ok:
-                    content = response.text
-                    if content.startswith('\ufeff'):
-                        content = content[1:]
-                    
-                    import json
-                    data = json.loads(content)
-                    
-                    # Extract unique route names from monitored visits
-                    routes = set()
-                    service_delivery = data.get("ServiceDelivery", {})
-                    stop_monitoring = service_delivery.get("StopMonitoringDelivery", {})
-                    if isinstance(stop_monitoring, list):
-                        stop_monitoring = stop_monitoring[0] if stop_monitoring else {}
-                    
-                    monitored_visits = stop_monitoring.get("MonitoredStopVisit", [])
-                    for visit in monitored_visits:
-                        journey = visit.get("MonitoredVehicleJourney", {})
-                        published_line = journey.get("PublishedLineName", "")
-                        if isinstance(published_line, list):
-                            published_line = published_line[0] if published_line else ""
-                        if published_line:
-                            routes.add(published_line.upper())
-                    
-                    stop["routes"] = sorted(list(routes))
-                else:
+                for stop in nearby_stops:
+                    try:
+                        # Get cached visits for this stop
+                        visits = all_sf_stops.get(stop["stop_code"], [])
+                        
+                        # Extract unique route names from cached visits
+                        routes = set()
+                        for visit in visits:
+                            journey = visit.get("MonitoredVehicleJourney", {})
+                            published_line = journey.get("PublishedLineName", "")
+                            if isinstance(published_line, list):
+                                published_line = published_line[0] if published_line else ""
+                            if published_line:
+                                routes.add(published_line.upper())
+                        
+                        stop["routes"] = sorted(list(routes))
+                    except Exception:
+                        # If we can't get routes, just skip
+                        stop["routes"] = []
+            else:
+                logger.warning("Regional transit cache not ready, routes unavailable")
+                for stop in nearby_stops:
                     stop["routes"] = []
-            except Exception:
-                # If we can't get routes, just skip
+        except Exception as e:
+            logger.error(f"Error accessing regional transit cache: {e}")
+            for stop in nearby_stops:
                 stop["routes"] = []
         
         return {
@@ -1347,6 +1337,40 @@ async def search_muni_stops_by_address(
         raise HTTPException(status_code=503, detail=f"Geocoding service unavailable: {str(e)}")
     except Exception as e:
         logger.error(f"Error searching Muni stops: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/transit/cache/status")
+async def get_transit_cache_status():
+    """
+    Get status and health information about the regional transit cache.
+    
+    Returns cache statistics including:
+    - Last refresh time and age
+    - Number of agencies and stops cached
+    - Refresh count and error count
+    - Whether cache is stale
+    """
+    try:
+        from src.data_sources.transit_cache import get_transit_cache
+        cache = get_transit_cache()
+        status = cache.get_status()
+        
+        # Add human-readable timestamps
+        from datetime import datetime
+        if status["last_refresh"] > 0:
+            status["last_refresh_iso"] = datetime.fromtimestamp(status["last_refresh"]).isoformat()
+        else:
+            status["last_refresh_iso"] = None
+            
+        if status["last_success"] > 0:
+            status["last_success_iso"] = datetime.fromtimestamp(status["last_success"]).isoformat()
+        else:
+            status["last_success_iso"] = None
+        
+        return status
+    except Exception as e:
+        logger.error(f"Error getting transit cache status: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

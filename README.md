@@ -395,6 +395,36 @@ Real-time SF Muni arrival predictions with an intelligent stop finder.
 {{muni.stops.1.formatted}}
 ```
 
+**Regional Transit Caching:**
+
+Vesta uses an intelligent regional caching system to avoid 511.org API rate limits:
+- **Single Regional Request**: Fetches ALL Bay Area transit data (Muni, BART, Caltrain, etc.) in one API call
+- **Automatic Refresh**: Cache refreshes every 90 seconds (configurable), staying well within the 60 requests/hour limit
+- **Instant Responses**: All Muni data served from cache with zero API latency
+- **Graceful Degradation**: If API is unavailable, serves stale cache data
+- **API Call Reduction**: Reduces API calls from 100+ per hour to ~40 per hour
+
+**Cache Configuration** (optional):
+```json
+{
+  "features": {
+    "muni": {
+      "transit_cache_enabled": true,
+      "transit_cache_refresh_seconds": 90
+    }
+  }
+}
+```
+
+**Monitoring Cache Health:**
+
+Check cache status via API endpoint:
+```bash
+curl http://localhost:8000/transit/cache/status
+```
+
+Returns cache age, refresh count, agencies cached, and staleness warnings.
+
 ### Traffic
 Monitor drive times to multiple destinations with live traffic conditions.
 

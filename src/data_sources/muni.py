@@ -1,15 +1,16 @@
-"""Muni transit data source using 511.org SIRI StopMonitoring API.
+"""Muni transit data source using 511.org regional transit cache.
 
 This module provides real-time arrival predictions for SF Muni transit.
-Supports multiple stop monitoring with caching.
+Uses the regional transit cache to avoid rate limiting (fetches all Bay Area
+transit data once every 90 seconds, then serves Muni data from cache).
+Supports multiple stop monitoring.
 """
 
 import logging
-import requests
-import time
 from typing import Optional, Dict, List, Any
 from datetime import datetime, timezone
 from ..config import Config
+from .transit_cache import get_transit_cache
 
 logger = logging.getLogger(__name__)
 
@@ -18,18 +19,15 @@ logger = logging.getLogger(__name__)
 COLOR_RED = 63    # Delay indicator
 COLOR_ORANGE = 64  # Full occupancy indicator
 
-# Cache for stop information (24 hour TTL)
-_stop_info_cache: Optional[Dict] = None
-_stop_info_cache_time: float = 0
-STOP_INFO_CACHE_TTL = 24 * 60 * 60  # 24 hours in seconds
-
 
 class MuniSource:
-    """Fetches real-time transit data from 511.org StopMonitoring API."""
+    """Fetches real-time transit data from regional transit cache."""
     
+    AGENCY = "SF"  # San Francisco Muni
+    
+    # Legacy API URLs (kept for reference, no longer used directly)
     API_BASE_URL = "http://api.511.org/transit/StopMonitoring"
     STOPS_API_URL = "http://api.511.org/transit/stops"
-    AGENCY = "SF"  # San Francisco Muni
     
     def __init__(self, api_key: str, stop_codes: List[str], line_name: Optional[str] = None):
         """
@@ -51,28 +49,6 @@ class MuniSource:
         # For backward compatibility
         self.stop_code = self.stop_codes[0] if self.stop_codes else ""
     
-    @staticmethod
-    def _get_stop_information() -> Optional[Dict]:
-        """
-        Fetch and cache stop information (names, addresses, coordinates).
-        Caches for 24 hours to reduce API calls.
-        
-        Returns:
-            Dictionary mapping stop_code to stop info, or None if fetch failed
-        """
-        global _stop_info_cache, _stop_info_cache_time
-        
-        current_time = time.time()
-        
-        # Return cached data if still valid
-        if _stop_info_cache is not None and (current_time - _stop_info_cache_time) < STOP_INFO_CACHE_TTL:
-            return _stop_info_cache
-        
-        # Note: We would need the API key to fetch stops, but we can't access Config here
-        # For now, return None and log that caching is not yet implemented
-        # The stop name will be fetched from the StopMonitoring response instead
-        logger.debug("Stop information cache not implemented yet (requires API key)")
-        return None
     
     def fetch_arrivals(self) -> Optional[Dict[str, Any]]:
         """
@@ -110,7 +86,7 @@ class MuniSource:
     
     def fetch_multiple_stops(self) -> List[Dict[str, Any]]:
         """
-        Fetch arrival predictions for all configured stops.
+        Fetch arrival predictions for all configured stops from regional transit cache.
         
         Returns:
             List of dictionaries with arrival data for each stop
@@ -119,38 +95,47 @@ class MuniSource:
             return []
         
         results = []
-        for stop_code in self.stop_codes:
-            try:
-                params = {
-                    "api_key": self.api_key,
-                    "agency": self.AGENCY,
-                    "stopCode": stop_code,
-                    "format": "json"
+        
+        try:
+            # Get transit cache instance
+            cache = get_transit_cache()
+            
+            # Check if cache is ready
+            if not cache.is_ready():
+                logger.warning("Regional transit cache not ready yet. Waiting for first refresh...")
+                return []
+            
+            # Get cached data for all our stops at once
+            cached_stops_data = cache.get_stops_data(self.AGENCY, self.stop_codes)
+            
+            # Parse each stop's data
+            for stop_code in self.stop_codes:
+                visits = cached_stops_data.get(stop_code, [])
+                
+                if not visits:
+                    logger.debug(f"No arrivals in cache for stop {stop_code}")
+                    continue
+                
+                # Build a mock StopMonitoring response structure from cached visits
+                mock_response = {
+                    "ServiceDelivery": {
+                        "StopMonitoringDelivery": {
+                            "MonitoredStopVisit": visits
+                        }
+                    }
                 }
                 
-                response = requests.get(self.API_BASE_URL, params=params, timeout=15)
-                response.raise_for_status()
-                
-                # 511.org returns JSON with BOM sometimes, handle that
-                content = response.text
-                if content.startswith('\ufeff'):
-                    content = content[1:]
-                
-                import json
-                data = json.loads(content)
-                
-                parsed = self._parse_response(data, stop_code)
+                # Parse using existing parser
+                parsed = self._parse_response(mock_response, stop_code)
                 if parsed:
                     results.append(parsed)
-                    
-            except requests.exceptions.RequestException as e:
-                logger.error(f"Failed to fetch Muni data for stop {stop_code}: {e}")
-            except (KeyError, ValueError, json.JSONDecodeError) as e:
-                logger.error(f"Failed to parse 511.org response for stop {stop_code}: {e}")
-            except Exception as e:
-                logger.error(f"Error fetching Muni data for stop {stop_code}: {e}")
-        
-        return results
+                    logger.debug(f"Parsed Muni data for stop {stop_code} from regional cache")
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"Error fetching Muni data from regional cache: {e}", exc_info=True)
+            return []
     
     def get_next_arrival(self) -> Optional[Dict[str, Any]]:
         """
@@ -535,10 +520,26 @@ class MuniSource:
 
 
 def get_muni_source() -> Optional[MuniSource]:
-    """Get configured Muni source instance."""
+    """Get configured Muni source instance and initialize transit cache."""
     if not Config.MUNI_API_KEY:
         logger.debug("Muni API key not configured")
         return None
+    
+    # Initialize and configure the regional transit cache
+    cache = get_transit_cache()
+    
+    # Configure cache with API key and refresh settings
+    refresh_interval = getattr(Config, 'TRANSIT_CACHE_REFRESH_SECONDS', 90)
+    cache_enabled = getattr(Config, 'TRANSIT_CACHE_ENABLED', True)
+    cache.configure(
+        api_key=Config.MUNI_API_KEY,
+        refresh_interval=refresh_interval,
+        enabled=cache_enabled
+    )
+    
+    # Start cache if not already running
+    if cache_enabled and not cache.is_ready():
+        cache.start()
     
     # Support both new (MUNI_STOP_CODES list) and old (MUNI_STOP_CODE string) config
     stop_codes = getattr(Config, 'MUNI_STOP_CODES', None)
