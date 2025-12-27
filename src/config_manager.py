@@ -11,6 +11,9 @@ import threading
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+# Import TimeService for migration
+from .time_service import get_time_service
+
 logger = logging.getLogger(__name__)
 
 # Default configuration schema
@@ -171,11 +174,12 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         },
         "silence_schedule": {
             "enabled": False,
-            "start_time": "20:00",  # 8pm
-            "end_time": "07:00",  # 7am
+            "start_time": "20:00",  # 8pm (will be migrated to UTC ISO format)
+            "end_time": "07:00",  # 7am (will be migrated to UTC ISO format)
         },
     },
     "general": {
+        "timezone": "America/Los_Angeles",  # User's timezone for display purposes
         "refresh_interval_seconds": 300,
         "output_target": "board",
     },
@@ -405,22 +409,30 @@ class ConfigManager:
         with self._file_lock:
             return self._deep_copy(self._config.get("general", {}))
 
-    def set_general(self, settings: Dict[str, Any]) -> None:
+    def set_general(self, settings: Dict[str, Any]) -> bool:
         """Update general configuration.
         
         Args:
             settings: Partial general settings to update.
+            
+        Returns:
+            True if settings were saved successfully, False otherwise.
         """
-        with self._file_lock:
-            if "general" not in self._config:
-                self._config["general"] = {}
-            
-            for key, value in settings.items():
-                if key in DEFAULT_CONFIG.get("general", {}):
-                    self._config["general"][key] = value
-            
-            self._save_internal()
-        logger.info("General settings updated")
+        try:
+            with self._file_lock:
+                if "general" not in self._config:
+                    self._config["general"] = {}
+                
+                for key, value in settings.items():
+                    if key in DEFAULT_CONFIG.get("general", {}):
+                        self._config["general"][key] = value
+                
+                self._save_internal()
+            logger.info("General settings updated")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update general settings: {e}")
+            return False
 
     def is_feature_enabled(self, feature_name: str) -> bool:
         """Check if a feature is enabled.
@@ -505,6 +517,61 @@ class ConfigManager:
                 errors.append("Guest WiFi password is required when enabled")
         
         return (len(errors) == 0, errors)
+    
+    def migrate_silence_schedule_to_utc(self) -> bool:
+        """Migrate silence_schedule times from old HH:MM format to UTC ISO format.
+        
+        This method detects if the silence_schedule is using the old local time format
+        (e.g., "20:00") and converts it to the new UTC ISO format (e.g., "04:00+00:00").
+        
+        Returns:
+            True if migration was performed, False if no migration needed
+        """
+        with self._lock:
+            silence_config = self.get_feature("silence_schedule")
+            start_time = silence_config.get("start_time", "")
+            end_time = silence_config.get("end_time", "")
+            
+            # Check if migration is needed (old format is just HH:MM, 5 chars)
+            if not start_time or not end_time:
+                return False
+            
+            # Old format: "20:00" (5 chars), New format: "20:00-08:00" (11+ chars)
+            needs_migration = (len(start_time) == 5 and ":" in start_time and 
+                             len(end_time) == 5 and ":" in end_time)
+            
+            if not needs_migration:
+                logger.debug("Silence schedule already in UTC format, no migration needed")
+                return False
+            
+            # Get timezone for conversion (try general.timezone first, then datetime.timezone)
+            general_config = self.get_general()
+            timezone = general_config.get("timezone")
+            
+            if not timezone:
+                # Fall back to datetime feature timezone
+                datetime_config = self.get_feature("datetime")
+                timezone = datetime_config.get("timezone", "America/Los_Angeles")
+            
+            logger.info(f"Migrating silence schedule from local time to UTC using timezone: {timezone}")
+            
+            # Convert times to UTC
+            time_service = get_time_service()
+            start_utc = time_service.local_to_utc_iso(start_time, timezone)
+            end_utc = time_service.local_to_utc_iso(end_time, timezone)
+            
+            # Update the config
+            silence_config["start_time"] = start_utc
+            silence_config["end_time"] = end_utc
+            
+            success = self.set_feature("silence_schedule", silence_config)
+            
+            if success:
+                logger.info(f"Successfully migrated silence schedule: {start_time} → {start_utc}, {end_time} → {end_utc}")
+            else:
+                logger.error("Failed to save migrated silence schedule")
+            
+            return success
 
 
 # Global instance getter
