@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { api } from "@/lib/api";
-import { ChevronDown, Bike } from "lucide-react";
+import { ChevronDown, Bike, TrainFront, Car } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { VESTABOARD_COLORS } from "@/lib/vestaboard-colors";
@@ -166,6 +166,36 @@ export function VariablePicker({
     enabled: templateVars?.variables?.baywheels !== undefined,
   });
 
+  // Fetch live MUNI stop data
+  const { data: muniData } = useQuery({
+    queryKey: ["muni-live-data"],
+    queryFn: async () => {
+      try {
+        const display = await api.getDisplayRaw("muni");
+        return display.data as { stops?: any[] };
+      } catch {
+        return null;
+      }
+    },
+    refetchInterval: 30000,
+    enabled: templateVars?.variables?.muni !== undefined,
+  });
+
+  // Fetch live Traffic route data
+  const { data: trafficData } = useQuery({
+    queryKey: ["traffic-live-data"],
+    queryFn: async () => {
+      try {
+        const display = await api.getDisplayRaw("traffic");
+        return display.data as { routes?: any[] };
+      } catch {
+        return null;
+      }
+    },
+    refetchInterval: 30000,
+    enabled: templateVars?.variables?.traffic !== undefined,
+  });
+
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success("Copied to clipboard");
@@ -226,7 +256,7 @@ export function VariablePicker({
               // Special handling for BayWheels with live station data
               if (category === "baywheels" && baywheelsData?.stations && baywheelsData.stations.length > 0) {
                 return (
-                  <CollapsibleSection key={category} title={category} defaultOpen={true}>
+                  <CollapsibleSection key={category} title={category} defaultOpen={false}>
                     <div className="space-y-3">
                       {/* Aggregate/General Variables */}
                       <div>
@@ -299,9 +329,249 @@ export function VariablePicker({
                 );
               }
 
+              // Special handling for MUNI with live stop data OR when enabled but no stops yet
+              if (category === "muni") {
+                return (
+                  <CollapsibleSection key={category} title={category} defaultOpen={false}>
+                    <div className="space-y-3">
+                      {/* Aggregate/General Variables */}
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1.5">General</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {vars.filter(v => !v.startsWith("stops.")).map((variable) => {
+                            const varValue = `{{${category}.${variable}}}`;
+                            return (
+                              <VariablePill
+                                key={variable}
+                                label={variable}
+                                value={varValue}
+                                onInsert={() => handleInsert(varValue)}
+                                onDragStart={(e) => handleDragStart(e, varValue)}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Individual Stops Accordion */}
+                      <div className="space-y-1.5">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <TrainFront className="h-3 w-3" />
+                          Stops {muniData?.stops ? `(${muniData.stops.length})` : "(None configured)"}
+                        </p>
+                        {muniData?.stops && muniData.stops.length > 0 ? (
+                          <div className="max-h-[400px] overflow-y-auto pr-1">
+                            <Accordion type="single" collapsible className="w-full">
+                              {muniData.stops.map((stop: any, index: number) => (
+                              <AccordionItem key={stop.stop_code || index} value={`stop-${index}`} className="border-b-0">
+                                <AccordionTrigger className="py-2 hover:no-underline">
+                                  <div className="flex items-center gap-2 text-xs">
+                                    <TrainFront className="h-4 w-4" />
+                                    <div className="text-left">
+                                      <div className="font-medium">{stop.stop_name || stop.stop_code}</div>
+                                      <div className="text-muted-foreground text-xs">
+                                        {stop.line} • Index: {index}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                  <div className="space-y-3 pt-2 pl-2">
+                                    {/* Stop-level variables */}
+                                    <div>
+                                      <p className="text-xs text-muted-foreground mb-1.5">Stop Info</p>
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {["stop_name", "stop_code"].map((field) => {
+                                          const varValue = `{{${category}.stops.${index}.${field}}}`;
+                                          return (
+                                            <VariablePill
+                                              key={field}
+                                              label={field}
+                                              value={varValue}
+                                              onInsert={() => handleInsert(varValue)}
+                                              onDragStart={(e) => handleDragStart(e, varValue)}
+                                            />
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+
+                                    {/* All Lines combined */}
+                                    <div>
+                                      <p className="text-xs text-muted-foreground mb-1.5">All Lines (Combined)</p>
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {["all_lines.formatted", "all_lines.next_arrival"].map((field) => {
+                                          const varValue = `{{${category}.stops.${index}.${field}}}`;
+                                          return (
+                                            <VariablePill
+                                              key={field}
+                                              label={field.split('.')[1]}
+                                              value={varValue}
+                                              onInsert={() => handleInsert(varValue)}
+                                              onDragStart={(e) => handleDragStart(e, varValue)}
+                                            />
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+
+                                    {/* Lines nested accordion */}
+                                    {stop.lines && Object.keys(stop.lines).length > 0 && (
+                                      <div>
+                                        <p className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
+                                          <TrainFront className="h-3 w-3" />
+                                          Lines ({Object.keys(stop.lines).length})
+                                        </p>
+                                        <Accordion type="single" collapsible className="w-full">
+                                          {Object.entries(stop.lines).map(([lineCode, lineData]: [string, any]) => (
+                                            <AccordionItem key={lineCode} value={`stop-${index}-line-${lineCode}`} className="border-b-0">
+                                              <AccordionTrigger className="py-1.5 hover:no-underline text-xs">
+                                                <div className="flex items-center gap-2">
+                                                  <Badge variant="outline" className="text-[10px] font-mono px-1.5">
+                                                    {lineCode}
+                                                  </Badge>
+                                                  <span className="text-left">{lineData.line || lineCode}</span>
+                                                  {lineData.next_arrival && (
+                                                    <span className="text-muted-foreground text-[10px]">
+                                                      {lineData.next_arrival}m
+                                                    </span>
+                                                  )}
+                                                </div>
+                                              </AccordionTrigger>
+                                              <AccordionContent>
+                                                <div className="space-y-2 pt-2 pl-2">
+                                                  <div className="flex flex-wrap gap-1.5">
+                                                    {["formatted", "next_arrival", "is_delayed", "line"].map((field) => {
+                                                      const varValue = `{{${category}.stops.${index}.lines.${lineCode}.${field}}}`;
+                                                      return (
+                                                        <VariablePill
+                                                          key={field}
+                                                          label={field}
+                                                          value={varValue}
+                                                          onInsert={() => handleInsert(varValue)}
+                                                          onDragStart={(e) => handleDragStart(e, varValue)}
+                                                        />
+                                                      );
+                                                    })}
+                                                  </div>
+                                                  <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                                                    <code className="text-xs">stops.{index}.lines.{lineCode}.*</code>
+                                                  </div>
+                                                </div>
+                                              </AccordionContent>
+                                            </AccordionItem>
+                                          ))}
+                                        </Accordion>
+                                      </div>
+                                    )}
+                                  </div>
+                                </AccordionContent>
+                              </AccordionItem>
+                            ))}
+                            </Accordion>
+                          </div>
+                        ) : (
+                          <div className="p-3 bg-muted/30 rounded-lg text-xs text-muted-foreground">
+                            <p className="mb-2">Configure stops in Settings to see indexed variables here.</p>
+                            <p className="font-mono text-[10px]">
+                              Example: <code className="bg-background px-1 rounded">stops.0.line</code>, <code className="bg-background px-1 rounded">stops.1.formatted</code>
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CollapsibleSection>
+                );
+              }
+
+              // Special handling for Traffic with live route data OR when enabled but no routes yet
+              if (category === "traffic") {
+                return (
+                  <CollapsibleSection key={category} title={category} defaultOpen={false}>
+                    <div className="space-y-3">
+                      {/* Aggregate/General Variables */}
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1.5">General</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {vars.filter(v => !v.startsWith("routes.")).map((variable) => {
+                            const varValue = `{{${category}.${variable}}}`;
+                            return (
+                              <VariablePill
+                                key={variable}
+                                label={variable}
+                                value={varValue}
+                                onInsert={() => handleInsert(varValue)}
+                                onDragStart={(e) => handleDragStart(e, varValue)}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Individual Routes Accordion */}
+                      <div className="space-y-1.5">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Car className="h-3 w-3" />
+                          Routes {trafficData?.routes ? `(${trafficData.routes.length})` : "(None configured)"}
+                        </p>
+                        {trafficData?.routes && trafficData.routes.length > 0 ? (
+                          <div className="max-h-[400px] overflow-y-auto pr-1">
+                            <Accordion type="single" collapsible className="w-full">
+                              {trafficData.routes.map((route: any, index: number) => (
+                              <AccordionItem key={index} value={`route-${index}`} className="border-b-0">
+                                <AccordionTrigger className="py-2 hover:no-underline">
+                                  <div className="flex items-center gap-2 text-xs">
+                                    <Car className="h-4 w-4" />
+                                    <div className="text-left">
+                                      <div className="font-medium">{route.destination_name}</div>
+                                      <div className="text-muted-foreground text-xs">
+                                        {route.duration_minutes}m • {route.traffic_status} • Index: {index}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                  <div className="space-y-2 pt-2 pl-2">
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {["duration_minutes", "delay_minutes", "traffic_status", "destination_name", "formatted"].map((field) => {
+                                        const varValue = `{{${category}.routes.${index}.${field}}}`;
+                                        return (
+                                          <VariablePill
+                                            key={field}
+                                            label={field}
+                                            value={varValue}
+                                            onInsert={() => handleInsert(varValue)}
+                                            onDragStart={(e) => handleDragStart(e, varValue)}
+                                          />
+                                        );
+                                      })}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                                      <code className="text-xs">routes.{index}.*</code>
+                                    </div>
+                                  </div>
+                                </AccordionContent>
+                              </AccordionItem>
+                            ))}
+                            </Accordion>
+                          </div>
+                        ) : (
+                          <div className="p-3 bg-muted/30 rounded-lg text-xs text-muted-foreground">
+                            <p className="mb-2">Configure routes in Settings to see indexed variables here.</p>
+                            <p className="font-mono text-[10px]">
+                              Example: <code className="bg-background px-1 rounded">routes.0.duration_minutes</code>, <code className="bg-background px-1 rounded">routes.1.formatted</code>
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CollapsibleSection>
+                );
+              }
+
               // Default handling for other categories
               return (
-                <CollapsibleSection key={category} title={category} defaultOpen={true}>
+                <CollapsibleSection key={category} title={category} defaultOpen={false}>
                   <div className="flex flex-wrap gap-1.5">
                     {vars.map((variable) => {
                       const varValue = `{{${category}.${variable}}}`;

@@ -273,9 +273,21 @@ export interface AirFogFeatureConfig {
 export interface MuniFeatureConfig {
     enabled: boolean;
     api_key: string;
-    stop_code: string;
+    stop_code?: string;  // Backward compatibility
+    stop_codes?: string[];  // New multi-stop support
+    stop_names?: string[];  // Stop names for display
     line_name: string;
     refresh_seconds: number;
+}
+
+export interface MuniStop {
+    stop_code: string;
+    stop_id: string;
+    name: string;
+    lat: number | null;
+    lon: number | null;
+    distance_km?: number;
+    routes?: string[];
 }
 
 export interface BayWheelsFeatureConfig {
@@ -308,12 +320,19 @@ export interface SurfFeatureConfig {
   refresh_seconds: number;
 }
 
-export interface TrafficFeatureConfig {
-    enabled: boolean;
-    api_key: string;
+export interface TrafficRoute {
     origin: string;
     destination: string;
     destination_name: string;
+}
+
+export interface TrafficFeatureConfig {
+    enabled: boolean;
+    api_key: string;
+    origin?: string;  // Backward compatibility
+    destination?: string;  // Backward compatibility
+    destination_name?: string;  // Backward compatibility
+    routes?: TrafficRoute[];  // New multi-route support
     refresh_seconds: number;
 }
 
@@ -564,4 +583,53 @@ export const api = {
       radius_km: number;
     }>(`/baywheels/stations/search?${params}`);
   },
+
+  // MUNI stop search endpoints
+  listMuniStops: () =>
+    fetchApi<{ stops: MuniStop[]; total: number }>("/muni/stops"),
+  findNearbyMuniStops: (lat: number, lng: number, radius?: number, limit?: number) => {
+    const params = new URLSearchParams({
+      lat: lat.toString(),
+      lng: lng.toString(),
+      ...(radius !== undefined && { radius: radius.toString() }),
+      ...(limit !== undefined && { limit: limit.toString() }),
+    });
+    return fetchApi<{
+      stops: MuniStop[];
+      count: number;
+      search_location: { lat: number; lng: number };
+      radius_km: number;
+    }>(`/muni/stops/nearby?${params}`);
+  },
+  searchMuniStopsByAddress: (address: string, radius?: number, limit?: number) => {
+    const params = new URLSearchParams({
+      address,
+      ...(radius !== undefined && { radius: radius.toString() }),
+      ...(limit !== undefined && { limit: limit.toString() }),
+    });
+    return fetchApi<{
+      stops: MuniStop[];
+      count: number;
+      search_address: string;
+      geocoded_location: { lat: number; lng: number; display_name: string };
+      radius_km: number;
+    }>(`/muni/stops/search?${params}`);
+  },
+
+  // Traffic route endpoints
+  geocodeAddress: (address: string) =>
+    fetchApi<{ lat: number; lng: number; formatted_address: string }>("/traffic/routes/geocode", {
+      method: "POST",
+      body: JSON.stringify({ address }),
+    }),
+  validateTrafficRoute: (origin: string, destination: string, destination_name: string) =>
+    fetchApi<{
+      valid: boolean;
+      distance_km?: number;
+      static_duration_minutes?: number;
+      error?: string;
+    }>("/traffic/routes/validate", {
+      method: "POST",
+      body: JSON.stringify({ origin, destination, destination_name }),
+    }),
 };

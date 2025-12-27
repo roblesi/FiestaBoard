@@ -501,25 +501,64 @@ class DisplayService:
     
     def _get_muni(self) -> DisplayResult:
         """Get Muni transit display."""
-        if not self.muni_source or not Config.MUNI_ENABLED:
+        # If MUNI is enabled but not configured (no API key), mark as unavailable
+        if not Config.MUNI_ENABLED:
             return DisplayResult(
                 display_type="muni",
                 formatted="",
                 raw={},
                 available=False,
-                error="Muni transit not configured or disabled"
+                error="Muni transit disabled"
             )
         
-        raw_data = self.muni_source.fetch_arrivals()
-        
-        if not raw_data:
+        # If enabled but no source (no API key), mark as unavailable
+        if not self.muni_source:
             return DisplayResult(
                 display_type="muni",
-                formatted="Muni: No arrivals",
+                formatted="",
+                raw={},
+                available=False,
+                error="Muni API key not configured"
+            )
+        
+        # Feature is enabled and has API key - mark as available even if no stops configured yet
+        # This allows template variables to show in the UI before stops are added
+        
+        # Get data for all configured stops
+        stops = self.muni_source.fetch_multiple_stops()
+        
+        if not stops:
+            # No stops configured yet or failed to fetch - still mark as available
+            return DisplayResult(
+                display_type="muni",
+                formatted="Muni: No stops configured",
                 raw={},
                 available=True,
-                error="Failed to fetch Muni data"
+                error="No stops configured"
             )
+        
+        # Build raw data with all template variables
+        raw_data = {
+            "stops": stops,
+            "stop_count": len(stops),
+        }
+        
+        # For backward compatibility, also include first stop data at top level
+        if stops:
+            first_stop = stops[0]
+            raw_data["stop_code"] = first_stop.get("stop_code", "")
+            raw_data["line"] = first_stop.get("line", "")
+            raw_data["stop_name"] = first_stop.get("stop_name", "")
+            raw_data["arrivals"] = first_stop.get("arrivals", [])
+            raw_data["is_delayed"] = first_stop.get("is_delayed", False)
+            raw_data["delay_description"] = first_stop.get("delay_description", "")
+            raw_data["formatted"] = first_stop.get("formatted", "")
+            raw_data["color_code"] = first_stop.get("color_code", 0)
+        
+        # Get next arrival across all stops
+        next_arrival = self.muni_source.get_next_arrival()
+        if next_arrival:
+            raw_data["next_arrival"] = next_arrival
         
         formatted = self.formatter.format_muni(raw_data)
         return DisplayResult(
@@ -646,24 +685,63 @@ class DisplayService:
     
     def _get_traffic(self) -> DisplayResult:
         """Get traffic conditions display."""
-        if not self.traffic_source or not Config.TRAFFIC_ENABLED:
+        # If Traffic is enabled but not configured (no API key), mark as unavailable
+        if not Config.TRAFFIC_ENABLED:
             return DisplayResult(
                 display_type="traffic",
                 formatted="",
                 raw={},
                 available=False,
-                error="Traffic source not configured or not enabled"
+                error="Traffic disabled"
             )
         
-        raw_data = self.traffic_source.fetch_traffic_data()
-        if not raw_data:
+        # If enabled but no source (no API key), mark as unavailable
+        if not self.traffic_source:
             return DisplayResult(
                 display_type="traffic",
-                formatted="Traffic: Unavailable",
+                formatted="",
+                raw={},
+                available=False,
+                error="Traffic API key not configured"
+            )
+        
+        # Feature is enabled and has API key - mark as available even if no routes configured yet
+        # This allows template variables to show in the UI before routes are added
+        
+        # Get data for all configured routes
+        routes = self.traffic_source.fetch_multiple_routes()
+        
+        if not routes:
+            # No routes configured yet or failed to fetch - still mark as available
+            return DisplayResult(
+                display_type="traffic",
+                formatted="Traffic: No routes configured",
                 raw={},
                 available=True,
-                error="Failed to fetch traffic data"
+                error="No routes configured"
             )
+        
+        # Build raw data with all template variables
+        raw_data = {
+            "routes": routes,
+            "route_count": len(routes),
+        }
+        
+        # For backward compatibility, also include first route data at top level
+        if routes:
+            first_route = routes[0]
+            raw_data["duration_minutes"] = first_route.get("duration_minutes", 0)
+            raw_data["delay_minutes"] = first_route.get("delay_minutes", 0)
+            raw_data["traffic_status"] = first_route.get("traffic_status", "UNKNOWN")
+            raw_data["traffic_color"] = first_route.get("traffic_color", "GREEN")
+            raw_data["destination_name"] = first_route.get("destination_name", "")
+            raw_data["formatted"] = first_route.get("formatted", "")
+            raw_data["formatted_message"] = first_route.get("formatted_message", "")
+        
+        # Get worst delay across all routes
+        worst_delay = self.traffic_source.get_worst_delay()
+        if worst_delay:
+            raw_data["worst_delay"] = worst_delay
         
         formatted = raw_data.get("formatted_message", "")
         if not formatted:

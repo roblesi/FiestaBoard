@@ -353,8 +353,43 @@ class Config:
     @classmethod
     @property
     def MUNI_STOP_CODE(cls) -> str:
-        """Muni stop code to monitor."""
+        """Muni stop code to monitor (backward compatibility - returns first code)."""
+        stop_codes = cls.MUNI_STOP_CODES
+        if stop_codes:
+            return stop_codes[0] if isinstance(stop_codes, list) else stop_codes
+        # Fallback to old config format
         return cls._get_feature("muni").get("stop_code", "")
+    
+    @classmethod
+    @property
+    def MUNI_STOP_CODES(cls) -> List[str]:
+        """Muni stop codes to monitor (list)."""
+        feature_config = cls._get_feature("muni")
+        
+        # Check for new stop_codes array format
+        stop_codes = feature_config.get("stop_codes")
+        if stop_codes:
+            if isinstance(stop_codes, list):
+                return stop_codes
+            else:
+                return [stop_codes]
+        
+        # Fallback to old single stop_code format
+        stop_code = feature_config.get("stop_code", "")
+        if stop_code:
+            return [stop_code]
+        
+        return []
+    
+    @classmethod
+    @property
+    def MUNI_STOP_NAMES(cls) -> List[str]:
+        """Muni stop names for display (list)."""
+        feature_config = cls._get_feature("muni")
+        stop_names = feature_config.get("stop_names", [])
+        if isinstance(stop_names, list):
+            return stop_names
+        return []
     
     @classmethod
     @property
@@ -454,6 +489,34 @@ class Config:
     def TRAFFIC_DESTINATION_NAME(cls) -> str:
         """Display name for traffic destination."""
         return cls._get_feature("traffic").get("destination_name", "DOWNTOWN")
+    
+    @classmethod
+    @property
+    def TRAFFIC_ROUTES(cls) -> List[Dict[str, str]]:
+        """Traffic routes to monitor (list of dicts with origin, destination, destination_name)."""
+        feature_config = cls._get_feature("traffic")
+        
+        # Check for new routes array format
+        routes = feature_config.get("routes")
+        if routes:
+            if isinstance(routes, list):
+                return routes
+            else:
+                return [routes]
+        
+        # Fallback to old single route format
+        origin = feature_config.get("origin", "")
+        destination = feature_config.get("destination", "")
+        destination_name = feature_config.get("destination_name", "DOWNTOWN")
+        
+        if origin and destination:
+            return [{
+                "origin": origin,
+                "destination": destination,
+                "destination_name": destination_name
+            }]
+        
+        return []
     
     @classmethod
     @property

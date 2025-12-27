@@ -48,6 +48,9 @@ docker-compose down
 - 🖖 **Star Trek Quotes**: Random quotes from TNG, Voyager, and DS9 with configurable ratio
 - 🎵 **Apple Music**: "Now Playing" display (artist + song) when music is playing
 - 📶 **Guest WiFi**: Display WiFi credentials for guests (easily toggled on/off)
+- 🚴 **Bay Wheels**: Track bike availability at multiple stations with visual station finder
+- 🚇 **Muni Transit**: Real-time SF Muni arrival predictions with stop finder (search by address or location)
+- 🚗 **Traffic**: Drive time to destinations with live traffic conditions (multiple routes supported)
 - 🌙 **Silence Schedule**: Configure a time window when the Vestaboard won't send updates (e.g., 8pm-7am)
 
 ### System Features
@@ -351,13 +354,83 @@ Configure a time window when the Vestaboard won't send updates. Perfect for quie
 
 **Example:** Set `SILENCE_SCHEDULE_START_TIME=20:00` and `SILENCE_SCHEDULE_END_TIME=07:00` to prevent updates between 8pm and 7am.
 
+### Bay Wheels Bike Share
+Track bike availability at multiple Bay Wheels stations with an easy-to-use station finder.
+
+**Features:**
+- **Visual Station Finder**: Search for stations by address, coordinates, or your current location
+- **Multiple Stations**: Track up to 4 stations simultaneously
+- **Live Data**: See real-time electric and classic bike availability
+- **Indexed Template Access**: Use `{{baywheels.stations.0.electric_bikes}}` to access specific stations
+- **Aggregate Stats**: Display totals across all stations with `{{baywheels.total_electric}}`
+
+**Setup:**
+1. Enable Bay Wheels in Settings
+2. Use the station finder to search near your location
+3. Select up to 4 stations to monitor
+4. Use indexed variables in your page templates
+
+### Muni Transit
+Real-time SF Muni arrival predictions with an intelligent stop finder.
+
+**Features:**
+- **Visual Stop Finder**: Search for Muni stops by address, coordinates, or your current location
+- **Multiple Stops**: Track up to 4 stops simultaneously
+- **Route Information**: See which lines serve each stop
+- **Live Arrivals**: Real-time arrival predictions for all configured stops
+- **Indexed Template Access**: Use `{{muni.stops.0.formatted}}` to display arrivals for specific stops
+- **Line Filtering**: Optionally filter to specific lines (e.g., N-Judah only)
+
+**Setup:**
+1. Get a free API key from [511.org/open-data](https://511.org/open-data)
+2. Enable Muni in Settings and enter your API key
+3. Use the stop finder to search near your location
+4. Select up to 4 stops to monitor
+5. Use indexed variables in your page templates (e.g., `{{muni.stops.0.line}}`, `{{muni.stops.1.formatted}}`)
+
+**Example Template:**
+```
+{center}MUNI ARRIVALS
+{{muni.stops.0.formatted}}
+{{muni.stops.1.formatted}}
+```
+
+### Traffic
+Monitor drive times to multiple destinations with live traffic conditions.
+
+**Features:**
+- **Visual Route Planner**: Configure routes with origin and destination
+- **Multiple Routes**: Track up to 4 routes simultaneously
+- **Route Validation**: Validate routes before saving to ensure they work
+- **Live Traffic**: Real-time traffic conditions and delay estimates
+- **Indexed Template Access**: Use `{{traffic.routes.0.formatted}}` to display specific routes
+- **Status Colors**: Automatic color coding based on traffic conditions (green/yellow/red)
+
+**Setup:**
+1. Get a Google Routes API key with Routes API enabled
+2. Enable Traffic in Settings and enter your API key
+3. Use the route planner to add routes:
+   - Enter origin (address or coordinates)
+   - Enter destination (address or coordinates)
+   - Add a short display name (e.g., "WORK", "AIRPORT")
+   - Click "Validate Route" to test
+   - Click "Add Route" to save
+4. Use indexed variables in your page templates (e.g., `{{traffic.routes.0.formatted}}`, `{{traffic.routes.1.duration_minutes}}`)
+
+**Example Template:**
+```
+{center}COMMUTE TIMES
+HOME→WORK: {{traffic.routes.0.duration_minutes}}m
+HOME→AIRPORT: {{traffic.routes.1.duration_minutes}}m
+```
+
 ## Future Features
 
-- 🚴 Baywheels station availability
-- 🚗 Waymo ride pricing
 - 🌐 Webhook support for manual messages
 - 📸 Custom image display
 - 📊 Analytics and usage stats
+- 🌊 Surf conditions
+- 💨 Air quality and fog conditions
 
 ## License
 
