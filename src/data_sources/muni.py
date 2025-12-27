@@ -1,13 +1,16 @@
-"""Muni transit data source using 511.org SIRI StopMonitoring API.
+"""Muni transit data source using 511.org regional transit cache.
 
 This module provides real-time arrival predictions for SF Muni transit.
+Uses the regional transit cache to avoid rate limiting (fetches all Bay Area
+transit data once every 90 seconds, then serves Muni data from cache).
+Supports multiple stop monitoring.
 """
 
 import logging
-import requests
 from typing import Optional, Dict, List, Any
 from datetime import datetime, timezone
 from ..config import Config
+from .transit_cache import get_transit_cache
 
 logger = logging.getLogger(__name__)
 
@@ -18,33 +21,46 @@ COLOR_ORANGE = 64  # Full occupancy indicator
 
 
 class MuniSource:
-    """Fetches real-time transit data from 511.org StopMonitoring API."""
+    """Fetches real-time transit data from regional transit cache."""
     
-    API_BASE_URL = "http://api.511.org/transit/StopMonitoring"
     AGENCY = "SF"  # San Francisco Muni
     
-    def __init__(self, api_key: str, stop_code: str, line_name: Optional[str] = None):
+    # Legacy API URLs (kept for reference, no longer used directly)
+    API_BASE_URL = "http://api.511.org/transit/StopMonitoring"
+    STOPS_API_URL = "http://api.511.org/transit/stops"
+    
+    def __init__(self, api_key: str, stop_codes: List[str], line_name: Optional[str] = None):
         """
         Initialize Muni source.
         
         Args:
             api_key: 511.org API key
-            stop_code: The stop code to monitor (e.g., "15726" for Church & Duboce)
+            stop_codes: List of stop codes to monitor (e.g., ["15726", "15727"])
             line_name: Optional line name filter (e.g., "N" for N-Judah)
         """
         self.api_key = api_key
-        self.stop_code = stop_code
+        # Support both single string (backward compatibility) and list
+        if isinstance(stop_codes, str):
+            self.stop_codes = [stop_codes]
+        else:
+            self.stop_codes = stop_codes if stop_codes else []
         self.line_name = line_name
+        
+        # For backward compatibility
+        self.stop_code = self.stop_codes[0] if self.stop_codes else ""
+    
     
     def fetch_arrivals(self) -> Optional[Dict[str, Any]]:
         """
-        Fetch arrival predictions from 511.org StopMonitoring API.
+        Fetch arrival predictions from 511.org StopMonitoring API (backward compatibility).
+        Returns data for first configured stop.
         
         Returns:
             Dictionary with parsed arrival data, or None if failed:
             {
                 "line": str,           # Line name (e.g., "N-JUDAH")
                 "stop_name": str,      # Stop name
+                "stop_code": str,      # Stop code
                 "arrivals": [          # List of next arrivals
                     {
                         "minutes": int,
@@ -59,45 +75,100 @@ class MuniSource:
                 "color_code": int,         # Vestaboard color code (63=red, 64=orange, 0=none)
             }
         """
-        params = {
-            "api_key": self.api_key,
-            "agency": self.AGENCY,
-            "stopCode": self.stop_code,
-            "format": "json"
-        }
+        if not self.stop_codes:
+            return None
+        
+        # For backward compatibility, return data for first stop
+        results = self.fetch_multiple_stops()
+        if results and len(results) > 0:
+            return results[0]
+        return None
+    
+    def fetch_multiple_stops(self) -> List[Dict[str, Any]]:
+        """
+        Fetch arrival predictions for all configured stops from regional transit cache.
+        
+        Returns:
+            List of dictionaries with arrival data for each stop
+        """
+        if not self.stop_codes:
+            return []
+        
+        results = []
         
         try:
-            response = requests.get(self.API_BASE_URL, params=params, timeout=15)
-            response.raise_for_status()
+            # Get transit cache instance
+            cache = get_transit_cache()
             
-            # 511.org returns JSON with BOM sometimes, handle that
-            content = response.text
-            if content.startswith('\ufeff'):
-                content = content[1:]
+            # Check if cache is ready
+            if not cache.is_ready():
+                logger.warning("Regional transit cache not ready yet. Waiting for first refresh...")
+                return []
             
-            import json
-            data = json.loads(content)
+            # Get cached data for all our stops at once
+            cached_stops_data = cache.get_stops_data(self.AGENCY, self.stop_codes)
             
-            return self._parse_response(data)
+            # Parse each stop's data
+            for stop_code in self.stop_codes:
+                visits = cached_stops_data.get(stop_code, [])
+                
+                if not visits:
+                    logger.debug(f"No arrivals in cache for stop {stop_code}")
+                    continue
+                
+                # Build a mock StopMonitoring response structure from cached visits
+                mock_response = {
+                    "ServiceDelivery": {
+                        "StopMonitoringDelivery": {
+                            "MonitoredStopVisit": visits
+                        }
+                    }
+                }
+                
+                # Parse using existing parser
+                parsed = self._parse_response(mock_response, stop_code)
+                if parsed:
+                    results.append(parsed)
+                    logger.debug(f"Parsed Muni data for stop {stop_code} from regional cache")
             
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to fetch Muni data from 511.org: {e}")
-            return None
-        except (KeyError, ValueError, json.JSONDecodeError) as e:
-            logger.error(f"Failed to parse 511.org response: {e}")
-            return None
+            return results
+            
+        except Exception as e:
+            logger.error(f"Error fetching Muni data from regional cache: {e}", exc_info=True)
+            return []
     
-    def _parse_response(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def get_next_arrival(self) -> Optional[Dict[str, Any]]:
+        """
+        Get the stop with the soonest arrival across all configured stops.
+        
+        Returns:
+            Dictionary with stop data for stop with soonest arrival, or None if no stops
+        """
+        stops = self.fetch_multiple_stops()
+        
+        if not stops:
+            return None
+        
+        # Find stop with soonest arrival
+        best = min(stops, key=lambda s: s.get("arrivals", [{}])[0].get("minutes", 999) if s.get("arrivals") else 999)
+        return best
+    
+    def _parse_response(self, data: Dict[str, Any], stop_code: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
         Parse the StopMonitoring API response.
         
         Args:
             data: Raw JSON response from 511.org
+            stop_code: The stop code being queried (optional, for logging)
             
         Returns:
             Parsed arrival data dictionary, or None if no data
         """
         try:
+            # Use provided stop_code or fall back to instance variable
+            if stop_code is None:
+                stop_code = self.stop_code
+            
             # Navigate to the monitored stop visits
             service_delivery = data.get("ServiceDelivery", {})
             stop_monitoring = service_delivery.get("StopMonitoringDelivery", {})
@@ -109,15 +180,13 @@ class MuniSource:
             monitored_visits = stop_monitoring.get("MonitoredStopVisit", [])
             
             if not monitored_visits:
-                logger.warning(f"No arrivals found for stop {self.stop_code}")
+                logger.warning(f"No arrivals found for stop {stop_code}")
                 return None
             
-            # Parse each arrival
-            arrivals = []
-            is_delayed = False
-            delay_description = ""
+            # Group arrivals by line
+            arrivals_by_line = {}  # Dict[line_code, List[arrival_dict]]
             stop_name = ""
-            line = ""
+            all_arrivals = []  # For all_lines combined view
             
             for visit in monitored_visits:
                 journey = visit.get("MonitoredVehicleJourney", {})
@@ -127,12 +196,11 @@ class MuniSource:
                 if isinstance(published_line, list):
                     published_line = published_line[0] if published_line else ""
                 
-                # Filter by line name if specified
-                if self.line_name and published_line.upper() != self.line_name.upper():
+                if not published_line:
                     continue
                 
-                if not line:
-                    line = published_line.upper()
+                # Normalize line code (JUDAH -> N, J-CHURCH -> J, etc.)
+                line_code = self._normalize_line_code(published_line)
                 
                 # Get stop name from first valid entry
                 monitored_call = journey.get("MonitoredCall", {})
@@ -155,53 +223,119 @@ class MuniSource:
                         if isinstance(occupancy, list):
                             occupancy = occupancy[0] if occupancy else "UNKNOWN"
                         
-                        is_full = occupancy.upper() == "FULL"
+                        # Handle None occupancy
+                        if occupancy is None:
+                            occupancy = "UNKNOWN"
                         
-                        # Check delay status
+                        is_full = str(occupancy).upper() == "FULL"
+                        
+                        # Check delay info
                         delay_info = journey.get("Delay")
-                        if delay_info:
-                            is_delayed = True
-                            # PT format: PT2M30S = 2 minutes 30 seconds delay
-                            delay_description = self._format_delay(delay_info)
-                        
-                        # Check situation refs for delay reasons
                         situation_refs = journey.get("SituationRef", [])
-                        if situation_refs:
-                            is_delayed = True
-                            if not delay_description:
-                                delay_description = "Service disruption"
+                        is_arrival_delayed = bool(delay_info or situation_refs)
+                        delay_text = ""
+                        if delay_info:
+                            delay_text = self._format_delay(delay_info)
+                        elif situation_refs:
+                            delay_text = "Service disruption"
                         
-                        arrivals.append({
+                        arrival_data = {
                             "minutes": minutes,
-                            "occupancy": occupancy.upper(),
+                            "occupancy": str(occupancy).upper(),
                             "is_full": is_full,
-                        })
+                            "is_delayed": is_arrival_delayed,
+                            "delay_description": delay_text,
+                            "line_code": line_code,
+                        }
+                        
+                        # Add to line-specific list
+                        if line_code not in arrivals_by_line:
+                            arrivals_by_line[line_code] = []
+                        arrivals_by_line[line_code].append(arrival_data)
+                        
+                        # Add to all arrivals
+                        all_arrivals.append(arrival_data)
             
-            if not arrivals:
+            if not arrivals_by_line and not all_arrivals:
                 return None
             
-            # Sort by minutes and take top 3
-            arrivals.sort(key=lambda x: x["minutes"])
-            arrivals = arrivals[:3]
+            # Build lines dict with data for each line
+            lines = {}
+            for line_code, line_arrivals in arrivals_by_line.items():
+                # Sort and take top 3 for this line
+                line_arrivals.sort(key=lambda x: x["minutes"])
+                top_arrivals = line_arrivals[:3]
+                
+                # Check if any are delayed or full
+                is_delayed = any(a.get("is_delayed", False) for a in top_arrivals)
+                has_full = any(a.get("is_full", False) for a in top_arrivals)
+                
+                # Color code
+                color_code = 0
+                if is_delayed:
+                    color_code = COLOR_RED
+                elif has_full:
+                    color_code = COLOR_ORANGE
+                
+                # Format display
+                display_line = self._get_display_line_name(line_code)
+                formatted = self._format_display(display_line, top_arrivals, is_delayed)
+                
+                lines[line_code] = {
+                    "line": display_line,
+                    "line_code": line_code,
+                    "arrivals": top_arrivals,
+                    "next_arrival": top_arrivals[0]["minutes"] if top_arrivals else None,
+                    "is_delayed": is_delayed,
+                    "delay_description": top_arrivals[0].get("delay_description", "") if is_delayed and top_arrivals else "",
+                    "formatted": formatted,
+                    "color_code": color_code,
+                }
             
-            # Determine color code
-            color_code = 0
-            if is_delayed:
-                color_code = COLOR_RED
-            elif any(a["is_full"] for a in arrivals):
-                color_code = COLOR_ORANGE
+            # Build all_lines combined view
+            all_arrivals.sort(key=lambda x: x["minutes"])
+            top_all = all_arrivals[:3]
             
-            # Create formatted string
-            formatted = self._format_display(line, arrivals, is_delayed)
+            # Get all line codes for display
+            all_line_codes = sorted(arrivals_by_line.keys())
+            combined_line_display = "/".join([self._get_display_line_name(lc) for lc in all_line_codes])
+            
+            # Check if any are delayed
+            is_any_delayed = any(a.get("is_delayed", False) for a in top_all)
+            has_any_full = any(a.get("is_full", False) for a in top_all)
+            
+            all_color_code = 0
+            if is_any_delayed:
+                all_color_code = COLOR_RED
+            elif has_any_full:
+                all_color_code = COLOR_ORANGE
+            
+            all_lines_formatted = self._format_display(combined_line_display, top_all, is_any_delayed)
+            
+            all_lines = {
+                "formatted": all_lines_formatted,
+                "next_arrival": top_all[0]["minutes"] if top_all else None,
+                "is_delayed": is_any_delayed,
+                "arrivals": top_all,
+                "color_code": all_color_code,
+            }
+            
+            # Backward compatibility: use first line data at top level
+            first_line_code = all_line_codes[0] if all_line_codes else ""
+            first_line_data = lines.get(first_line_code, {})
             
             return {
-                "line": line,
+                "stop_code": stop_code,
                 "stop_name": stop_name,
-                "arrivals": arrivals,
-                "is_delayed": is_delayed,
-                "delay_description": delay_description,
-                "formatted": formatted,
-                "color_code": color_code,
+                "lines": lines,
+                "all_lines": all_lines,
+                # Backward compatibility fields
+                "line": first_line_data.get("line", ""),
+                "arrivals": first_line_data.get("arrivals", []),
+                "is_delayed": first_line_data.get("is_delayed", False),
+                "delay_description": first_line_data.get("delay_description", ""),
+                "formatted": first_line_data.get("formatted", ""),
+                "color_code": first_line_data.get("color_code", 0),
             }
             
         except Exception as e:
@@ -313,6 +447,53 @@ class MuniSource:
         
         return result
     
+    def _normalize_line_code(self, line: str) -> str:
+        """
+        Normalize line code to single letter format.
+        
+        Args:
+            line: Raw line name (e.g., "JUDAH", "N-JUDAH", "N")
+            
+        Returns:
+            Normalized line code (e.g., "N")
+        """
+        line_upper = line.upper()
+        
+        # Map full names to single letters
+        line_map = {
+            "JUDAH": "N",
+            "N-JUDAH": "N",
+            "CHURCH": "J",
+            "J-CHURCH": "J",
+            "INGLESIDE": "K",
+            "K-INGLESIDE": "K",
+            "TARAVAL": "L",
+            "L-TARAVAL": "L",
+            "OCEAN VIEW": "M",
+            "M-OCEAN VIEW": "M",
+            "THIRD": "T",
+            "T-THIRD": "T",
+            "SHUTTLE": "S",
+            "S-SHUTTLE": "S",
+            "MARKET": "F",
+            "F-MARKET": "F",
+        }
+        
+        # Try direct lookup
+        if line_upper in line_map:
+            return line_map[line_upper]
+        
+        # If already single letter, return it
+        if len(line_upper) == 1:
+            return line_upper
+        
+        # Extract first letter if format like "N-JUDAH"
+        if "-" in line_upper:
+            return line_upper.split("-")[0]
+        
+        # Default: return as-is
+        return line_upper
+    
     def _get_display_line_name(self, line: str) -> str:
         """
         Get display-friendly line name.
@@ -339,18 +520,43 @@ class MuniSource:
 
 
 def get_muni_source() -> Optional[MuniSource]:
-    """Get configured Muni source instance."""
+    """Get configured Muni source instance and initialize transit cache."""
     if not Config.MUNI_API_KEY:
         logger.debug("Muni API key not configured")
         return None
     
-    if not Config.MUNI_STOP_CODE:
-        logger.debug("Muni stop code not configured")
-        return None
+    # Initialize and configure the regional transit cache
+    cache = get_transit_cache()
     
+    # Configure cache with API key and refresh settings
+    refresh_interval = getattr(Config, 'TRANSIT_CACHE_REFRESH_SECONDS', 90)
+    cache_enabled = getattr(Config, 'TRANSIT_CACHE_ENABLED', True)
+    cache.configure(
+        api_key=Config.MUNI_API_KEY,
+        refresh_interval=refresh_interval,
+        enabled=cache_enabled
+    )
+    
+    # Start cache if not already running
+    if cache_enabled and not cache.is_ready():
+        cache.start()
+    
+    # Support both new (MUNI_STOP_CODES list) and old (MUNI_STOP_CODE string) config
+    stop_codes = getattr(Config, 'MUNI_STOP_CODES', None)
+    
+    if not stop_codes:
+        # Fall back to single stop code (backward compatibility)
+        stop_code = Config.MUNI_STOP_CODE
+        if stop_code:
+            stop_codes = [stop_code]
+        else:
+            # No stops configured yet, but return source anyway so variables show in UI
+            stop_codes = []
+    
+    # Return source even with empty stop_codes so template variables are available
     return MuniSource(
         api_key=Config.MUNI_API_KEY,
-        stop_code=Config.MUNI_STOP_CODE,
+        stop_codes=stop_codes,
         line_name=Config.MUNI_LINE_NAME if Config.MUNI_LINE_NAME else None
     )
 

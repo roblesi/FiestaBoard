@@ -55,6 +55,7 @@ Thumbs.db
 
 # Docker
 .dockerignore
+*.tar
 
 # Config files with sensitive data
 config/config.yaml

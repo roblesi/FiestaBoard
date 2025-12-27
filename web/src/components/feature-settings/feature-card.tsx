@@ -16,6 +16,8 @@ import { LucideIcon } from "lucide-react";
 import { ComponentType } from "react";
 import { VESTABOARD_COLORS, AVAILABLE_COLORS as VESTA_AVAILABLE_COLORS, VestaboardColorName } from "@/lib/vestaboard-colors";
 import { BayWheelsStationFinder } from "./baywheels-station-finder";
+import { MuniStopFinder } from "./muni-stop-finder";
+import { TrafficRoutePlanner } from "./traffic-route-planner";
 import { utcToLocalTime, localTimeToUTC } from "@/lib/timezone-utils";
 
 export interface FeatureField {
@@ -146,6 +148,112 @@ function SelectedStationsDisplay({
       </div>
       <p className="text-xs text-muted-foreground">
         Use <code className="bg-muted px-1 rounded">baywheels.stations.{`{index}`}.electric_bikes</code> in templates (e.g., stations.0, stations.1)
+      </p>
+    </div>
+  );
+}
+
+// Selected Stops Display Component (for MUNI)
+function SelectedStopsDisplay({
+  stopCodes,
+  stopNames,
+  onRemove,
+}: {
+  stopCodes: string[];
+  stopNames: string[];
+  onRemove: (stopCode: string) => void;
+}) {
+  const [loadedNames, setLoadedNames] = useState<Map<string, string>>(new Map());
+  
+  // Fetch stop names if not available
+  useEffect(() => {
+    const fetchNames = async () => {
+      const missingCodes = stopCodes.filter((code, index) => !stopNames[index] || stopNames[index] === code);
+      if (missingCodes.length > 0) {
+        try {
+          const allStops = await api.listMuniStops();
+          const newMap = new Map<string, string>();
+          allStops.stops.forEach(stop => {
+            if (stopCodes.includes(stop.stop_code)) {
+              newMap.set(stop.stop_code, stop.name);
+            }
+          });
+          setLoadedNames(newMap);
+        } catch (err) {
+          console.debug("Failed to fetch stop names:", err);
+        }
+      }
+    };
+    fetchNames();
+  }, [stopCodes, stopNames]);
+
+  return (
+    <div className="space-y-2">
+      <Label className="text-xs font-medium">Selected Stops</Label>
+      <div className="flex flex-wrap gap-2">
+        {stopCodes.map((stopCode, index) => {
+          // Try to get name from: 1) stopNames array, 2) loadedNames map, 3) fallback to code
+          const nameFromArray = stopNames[index];
+          const nameFromMap = loadedNames.get(stopCode);
+          const displayName = nameFromArray && nameFromArray !== stopCode 
+            ? nameFromArray 
+            : (nameFromMap || stopCode);
+          
+          return (
+            <Badge key={stopCode} variant="secondary" className="flex items-center gap-1 max-w-full">
+              <span className="text-xs font-mono text-muted-foreground shrink-0">[{index}]</span>
+              <span className="truncate" title={displayName}>{displayName}</span>
+              <button
+                onClick={() => onRemove(stopCode)}
+                className="ml-1 hover:text-destructive shrink-0"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          );
+        })}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Use <code className="bg-muted px-1 rounded">muni.stops.{`{index}`}.line</code> in templates (e.g., stops.0, stops.1)
+      </p>
+    </div>
+  );
+}
+
+// Selected Routes Display Component (for Traffic)
+function SelectedRoutesDisplay({
+  routes,
+  onRemove,
+}: {
+  routes: Array<{ origin: string; destination: string; destination_name: string }>;
+  onRemove: (index: number) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label className="text-xs font-medium">Selected Routes</Label>
+      <div className="space-y-2">
+        {routes.map((route, index) => (
+          <div key={index} className="flex items-center gap-2 p-2 border rounded-lg bg-muted/30">
+            <Badge variant="secondary" className="text-xs font-mono shrink-0">
+              [{index}]
+            </Badge>
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-sm truncate">{route.destination_name}</div>
+              <div className="text-xs text-muted-foreground truncate">
+                {route.origin} → {route.destination}
+              </div>
+            </div>
+            <button
+              onClick={() => onRemove(index)}
+              className="hover:text-destructive shrink-0"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ))}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Use <code className="bg-muted px-1 rounded">traffic.routes.{`{index}`}.duration_minutes</code> in templates (e.g., routes.0, routes.1)
       </p>
     </div>
   );
@@ -703,11 +811,152 @@ export function FeatureCard({
             </div>
           )}
 
+          {/* MUNI Stop Finder */}
+          {(featureName as string) === "muni" && (
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium text-muted-foreground">Stops</h4>
+              <MuniStopFinder
+                selectedStopCodes={(formData.stop_codes as string[]) || (formData.stop_code ? [formData.stop_code as string] : [])}
+                onStopsSelected={(stops) => {
+                  // Migrate from old stop_code to new stop_codes format
+                  const newData = { ...formData };
+                  if (stops.length > 0) {
+                    const stopCodes = stops.map(s => s.stop_code);
+                    const stopNames = stops.map(s => s.name);
+                    newData.stop_codes = stopCodes;
+                    newData.stop_names = stopNames; // Store names for display
+                    // Keep stop_code for backward compatibility if only one stop
+                    if (stopCodes.length === 1) {
+                      newData.stop_code = stopCodes[0];
+                    } else {
+                      delete newData.stop_code;
+                    }
+                  } else {
+                    delete newData.stop_codes;
+                    delete newData.stop_names;
+                    delete newData.stop_code;
+                  }
+                  setFormData(newData);
+                  setHasChanges(true);
+                }}
+                maxStops={4}
+              />
+              {/* Show currently selected stops */}
+              {((formData.stop_codes as string[]) || (formData.stop_code ? [formData.stop_code as string] : [])).length > 0 && (
+                <SelectedStopsDisplay
+                  stopCodes={(formData.stop_codes as string[]) || (formData.stop_code ? [formData.stop_code as string] : [])}
+                  stopNames={(formData.stop_names as string[]) || []}
+                  onRemove={(stopCode) => {
+                    const currentCodes = (formData.stop_codes as string[]) || (formData.stop_code ? [formData.stop_code as string] : []);
+                    const currentNames = (formData.stop_names as string[]) || [];
+                    const newCodes = currentCodes.filter((code) => code !== stopCode);
+                    const newNames = currentNames.filter((_, i) => currentCodes[i] !== stopCode);
+                    const newData = { ...formData };
+                    if (newCodes.length > 0) {
+                      newData.stop_codes = newCodes;
+                      newData.stop_names = newNames;
+                      if (newCodes.length === 1) {
+                        newData.stop_code = newCodes[0];
+                      } else {
+                        delete newData.stop_code;
+                      }
+                    } else {
+                      delete newData.stop_codes;
+                      delete newData.stop_names;
+                      delete newData.stop_code;
+                    }
+                    setFormData(newData);
+                    setHasChanges(true);
+                  }}
+                />
+              )}
+            </div>
+          )}
+
+          {/* Traffic Route Planner */}
+          {(featureName as string) === "traffic" && (
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium text-muted-foreground">Routes</h4>
+              <TrafficRoutePlanner
+                selectedRoutes={(formData.routes as any[]) || (formData.origin && formData.destination ? [{
+                  origin: formData.origin as string,
+                  destination: formData.destination as string,
+                  destination_name: (formData.destination_name as string) || "DESTINATION"
+                }] : [])}
+                onRoutesSelected={(routes) => {
+                  // Migrate from old origin/destination to new routes format
+                  const newData = { ...formData };
+                  if (routes.length > 0) {
+                    newData.routes = routes;
+                    // Keep origin/destination for backward compatibility if only one route
+                    if (routes.length === 1) {
+                      newData.origin = routes[0].origin;
+                      newData.destination = routes[0].destination;
+                      newData.destination_name = routes[0].destination_name;
+                    } else {
+                      delete newData.origin;
+                      delete newData.destination;
+                      delete newData.destination_name;
+                    }
+                  } else {
+                    delete newData.routes;
+                    delete newData.origin;
+                    delete newData.destination;
+                    delete newData.destination_name;
+                  }
+                  setFormData(newData);
+                  setHasChanges(true);
+                }}
+                maxRoutes={4}
+              />
+              {/* Show currently selected routes */}
+              {((formData.routes as any[]) || []).length > 0 && (
+                <SelectedRoutesDisplay
+                  routes={(formData.routes as any[]) || []}
+                  onRemove={(index) => {
+                    const currentRoutes = (formData.routes as any[]) || [];
+                    const newRoutes = currentRoutes.filter((_, i) => i !== index);
+                    const newData = { ...formData };
+                    if (newRoutes.length > 0) {
+                      newData.routes = newRoutes;
+                      if (newRoutes.length === 1) {
+                        newData.origin = newRoutes[0].origin;
+                        newData.destination = newRoutes[0].destination;
+                        newData.destination_name = newRoutes[0].destination_name;
+                      } else {
+                        delete newData.origin;
+                        delete newData.destination;
+                        delete newData.destination_name;
+                      }
+                    } else {
+                      delete newData.routes;
+                      delete newData.origin;
+                      delete newData.destination;
+                      delete newData.destination_name;
+                    }
+                    setFormData(newData);
+                    setHasChanges(true);
+                  }}
+                />
+              )}
+            </div>
+          )}
+
           {/* Settings Section */}
           {fields.length > 0 && (
             <div className="space-y-4">
               <h4 className="text-sm font-medium text-muted-foreground">Settings</h4>
-              {fields.map((field) => (
+              {fields.filter((field) => {
+                // Hide stop_code field for MUNI (replaced by stop finder)
+                if ((featureName as string) === "muni" && field.key === "stop_code") {
+                  return false;
+                }
+                // Hide origin/destination fields for Traffic (replaced by route planner)
+                if ((featureName as string) === "traffic" && (field.key === "origin" || field.key === "destination" || field.key === "destination_name")) {
+                  return false;
+                }
+                return true;
+              }).map((field) => (
                 <div key={field.key} className="space-y-1.5">
                   <label className="text-xs font-medium flex items-center gap-1">
                     {field.label}

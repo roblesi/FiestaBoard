@@ -1093,8 +1093,11 @@ async def search_baywheels_stations_by_address(
             "format": "json",
             "limit": 1
         }
+        geocode_headers = {
+            "User-Agent": "Vesta-Vestaboard-Service/1.0"
+        }
         
-        geocode_response = requests.get(geocode_url, params=geocode_params, timeout=10)
+        geocode_response = requests.get(geocode_url, params=geocode_params, headers=geocode_headers, timeout=10)
         geocode_response.raise_for_status()
         geocode_data = geocode_response.json()
         
@@ -1153,6 +1156,438 @@ async def search_baywheels_stations_by_address(
     except Exception as e:
         logger.error(f"Error searching Bay Wheels stations: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# MUNI Endpoints
+# =============================================================================
+
+@app.get("/muni/stops")
+async def list_all_muni_stops():
+    """
+    List all SF Muni stops with metadata.
+    
+    Returns all stops from the 511.org transit API with cached data (24hr TTL).
+    """
+    import requests
+    import time
+    
+    # Cache for stop information (24 hour TTL)
+    cache_key = "_muni_stops_cache"
+    cache_time_key = "_muni_stops_cache_time"
+    CACHE_TTL = 24 * 60 * 60  # 24 hours
+    
+    # Check if we have cached data
+    if not hasattr(list_all_muni_stops, cache_key):
+        setattr(list_all_muni_stops, cache_key, None)
+        setattr(list_all_muni_stops, cache_time_key, 0)
+    
+    cached_data = getattr(list_all_muni_stops, cache_key)
+    cache_time = getattr(list_all_muni_stops, cache_time_key)
+    current_time = time.time()
+    
+    # Return cached data if still valid
+    if cached_data and (current_time - cache_time) < CACHE_TTL:
+        return cached_data
+    
+    try:
+        # Fetch stops from 511.org
+        # Note: 511.org requires an API key for most endpoints
+        # We'll use the configured MUNI API key
+        from src.config import Config
+        api_key = Config.MUNI_API_KEY
+        
+        if not api_key:
+            raise HTTPException(status_code=400, detail="MUNI API key not configured")
+        
+        url = "http://api.511.org/transit/stops"
+        params = {
+            "api_key": api_key,
+            "operator_id": "SF",
+            "format": "json"
+        }
+        
+        response = requests.get(url, params=params, timeout=15)
+        response.raise_for_status()
+        
+        # Handle BOM if present
+        content = response.text
+        if content.startswith('\ufeff'):
+            content = content[1:]
+        
+        import json
+        data = json.loads(content)
+        
+        # Parse stops from the Contents.dataObjects.ScheduledStopPoint array
+        stops = []
+        stop_points = data.get("Contents", {}).get("dataObjects", {}).get("ScheduledStopPoint", [])
+        
+        for stop in stop_points:
+            stop_id = stop.get("id", "")
+            # Extract numeric stop code from ID (format: "SF_####")
+            stop_code = stop_id.split("_")[-1] if "_" in stop_id else stop_id
+            
+            location = stop.get("Location", {})
+            lat = location.get("Latitude")
+            lon = location.get("Longitude")
+            
+            # Get stop name
+            name = stop.get("Name", stop_code)
+            
+            stops.append({
+                "stop_code": stop_code,
+                "stop_id": stop_id,
+                "name": name,
+                "lat": float(lat) if lat else None,
+                "lon": float(lon) if lon else None,
+            })
+        
+        result = {
+            "stops": stops,
+            "total": len(stops)
+        }
+        
+        # Update cache
+        setattr(list_all_muni_stops, cache_key, result)
+        setattr(list_all_muni_stops, cache_time_key, current_time)
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error listing Muni stops: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/muni/stops/nearby")
+async def find_nearby_muni_stops(
+    lat: float = Query(..., description="Latitude"),
+    lng: float = Query(..., description="Longitude"),
+    radius: float = Query(0.5, description="Search radius in kilometers"),
+    limit: int = Query(10, description="Maximum number of results")
+):
+    """
+    Find Muni stops near a location.
+    
+    Args:
+        lat: Latitude
+        lng: Longitude
+        radius: Search radius in kilometers (default 0.5)
+        limit: Maximum number of results (default 10)
+    
+    Returns:
+        List of nearby stops sorted by distance with live arrival data
+    """
+    import math
+    
+    try:
+        # Get all stops (from cache if available)
+        stops_data = await list_all_muni_stops()
+        all_stops = stops_data["stops"]
+        
+        # Calculate distance to each stop using haversine formula
+        def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+            """Calculate distance in kilometers between two points."""
+            R = 6371.0  # Earth radius in km
+            
+            lat1_rad = math.radians(lat1)
+            lon1_rad = math.radians(lon1)
+            lat2_rad = math.radians(lat2)
+            lon2_rad = math.radians(lon2)
+            
+            dlat = lat2_rad - lat1_rad
+            dlon = lon2_rad - lon1_rad
+            
+            a = math.sin(dlat / 2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlon / 2)**2
+            c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+            
+            return R * c
+        
+        # Filter stops within radius and calculate distances
+        nearby_stops = []
+        for stop in all_stops:
+            if stop["lat"] is None or stop["lon"] is None:
+                continue
+            
+            distance = haversine_distance(lat, lng, stop["lat"], stop["lon"])
+            
+            if distance <= radius:
+                stop_with_distance = stop.copy()
+                stop_with_distance["distance_km"] = round(distance, 2)
+                nearby_stops.append(stop_with_distance)
+        
+        # Sort by distance and limit
+        nearby_stops.sort(key=lambda x: x["distance_km"])
+        nearby_stops = nearby_stops[:limit]
+        
+        # Try to get routes serving each stop from regional transit cache
+        try:
+            from src.data_sources.transit_cache import get_transit_cache
+            cache = get_transit_cache()
+            
+            if cache.is_ready():
+                # Get all cached stop codes for SF agency
+                all_sf_stops = cache.get_all_stops_for_agency("SF")
+                
+                for stop in nearby_stops:
+                    try:
+                        # Get cached visits for this stop
+                        visits = all_sf_stops.get(stop["stop_code"], [])
+                        
+                        # Extract unique route names from cached visits
+                        routes = set()
+                        for visit in visits:
+                            journey = visit.get("MonitoredVehicleJourney", {})
+                            published_line = journey.get("PublishedLineName", "")
+                            if isinstance(published_line, list):
+                                published_line = published_line[0] if published_line else ""
+                            if published_line:
+                                routes.add(published_line.upper())
+                        
+                        stop["routes"] = sorted(list(routes))
+                    except Exception:
+                        # If we can't get routes, just skip
+                        stop["routes"] = []
+            else:
+                logger.warning("Regional transit cache not ready, routes unavailable")
+                for stop in nearby_stops:
+                    stop["routes"] = []
+        except Exception as e:
+            logger.error(f"Error accessing regional transit cache: {e}")
+            for stop in nearby_stops:
+                stop["routes"] = []
+        
+        return {
+            "stops": nearby_stops,
+            "count": len(nearby_stops),
+            "search_location": {"lat": lat, "lng": lng},
+            "radius_km": radius
+        }
+        
+    except Exception as e:
+        logger.error(f"Error finding nearby Muni stops: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/muni/stops/search")
+async def search_muni_stops_by_address(
+    address: str = Query(..., description="Address to search near"),
+    radius: float = Query(0.5, description="Search radius in kilometers"),
+    limit: int = Query(10, description="Maximum number of results")
+):
+    """
+    Find Muni stops near an address.
+    
+    Uses OpenStreetMap Nominatim for geocoding (free, no API key required).
+    
+    Args:
+        address: Address string (e.g., "123 Main St, San Francisco, CA")
+        radius: Search radius in kilometers (default 0.5)
+        limit: Maximum number of results (default 10)
+    
+    Returns:
+        List of nearby stops sorted by distance
+    """
+    import requests
+    
+    try:
+        # Geocode address using Nominatim
+        geocode_url = "https://nominatim.openstreetmap.org/search"
+        geocode_params = {
+            "q": address,
+            "format": "json",
+            "limit": 1
+        }
+        geocode_headers = {
+            "User-Agent": "Vesta-Vestaboard-Service/1.0"
+        }
+        
+        geocode_response = requests.get(geocode_url, params=geocode_params, headers=geocode_headers, timeout=10)
+        geocode_response.raise_for_status()
+        geocode_data = geocode_response.json()
+        
+        if not geocode_data:
+            raise HTTPException(status_code=404, detail=f"Address not found: {address}")
+        
+        location = geocode_data[0]
+        lat = float(location["lat"])
+        lng = float(location["lon"])
+        
+        # Find nearby stops
+        stops_data = await find_nearby_muni_stops(lat=lat, lng=lng, radius=radius, limit=limit)
+        
+        return {
+            "stops": stops_data["stops"],
+            "count": stops_data["count"],
+            "search_address": address,
+            "geocoded_location": {"lat": lat, "lng": lng, "display_name": location.get("display_name", "")},
+            "radius_km": radius
+        }
+        
+    except HTTPException:
+        raise
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error geocoding address: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail=f"Geocoding service unavailable: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error searching Muni stops: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/transit/cache/status")
+async def get_transit_cache_status():
+    """
+    Get status and health information about the regional transit cache.
+    
+    Returns cache statistics including:
+    - Last refresh time and age
+    - Number of agencies and stops cached
+    - Refresh count and error count
+    - Whether cache is stale
+    """
+    try:
+        from src.data_sources.transit_cache import get_transit_cache
+        cache = get_transit_cache()
+        status = cache.get_status()
+        
+        # Add human-readable timestamps
+        from datetime import datetime
+        if status["last_refresh"] > 0:
+            status["last_refresh_iso"] = datetime.fromtimestamp(status["last_refresh"]).isoformat()
+        else:
+            status["last_refresh_iso"] = None
+            
+        if status["last_success"] > 0:
+            status["last_success_iso"] = datetime.fromtimestamp(status["last_success"]).isoformat()
+        else:
+            status["last_success_iso"] = None
+        
+        return status
+    except Exception as e:
+        logger.error(f"Error getting transit cache status: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# Traffic Endpoints
+# =============================================================================
+
+@app.post("/traffic/routes/geocode")
+async def geocode_address(request: dict):
+    """
+    Geocode an address to coordinates.
+    
+    Body:
+        address: Address string
+    
+    Returns:
+        lat, lng, and formatted_address
+    """
+    import requests
+    
+    address = request.get("address")
+    if not address:
+        raise HTTPException(status_code=400, detail="address parameter required")
+    
+    try:
+        # Try Nominatim (free, no key needed)
+        geocode_url = "https://nominatim.openstreetmap.org/search"
+        geocode_params = {
+            "q": address,
+            "format": "json",
+            "limit": 1
+        }
+        geocode_headers = {
+            "User-Agent": "Vesta-Vestaboard-Service/1.0"
+        }
+        
+        response = requests.get(geocode_url, params=geocode_params, headers=geocode_headers, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        
+        if not data:
+            raise HTTPException(status_code=404, detail=f"Address not found: {address}")
+        
+        location = data[0]
+        return {
+            "lat": float(location["lat"]),
+            "lng": float(location["lon"]),
+            "formatted_address": location.get("display_name", address)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error geocoding address: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/traffic/routes/validate")
+async def validate_traffic_route(request: dict):
+    """
+    Validate a traffic route and get basic info.
+    
+    Body:
+        origin: Origin address or lat,lng
+        destination: Destination address or lat,lng
+        destination_name: Display name for destination
+    
+    Returns:
+        Validation result with distance and duration estimates
+    """
+    from src.data_sources.traffic import TrafficSource
+    from src.config import Config
+    
+    origin = request.get("origin")
+    destination = request.get("destination")
+    destination_name = request.get("destination_name", "DESTINATION")
+    
+    if not origin or not destination:
+        raise HTTPException(status_code=400, detail="origin and destination required")
+    
+    # Get API key from config
+    api_key = getattr(Config, 'GOOGLE_ROUTES_API_KEY', None)
+    if not api_key:
+        raise HTTPException(status_code=400, detail="Google Routes API key not configured")
+    
+    try:
+        # Create a temporary TrafficSource to test the route
+        traffic_source = TrafficSource(
+            api_key=api_key,
+            origin=origin,
+            destination=destination,
+            destination_name=destination_name
+        )
+        
+        # Fetch traffic data to validate
+        data = traffic_source.fetch_traffic_data()
+        
+        if not data:
+            return {
+                "valid": False,
+                "error": "Failed to fetch route data. Check that addresses are valid."
+            }
+        
+        # Extract coordinates if available
+        origin_coords = None
+        destination_coords = None
+        
+        return {
+            "valid": True,
+            "distance_km": round(data.get("static_duration", 0) / 60 * 0.8, 1),  # Rough estimate
+            "static_duration_minutes": data.get("static_duration_minutes", 0),
+            "origin": origin,
+            "destination": destination,
+            "destination_name": destination_name,
+            "origin_coords": origin_coords,
+            "destination_coords": destination_coords
+        }
+        
+    except Exception as e:
+        logger.error(f"Error validating traffic route: {e}", exc_info=True)
+        return {
+            "valid": False,
+            "error": str(e)
+        }
 
 
 # =============================================================================

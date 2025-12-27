@@ -1,8 +1,11 @@
-"""Traffic data source using Google Routes API."""
+"""Traffic data source using Google Routes API.
+
+Supports multiple route monitoring with indexed template access.
+"""
 
 import logging
 import requests
-from typing import Optional, Dict, Tuple
+from typing import Optional, Dict, Tuple, List
 
 from ..config import Config
 
@@ -19,23 +22,31 @@ class TrafficSource:
     def __init__(
         self,
         api_key: str,
-        origin: str,
-        destination: str,
-        destination_name: str = "DOWNTOWN"
+        routes: List[Dict[str, str]]
     ):
         """
         Initialize traffic source.
         
         Args:
             api_key: Google Maps API key with Routes API enabled
-            origin: Origin address or lat,lng
-            destination: Destination address or lat,lng
-            destination_name: Display name for destination (e.g., "DOWNTOWN", "WORK")
+            routes: List of route dictionaries with keys:
+                    - origin: Origin address or lat,lng
+                    - destination: Destination address or lat,lng
+                    - destination_name: Display name (e.g., "DOWNTOWN", "WORK")
         """
         self.api_key = api_key
-        self.origin = origin
-        self.destination = destination
-        self.destination_name = destination_name
+        # Support both new (list of routes) and old (single route) format
+        if isinstance(routes, list):
+            self.routes = routes if routes else []
+        else:
+            # Backward compatibility - treat as dict with origin/destination
+            self.routes = [routes]
+        
+        # For backward compatibility
+        if self.routes:
+            self.origin = self.routes[0].get("origin", "")
+            self.destination = self.routes[0].get("destination", "")
+            self.destination_name = self.routes[0].get("destination_name", "DOWNTOWN")
     
     @staticmethod
     def calculate_traffic_index(
@@ -126,9 +137,77 @@ class TrafficSource:
     
     def fetch_traffic_data(self) -> Optional[Dict[str, any]]:
         """
-        Fetch traffic data from Google Routes API.
+        Fetch traffic data from Google Routes API (backward compatibility).
+        Returns data for first configured route.
+        
+        Returns:
+            Dictionary with traffic data, or None if failed
+        """
+        if not self.routes:
+            return None
+        
+        # For backward compatibility, return data for first route
+        results = self.fetch_multiple_routes()
+        if results and len(results) > 0:
+            return results[0]
+        return None
+    
+    def fetch_multiple_routes(self) -> List[Dict[str, any]]:
+        """
+        Fetch traffic data for all configured routes.
+        
+        Returns:
+            List of dictionaries with traffic data for each route
+        """
+        if not self.routes:
+            return []
+        
+        results = []
+        for route in self.routes:
+            try:
+                data = self._fetch_single_route(
+                    origin=route.get("origin", ""),
+                    destination=route.get("destination", ""),
+                    destination_name=route.get("destination_name", "DESTINATION")
+                )
+                if data:
+                    results.append(data)
+            except Exception as e:
+                logger.error(f"Error fetching traffic for route to {route.get('destination_name', 'unknown')}: {e}")
+        
+        return results
+    
+    def get_worst_delay(self) -> Optional[Dict[str, any]]:
+        """
+        Get the route with the worst delay across all configured routes.
+        
+        Returns:
+            Dictionary with route data for route with worst delay, or None if no routes
+        """
+        routes = self.fetch_multiple_routes()
+        
+        if not routes:
+            return None
+        
+        # Find route with highest delay
+        worst = max(routes, key=lambda r: r.get("delay_minutes", 0))
+        return worst
+    
+    def _fetch_single_route(
+        self,
+        origin: str,
+        destination: str,
+        destination_name: str
+    ) -> Optional[Dict[str, any]]:
+        """
+        Fetch traffic data for a single route from Google Routes API.
         
         Uses ComputeRoutes with TRAFFIC_AWARE_OPTIMAL routing preference.
+        
+        Args:
+            origin: Origin address or lat,lng
+            destination: Destination address or lat,lng
+            destination_name: Display name for destination
         
         Returns:
             Dictionary with traffic data, or None if failed
@@ -143,8 +222,8 @@ class TrafficSource:
         
         # Build request body
         body = {
-            "origin": self._build_waypoint(self.origin),
-            "destination": self._build_waypoint(self.destination),
+            "origin": self._build_waypoint(origin),
+            "destination": self._build_waypoint(destination),
             "travelMode": "DRIVE",
             "routingPreference": "TRAFFIC_AWARE_OPTIMAL",
             "computeAlternativeRoutes": False,
@@ -186,7 +265,7 @@ class TrafficSource:
             
             # Format message
             formatted_message = self.format_message(
-                self.destination_name,
+                destination_name,
                 duration_minutes,
                 delay_minutes
             )
@@ -207,11 +286,12 @@ class TrafficSource:
                 "static_duration_minutes": static_duration_minutes,
                 "delay_minutes": delay_minutes,
                 "formatted_message": formatted_message,
+                "formatted": formatted_message,  # Alias for template compatibility
                 
                 # Route info
-                "origin": self.origin,
-                "destination": self.destination,
-                "destination_name": self.destination_name,
+                "origin": origin,
+                "destination": destination,
+                "destination_name": destination_name,
             }
             
         except requests.exceptions.RequestException as e:
@@ -266,17 +346,27 @@ def get_traffic_source() -> Optional[TrafficSource]:
         logger.warning("Google Routes API key not configured")
         return None
     
-    origin = Config.TRAFFIC_ORIGIN if hasattr(Config, 'TRAFFIC_ORIGIN') else ""
-    destination = Config.TRAFFIC_DESTINATION if hasattr(Config, 'TRAFFIC_DESTINATION') else ""
-    destination_name = Config.TRAFFIC_DESTINATION_NAME if hasattr(Config, 'TRAFFIC_DESTINATION_NAME') else "DOWNTOWN"
+    # Support both new (TRAFFIC_ROUTES list) and old (TRAFFIC_ORIGIN/DESTINATION) config
+    routes = getattr(Config, 'TRAFFIC_ROUTES', None)
     
-    if not origin or not destination:
-        logger.warning("Traffic origin or destination not configured")
-        return None
+    if not routes:
+        # Fall back to single route (backward compatibility)
+        origin = Config.TRAFFIC_ORIGIN if hasattr(Config, 'TRAFFIC_ORIGIN') else ""
+        destination = Config.TRAFFIC_DESTINATION if hasattr(Config, 'TRAFFIC_DESTINATION') else ""
+        destination_name = Config.TRAFFIC_DESTINATION_NAME if hasattr(Config, 'TRAFFIC_DESTINATION_NAME') else "DOWNTOWN"
+        
+        if origin and destination:
+            routes = [{
+                "origin": origin,
+                "destination": destination,
+                "destination_name": destination_name
+            }]
+        else:
+            # No routes configured yet, but return source anyway so variables show in UI
+            routes = []
     
+    # Return source even with empty routes so template variables are available
     return TrafficSource(
         api_key=api_key,
-        origin=origin,
-        destination=destination,
-        destination_name=destination_name
+        routes=routes
     )

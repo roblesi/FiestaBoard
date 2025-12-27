@@ -67,7 +67,10 @@ AVAILABLE_VARIABLES = {
     "star_trek": ["quote", "character", "series", "series_color"],
     "guest_wifi": ["ssid", "password"],
     "air_fog": ["aqi", "air_status", "air_color", "fog_status", "fog_color", "is_foggy", "visibility", "formatted"],
-    "muni": ["line", "stop_name", "arrivals", "is_delayed", "delay_description", "formatted"],
+    "muni": [
+        "line", "stop_name", "stop_code", "arrivals", "is_delayed", "delay_description", "formatted",
+        "stop_count", "next_arrival", "stops", "lines", "all_lines"
+    ],
     "surf": ["wave_height", "swell_period", "quality", "quality_color", "formatted"],
     "baywheels": [
         "electric_bikes", "classic_bikes", "num_bikes_available", "is_renting", "station_name", "status_color",
@@ -75,7 +78,10 @@ AVAILABLE_VARIABLES = {
         "best_station_name", "best_station_electric", "best_station_id",
         "stations"
     ],
-    "traffic": ["duration_minutes", "delay_minutes", "traffic_status", "traffic_color", "destination_name", "formatted"],
+    "traffic": [
+        "duration_minutes", "delay_minutes", "traffic_status", "traffic_color", "destination_name", "formatted",
+        "route_count", "worst_delay", "routes"
+    ],
 }
 
 # Maximum character lengths for each variable (for validation)
@@ -118,10 +124,35 @@ VARIABLE_MAX_LENGTHS = {
     "air_fog.formatted": 22,  # Pre-formatted message
     "muni.line": 12,
     "muni.stop_name": 22,
+    "muni.stop_code": 6,
     "muni.arrivals": 15,
     "muni.is_delayed": 3,
     "muni.delay_description": 22,
     "muni.formatted": 22,
+    "muni.stop_count": 1,
+    "muni.stops.0.line": 12,
+    "muni.stops.0.stop_name": 22,
+    "muni.stops.0.stop_code": 6,
+    "muni.stops.0.formatted": 22,
+    "muni.stops.0.is_delayed": 3,
+    "muni.stops.1.line": 12,
+    "muni.stops.1.stop_name": 22,
+    "muni.stops.1.formatted": 22,
+    "muni.stops.2.line": 12,
+    "muni.stops.2.stop_name": 22,
+    "muni.stops.2.formatted": 22,
+    "muni.stops.3.line": 12,
+    "muni.stops.3.stop_name": 22,
+    "muni.stops.3.formatted": 22,
+    "muni.stops.0.all_lines.formatted": 22,
+    "muni.stops.0.all_lines.next_arrival": 2,
+    "muni.stops.0.lines.N.formatted": 22,
+    "muni.stops.0.lines.N.next_arrival": 2,
+    "muni.stops.0.lines.N.is_delayed": 3,
+    "muni.stops.0.lines.J.formatted": 22,
+    "muni.stops.0.lines.KT.formatted": 22,
+    "muni.stops.0.lines.L.formatted": 22,
+    "muni.stops.0.lines.M.formatted": 22,
     "surf.wave_height": 4,  # e.g., "3.5"
     "surf.swell_period": 4,  # e.g., "12.5"
     "surf.quality": 9,  # EXCELLENT, GOOD, FAIR, POOR
@@ -156,6 +187,21 @@ VARIABLE_MAX_LENGTHS = {
     "traffic.traffic_color": 4,  # Color tile
     "traffic.destination_name": 10,  # e.g., "DOWNTOWN"
     "traffic.formatted": 22,  # Pre-formatted message
+    "traffic.route_count": 1,
+    "traffic.routes.0.duration_minutes": 3,
+    "traffic.routes.0.delay_minutes": 3,
+    "traffic.routes.0.traffic_status": 8,
+    "traffic.routes.0.destination_name": 10,
+    "traffic.routes.0.formatted": 22,
+    "traffic.routes.1.duration_minutes": 3,
+    "traffic.routes.1.destination_name": 10,
+    "traffic.routes.1.formatted": 22,
+    "traffic.routes.2.duration_minutes": 3,
+    "traffic.routes.2.destination_name": 10,
+    "traffic.routes.2.formatted": 22,
+    "traffic.routes.3.duration_minutes": 3,
+    "traffic.routes.3.destination_name": 10,
+    "traffic.routes.3.formatted": 22,
 }
 
 # Regex patterns

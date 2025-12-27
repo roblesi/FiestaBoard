@@ -118,9 +118,13 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "muni": {
             "enabled": False,
             "api_key": "",  # 511.org API key
-            "stop_code": "",  # Muni stop code (e.g., "15726")
+            "stop_code": "",  # Muni stop code (e.g., "15726") - backward compatibility
+            "stop_codes": [],  # List of stop codes to monitor (up to 4)
+            "stop_names": [],  # List of stop names for display
             "line_name": "",  # Optional line filter (e.g., "N" for N-Judah)
             "refresh_seconds": 60,  # 1 minute for transit data
+            "transit_cache_enabled": True,  # Enable regional transit cache
+            "transit_cache_refresh_seconds": 90,  # Refresh regional cache every 90 seconds
             "color_rules": {},
         },
         "surf": {
@@ -155,9 +159,10 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "traffic": {
             "enabled": False,
             "api_key": "",  # Google Routes API key (using api_key for consistency)
-            "origin": "",  # Origin address or lat,lng
-            "destination": "",  # Destination address or lat,lng
-            "destination_name": "DOWNTOWN",  # Display name for destination
+            "origin": "",  # Origin address or lat,lng - backward compatibility
+            "destination": "",  # Destination address or lat,lng - backward compatibility
+            "destination_name": "DOWNTOWN",  # Display name for destination - backward compatibility
+            "routes": [],  # List of route dicts: [{origin, destination, destination_name}]
             "refresh_seconds": 300,  # 5 minutes
             "color_rules": {
                 "traffic_status": [

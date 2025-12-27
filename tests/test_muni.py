@@ -353,101 +353,105 @@ class TestMuniSourceFormatting:
 
 
 class TestMuniSourceAPI:
-    """Tests for Muni API interactions."""
+    """Tests for Muni API interactions with transit cache."""
     
     @pytest.fixture
     def muni_source(self):
-        return MuniSource(api_key="test_key", stop_code="15726", line_name="N")
+        return MuniSource(api_key="test_key", stop_codes=["15726"], line_name="N")
     
-    @patch('src.data_sources.muni.requests.get')
-    def test_fetch_arrivals_success(self, mock_get, muni_source):
-        """Test successful API fetch."""
+    @pytest.fixture
+    def mock_cache_visits(self):
+        """Mock transit cache visits for testing."""
         now = datetime.now(timezone.utc)
         arrival = (now + timedelta(minutes=5)).isoformat()
         
-        mock_response = Mock()
-        mock_response.text = json.dumps({
-            "ServiceDelivery": {
-                "StopMonitoringDelivery": {
-                    "MonitoredStopVisit": [
-                        {
-                            "MonitoredVehicleJourney": {
-                                "PublishedLineName": "N",
-                                "Occupancy": "MANY_SEATS",
-                                "MonitoredCall": {
-                                    "StopPointName": "Test Stop",
-                                    "ExpectedArrivalTime": arrival,
-                                }
-                            }
-                        },
-                    ]
+        return [
+            {
+                "MonitoredVehicleJourney": {
+                    "PublishedLineName": "N",
+                    "Occupancy": "MANY_SEATS",
+                    "MonitoredCall": {
+                        "StopPointName": "Test Stop",
+                        "ExpectedArrivalTime": arrival,
+                    }
                 }
             }
-        })
-        mock_response.raise_for_status = Mock()
-        mock_get.return_value = mock_response
+        ]
+    
+    @patch('src.data_sources.muni.get_transit_cache')
+    def test_fetch_arrivals_success(self, mock_get_cache, muni_source, mock_cache_visits):
+        """Test successful fetch from transit cache."""
+        # Mock cache
+        mock_cache = Mock()
+        mock_cache.is_ready.return_value = True
+        mock_cache.get_stops_data.return_value = {"15726": mock_cache_visits}
+        mock_get_cache.return_value = mock_cache
         
         result = muni_source.fetch_arrivals()
         
         assert result is not None
-        assert result["line"] == "N"
-        mock_get.assert_called_once()
+        assert result["line"] == "N-JUDAH"
+        mock_cache.get_stops_data.assert_called_once_with("SF", ["15726"])
     
-    @patch('src.data_sources.muni.requests.get')
-    def test_fetch_arrivals_with_bom(self, mock_get, muni_source):
-        """Test handling response with BOM (Byte Order Mark)."""
-        now = datetime.now(timezone.utc)
-        arrival = (now + timedelta(minutes=5)).isoformat()
-        
-        mock_response = Mock()
-        # Add BOM to response
-        mock_response.text = '\ufeff' + json.dumps({
-            "ServiceDelivery": {
-                "StopMonitoringDelivery": {
-                    "MonitoredStopVisit": [
-                        {
-                            "MonitoredVehicleJourney": {
-                                "PublishedLineName": "N",
-                                "Occupancy": "MANY_SEATS",
-                                "MonitoredCall": {
-                                    "StopPointName": "Test Stop",
-                                    "ExpectedArrivalTime": arrival,
-                                }
-                            }
-                        },
-                    ]
-                }
-            }
-        })
-        mock_response.raise_for_status = Mock()
-        mock_get.return_value = mock_response
-        
-        result = muni_source.fetch_arrivals()
-        
-        assert result is not None
-        assert result["line"] == "N"
-    
-    @patch('src.data_sources.muni.requests.get')
-    def test_fetch_arrivals_network_error(self, mock_get, muni_source):
-        """Test handling network errors."""
-        import requests
-        mock_get.side_effect = requests.exceptions.RequestException("Network error")
+    @patch('src.data_sources.muni.get_transit_cache')
+    def test_fetch_arrivals_cache_not_ready(self, mock_get_cache, muni_source):
+        """Test handling when cache is not ready."""
+        # Mock cache not ready
+        mock_cache = Mock()
+        mock_cache.is_ready.return_value = False
+        mock_get_cache.return_value = mock_cache
         
         result = muni_source.fetch_arrivals()
         
         assert result is None
     
-    @patch('src.data_sources.muni.requests.get')
-    def test_fetch_arrivals_invalid_json(self, mock_get, muni_source):
-        """Test handling invalid JSON response."""
-        mock_response = Mock()
-        mock_response.text = "not valid json"
-        mock_response.raise_for_status = Mock()
-        mock_get.return_value = mock_response
+    @patch('src.data_sources.muni.get_transit_cache')
+    def test_fetch_arrivals_no_data_in_cache(self, mock_get_cache, muni_source):
+        """Test handling when stop has no data in cache."""
+        # Mock cache with no data for stop
+        mock_cache = Mock()
+        mock_cache.is_ready.return_value = True
+        mock_cache.get_stops_data.return_value = {"15726": []}
+        mock_get_cache.return_value = mock_cache
         
         result = muni_source.fetch_arrivals()
         
         assert result is None
+    
+    @patch('src.data_sources.muni.get_transit_cache')
+    def test_fetch_multiple_stops(self, mock_get_cache, mock_cache_visits):
+        """Test fetching multiple stops from cache."""
+        now = datetime.now(timezone.utc)
+        arrival2 = (now + timedelta(minutes=8)).isoformat()
+        
+        mock_cache_visits_stop2 = [
+            {
+                "MonitoredVehicleJourney": {
+                    "PublishedLineName": "N",
+                    "Occupancy": "FEW_SEATS",
+                    "MonitoredCall": {
+                        "StopPointName": "Test Stop 2",
+                        "ExpectedArrivalTime": arrival2,
+                    }
+                }
+            }
+        ]
+        
+        # Mock cache with multiple stops
+        mock_cache = Mock()
+        mock_cache.is_ready.return_value = True
+        mock_cache.get_stops_data.return_value = {
+            "15726": mock_cache_visits,
+            "15727": mock_cache_visits_stop2
+        }
+        mock_get_cache.return_value = mock_cache
+        
+        source = MuniSource(api_key="test", stop_codes=["15726", "15727"])
+        results = source.fetch_multiple_stops()
+        
+        assert len(results) == 2
+        assert results[0]["stop_code"] == "15726"
+        assert results[1]["stop_code"] == "15727"
 
 
 class TestGetMuniSource:
