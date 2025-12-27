@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback, useMemo } from "react";
+import { useEffect, useCallback, useMemo, useState } from "react";
 import { useActivePage, useSetActivePage, usePages, usePagePreview } from "@/hooks/use-vestaboard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,8 @@ import {
   Code2,
 } from "lucide-react";
 import { VestaboardDisplay } from "@/components/vestaboard-display";
+import type { Page, PagePreviewResponse } from "@/lib/api";
+import { api } from "@/lib/api";
 
 // Page type icons
 const PAGE_TYPE_ICONS: Record<string, typeof FileText> = {
@@ -22,18 +24,98 @@ const PAGE_TYPE_ICONS: Record<string, typeof FileText> = {
   template: Code2,
 };
 
-// Mini preview component for each page button
-function PageButtonPreview({ pageId }: { pageId: string }) {
-  const { data: previewData } = usePagePreview(pageId, { 
-    enabled: true,
-    refetchInterval: 60000 // Refresh every minute
-  });
+// Cache key prefix for localStorage
+const PREVIEW_CACHE_PREFIX = "vestaboard_preview_";
+
+// Get cached preview from localStorage
+function getCachedPreview(page: Page): PagePreviewResponse | null {
+  if (typeof window === "undefined") return null;
+  
+  try {
+    const cacheKey = `${PREVIEW_CACHE_PREFIX}${page.id}`;
+    const cached = localStorage.getItem(cacheKey);
+    
+    if (!cached) return null;
+    
+    const { preview, pageUpdatedAt } = JSON.parse(cached);
+    
+    // Check if page has been updated since we cached the preview
+    if (pageUpdatedAt !== page.updated_at) {
+      // Page changed, cache is stale
+      return null;
+    }
+    
+    return preview;
+  } catch (error) {
+    console.error("Error reading preview cache:", error);
+    return null;
+  }
+}
+
+// Save preview to localStorage
+function setCachedPreview(page: Page, preview: PagePreviewResponse): void {
+  if (typeof window === "undefined") return;
+  
+  try {
+    const cacheKey = `${PREVIEW_CACHE_PREFIX}${page.id}`;
+    const cacheData = {
+      preview,
+      pageUpdatedAt: page.updated_at,
+      cachedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+  } catch (error) {
+    console.error("Error writing preview cache:", error);
+  }
+}
+
+// Mini preview component for each page button - uses localStorage caching
+function PageButtonPreview({ page }: { page: Page }) {
+  const [preview, setPreview] = useState<PagePreviewResponse | null>(() => 
+    getCachedPreview(page)
+  );
+  const [isLoading, setIsLoading] = useState(!preview);
+  
+  useEffect(() => {
+    // Check if we already have a valid cached preview
+    const cached = getCachedPreview(page);
+    if (cached) {
+      setPreview(cached);
+      setIsLoading(false);
+      return;
+    }
+    
+    // Fetch fresh preview
+    let mounted = true;
+    
+    const fetchPreview = async () => {
+      try {
+        const result = await api.previewPage(page.id);
+        if (mounted) {
+          setPreview(result);
+          setCachedPreview(page, result);
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error(`Failed to fetch preview for ${page.name}:`, error);
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+    
+    fetchPreview();
+    
+    return () => {
+      mounted = false;
+    };
+  }, [page, page.id, page.updated_at]);
   
   return (
     <div className="w-full">
       <VestaboardDisplay 
-        message={previewData?.message || null} 
-        isLoading={!previewData}
+        message={preview?.message || null} 
+        isLoading={isLoading}
         size="sm"
       />
     </div>
@@ -201,7 +283,7 @@ export function ActivePageDisplay() {
                     </div>
                     
                     {/* Mini preview */}
-                    <PageButtonPreview pageId={page.id} />
+                    <PageButtonPreview page={page} />
                     
                     {/* Active indicator */}
                     {isActive && (
