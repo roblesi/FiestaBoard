@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback, useMemo, useState } from "react";
+import { useEffect, useCallback, useMemo, useState, memo, useTransition, useRef, useDeferredValue } from "react";
 import { useActivePage, useSetActivePage, usePages, usePagePreview } from "@/hooks/use-vestaboard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,19 +28,19 @@ const PAGE_TYPE_ICONS: Record<string, typeof FileText> = {
 const PREVIEW_CACHE_PREFIX = "vestaboard_preview_";
 
 // Get cached preview from localStorage
-function getCachedPreview(page: Page): PagePreviewResponse | null {
+function getCachedPreview(pageId: string, pageUpdatedAt: string): PagePreviewResponse | null {
   if (typeof window === "undefined") return null;
   
   try {
-    const cacheKey = `${PREVIEW_CACHE_PREFIX}${page.id}`;
+    const cacheKey = `${PREVIEW_CACHE_PREFIX}${pageId}`;
     const cached = localStorage.getItem(cacheKey);
     
     if (!cached) return null;
     
-    const { preview, pageUpdatedAt } = JSON.parse(cached);
+    const { preview, pageUpdatedAt: cachedUpdatedAt } = JSON.parse(cached);
     
     // Check if page has been updated since we cached the preview
-    if (pageUpdatedAt !== page.updated_at) {
+    if (cachedUpdatedAt !== pageUpdatedAt) {
       // Page changed, cache is stale
       return null;
     }
@@ -53,14 +53,14 @@ function getCachedPreview(page: Page): PagePreviewResponse | null {
 }
 
 // Save preview to localStorage
-function setCachedPreview(page: Page, preview: PagePreviewResponse): void {
+function setCachedPreview(pageId: string, pageUpdatedAt: string, preview: PagePreviewResponse): void {
   if (typeof window === "undefined") return;
   
   try {
-    const cacheKey = `${PREVIEW_CACHE_PREFIX}${page.id}`;
+    const cacheKey = `${PREVIEW_CACHE_PREFIX}${pageId}`;
     const cacheData = {
       preview,
-      pageUpdatedAt: page.updated_at,
+      pageUpdatedAt,
       cachedAt: new Date().toISOString(),
     };
     localStorage.setItem(cacheKey, JSON.stringify(cacheData));
@@ -70,15 +70,21 @@ function setCachedPreview(page: Page, preview: PagePreviewResponse): void {
 }
 
 // Mini preview component for each page button - uses localStorage caching
-function PageButtonPreview({ page }: { page: Page }) {
+// Memoized to prevent unnecessary re-renders when parent updates
+const PageButtonPreview = memo(function PageButtonPreview({ page }: { page: Page }) {
+  const pageId = page.id;
+  // Use empty string as fallback for optional updated_at
+  const pageUpdatedAt = page.updated_at || "";
+  const pageName = page.name;
+  
   const [preview, setPreview] = useState<PagePreviewResponse | null>(() => 
-    getCachedPreview(page)
+    getCachedPreview(pageId, pageUpdatedAt)
   );
   const [isLoading, setIsLoading] = useState(!preview);
   
   useEffect(() => {
     // Check if we already have a valid cached preview
-    const cached = getCachedPreview(page);
+    const cached = getCachedPreview(pageId, pageUpdatedAt);
     if (cached) {
       setPreview(cached);
       setIsLoading(false);
@@ -90,14 +96,14 @@ function PageButtonPreview({ page }: { page: Page }) {
     
     const fetchPreview = async () => {
       try {
-        const result = await api.previewPage(page.id);
+        const result = await api.previewPage(pageId);
         if (mounted) {
           setPreview(result);
-          setCachedPreview(page, result);
+          setCachedPreview(pageId, pageUpdatedAt, result);
           setIsLoading(false);
         }
       } catch (error) {
-        console.error(`Failed to fetch preview for ${page.name}:`, error);
+        console.error(`Failed to fetch preview for ${pageName}:`, error);
         if (mounted) {
           setIsLoading(false);
         }
@@ -109,10 +115,10 @@ function PageButtonPreview({ page }: { page: Page }) {
     return () => {
       mounted = false;
     };
-  }, [page, page.id, page.updated_at]);
+  }, [pageId, pageUpdatedAt, pageName]);
   
   return (
-    <div className="w-full">
+    <div className="w-full hover-stable">
       <VestaboardDisplay 
         message={preview?.message || null} 
         isLoading={isLoading}
@@ -120,7 +126,91 @@ function PageButtonPreview({ page }: { page: Page }) {
       />
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison: only re-render if page ID or updated_at changes
+  return prevProps.page.id === nextProps.page.id && 
+         prevProps.page.updated_at === nextProps.page.updated_at;
+});
+
+// Memoized page button component to prevent unnecessary re-renders
+const PageButton = memo(function PageButton({
+  page,
+  isActive,
+  isPending,
+  onSelect,
+}: {
+  page: Page;
+  isActive: boolean;
+  isPending: boolean;
+  onSelect: (pageId: string) => void;
+}) {
+  const TypeIcon = PAGE_TYPE_ICONS[page.type] || FileText;
+  
+  // Pre-compute className to avoid template string parsing on every render
+  // Remove ALL transitions for instant, snappy feedback
+  const buttonClassName = isActive
+    ? "group relative flex flex-col gap-2 p-3 rounded-lg border-2 border-primary bg-primary/10 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed text-left page-button-container"
+    : "group relative flex flex-col gap-2 p-3 rounded-lg border-2 border-border hover:border-primary/50 hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed text-left page-button-container";
+  
+  // No transitions - instant color changes
+  const iconClassName = isActive
+    ? "h-4 w-4 shrink-0 text-primary"
+    : "h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground";
+  
+  const nameClassName = isActive
+    ? "text-sm font-medium truncate text-foreground"
+    : "text-sm font-medium truncate text-muted-foreground group-hover:text-foreground";
+  
+  // Memoize click handler to prevent function recreation
+  const handleClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    if (!isPending && !isActive) {
+      onSelect(page.id);
+    }
+  }, [page.id, isPending, isActive, onSelect]);
+  
+  return (
+    <button
+      key={page.id}
+      onClick={handleClick}
+      disabled={isPending || isActive}
+      className={buttonClassName}
+      type="button"
+    >
+      {/* Page info header */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <TypeIcon className={iconClassName} />
+          <span className={nameClassName}>
+            {page.name}
+          </span>
+        </div>
+        <Badge 
+          variant={isActive ? "default" : "secondary"} 
+          className="text-[10px] px-1.5 py-0 shrink-0"
+        >
+          {page.type}
+        </Badge>
+      </div>
+      
+      {/* Mini preview - isolated to prevent hover re-renders */}
+      <div className="hover-stable">
+        <PageButtonPreview page={page} />
+      </div>
+      
+      {/* Active indicator */}
+      {isActive && (
+        <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-primary rounded-full" />
+      )}
+    </button>
+  );
+}, (prevProps, nextProps) => {
+  // Only re-render if relevant props change
+  return prevProps.page.id === nextProps.page.id &&
+         prevProps.isActive === nextProps.isActive &&
+         prevProps.isPending === nextProps.isPending &&
+         prevProps.page.updated_at === nextProps.page.updated_at;
+});
 
 export function ActivePageDisplay() {
   // Fetch active page setting
@@ -138,7 +228,13 @@ export function ActivePageDisplay() {
   
   // Get the active page ID
   const activePageId = activePageData?.page_id || null;
-  const pages = useMemo(() => pagesData?.pages || [], [pagesData?.pages]);
+  // Defer activePageId updates to reduce priority of non-urgent re-renders
+  // This makes clicking feel more responsive
+  const deferredActivePageId = useDeferredValue(activePageId);
+  
+  // Memoize pages array to prevent unnecessary re-renders
+  // Only recreate if the pages array reference changes (which should only happen on actual data changes)
+  const pages = useMemo(() => pagesData?.pages || [], [pagesData]);
   
   // Fetch preview of active page with auto-refresh every 30 seconds
   const { 
@@ -170,18 +266,37 @@ export function ActivePageDisplay() {
     }
   }, [isLoadingActivePage, isLoadingPages, activePageId, pages, setActivePageMutation]);
   
-  // Handle page selection
+  // Use transition for non-urgent updates to improve perceived performance
+  const [isPending, startTransition] = useTransition();
+  const lastClickTimeRef = useRef<number>(0);
+  const lastPageIdRef = useRef<string | null>(null);
+  
+  // Handle page selection with debouncing and optimistic updates
   const handleSelectPage = useCallback((pageId: string) => {
     if (pageId === activePageId) return; // Don't re-select the same page
     
+    // Debounce rapid clicks (within 200ms) to prevent spam
+    const now = Date.now();
+    if (pageId === lastPageIdRef.current && now - lastClickTimeRef.current < 200) {
+      return;
+    }
+    lastClickTimeRef.current = now;
+    lastPageIdRef.current = pageId;
+    
     const page = pages.find(p => p.id === pageId);
+    
+    // Immediately update UI optimistically, then sync with server
+    // Don't wrap in startTransition - we want this to feel instant
     setActivePageMutation.mutate(pageId, {
       onSuccess: (result) => {
-        if (result.sent_to_board) {
-          toast.success(`Switched to "${page?.name || 'page'}"`);
-        } else {
-          toast.info(`Switched to "${page?.name || 'page'}" (dev mode)`);
-        }
+        // Use startTransition for toast notifications (non-urgent)
+        startTransition(() => {
+          if (result.sent_to_board) {
+            toast.success(`Switched to "${page?.name || 'page'}"`);
+          } else {
+            toast.info(`Switched to "${page?.name || 'page'}" (dev mode)`);
+          }
+        });
       },
       onError: () => {
         toast.error("Failed to switch page");
@@ -241,57 +356,15 @@ export function ActivePageDisplay() {
               SELECT PAGE
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {pages.map((page) => {
-                const TypeIcon = PAGE_TYPE_ICONS[page.type] || FileText;
-                const isActive = page.id === activePageId;
-                
-                return (
-                  <button
-                    key={page.id}
-                    onClick={() => handleSelectPage(page.id)}
-                    disabled={setActivePageMutation.isPending || isActive}
-                    className={`
-                      group relative flex flex-col gap-2 p-3 rounded-lg
-                      transition-all duration-200 ease-out
-                      border-2 
-                      ${isActive 
-                        ? "border-primary bg-primary/10 shadow-sm" 
-                        : "border-border hover:border-primary/50 hover:bg-accent"
-                      }
-                      disabled:opacity-50 disabled:cursor-not-allowed
-                      text-left
-                    `}
-                  >
-                    {/* Page info header */}
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <TypeIcon className={`h-4 w-4 shrink-0 transition-colors ${
-                          isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
-                        }`} />
-                        <span className={`text-sm font-medium transition-colors truncate ${
-                          isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
-                        }`}>
-                          {page.name}
-                        </span>
-                      </div>
-                      <Badge 
-                        variant={isActive ? "default" : "secondary"} 
-                        className="text-[10px] px-1.5 py-0 shrink-0"
-                      >
-                        {page.type}
-                      </Badge>
-                    </div>
-                    
-                    {/* Mini preview */}
-                    <PageButtonPreview page={page} />
-                    
-                    {/* Active indicator */}
-                    {isActive && (
-                      <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-primary rounded-full" />
-                    )}
-                  </button>
-                );
-              })}
+              {pages.map((page) => (
+                <PageButton
+                  key={page.id}
+                  page={page}
+                  isActive={page.id === deferredActivePageId}
+                  isPending={isPending || setActivePageMutation.isPending}
+                  onSelect={handleSelectPage}
+                />
+              ))}
             </div>
           </div>
         ) : (

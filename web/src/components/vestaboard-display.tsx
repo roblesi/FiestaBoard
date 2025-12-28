@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, memo } from "react";
 import { ALL_COLOR_CODES, VESTABOARD_COLORS } from "@/lib/vestaboard-colors";
 
 const ROWS = 6;
@@ -77,8 +78,45 @@ function messageToGrid(message: string): Token[][] {
   return grid;
 }
 
-// Individual character tile component
-function CharTile({ token, size = "md" }: { token: Token; size?: "sm" | "md" | "lg" }) {
+// Memoized grid row component to prevent row-level re-renders
+const GridRow = memo(function GridRow({ 
+  row, 
+  rowIdx, 
+  size, 
+  gapClass 
+}: { 
+  row: Token[]; 
+  rowIdx: number; 
+  size: "sm" | "md" | "lg"; 
+  gapClass: string;
+}) {
+  return (
+    <div className={`flex ${gapClass} justify-center`}>
+      {row.map((token, colIdx) => (
+        <CharTile key={`col-${rowIdx}-${colIdx}`} token={token} size={size} />
+      ))}
+    </div>
+  );
+}, (prevProps, nextProps) => {
+  // Only re-render if row data changes
+  if (prevProps.row.length !== nextProps.row.length) return false;
+  if (prevProps.size !== nextProps.size) return false;
+  if (prevProps.gapClass !== nextProps.gapClass) return false;
+  
+  // Deep compare tokens
+  for (let i = 0; i < prevProps.row.length; i++) {
+    const prevToken = prevProps.row[i];
+    const nextToken = nextProps.row[i];
+    if (prevToken.type !== nextToken.type) return false;
+    if (prevToken.type === "char" && prevToken.value !== nextToken.value) return false;
+    if (prevToken.type === "color" && prevToken.code !== nextToken.code) return false;
+  }
+  
+  return true; // Rows are equal, don't re-render
+});
+
+// Individual character tile component - memoized to prevent unnecessary re-renders
+const CharTile = memo(function CharTile({ token, size = "md" }: { token: Token; size?: "sm" | "md" | "lg" }) {
   const sizeClasses = {
     sm: "w-[12px] h-[16px]",
     md: "w-[18px] h-[24px] sm:w-[22px] sm:h-[30px] md:w-[26px] md:h-[36px]",
@@ -108,10 +146,17 @@ function CharTile({ token, size = "md" }: { token: Token; size?: "sm" | "md" | "
       </span>
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  // Only re-render if token or size changes
+  return prevProps.token.type === nextProps.token.type &&
+         (prevProps.token.type === "char" 
+           ? prevProps.token.value === nextProps.token.value
+           : prevProps.token.code === nextProps.token.code) &&
+         prevProps.size === nextProps.size;
+});
 
-// Skeleton tile for loading state
-function SkeletonTile({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
+// Skeleton tile for loading state - memoized
+const SkeletonTile = memo(function SkeletonTile({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
   const sizeClasses = {
     sm: "w-[12px] h-[16px]",
     md: "w-[18px] h-[24px] sm:w-[22px] sm:h-[30px] md:w-[26px] md:h-[36px]",
@@ -121,7 +166,7 @@ function SkeletonTile({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
   return (
     <div className={`${sizeClasses[size]} rounded-[2px] bg-vesta-black animate-pulse`} />
   );
-}
+});
 
 interface VestaboardDisplayProps {
   message: string | null;
@@ -130,8 +175,11 @@ interface VestaboardDisplayProps {
   className?: string;
 }
 
-export function VestaboardDisplay({ message, isLoading = false, size = "md", className = "" }: VestaboardDisplayProps) {
-  const grid = message ? messageToGrid(message) : null;
+export const VestaboardDisplay = memo(function VestaboardDisplay({ message, isLoading = false, size = "md", className = "" }: VestaboardDisplayProps) {
+  // Memoize grid calculation to avoid recalculating on every render
+  const grid = useMemo(() => {
+    return message ? messageToGrid(message) : null;
+  }, [message]);
   
   const paddingClasses = {
     sm: "p-2",
@@ -158,13 +206,15 @@ export function VestaboardDisplay({ message, isLoading = false, size = "md", cla
             </div>
           ))
         ) : grid ? (
-          // Actual character grid
+          // Actual character grid - memoize rows to prevent row-level re-renders
           grid.map((row, rowIdx) => (
-            <div key={rowIdx} className={`flex ${gapClasses[size]} justify-center`}>
-              {row.map((token, colIdx) => (
-                <CharTile key={colIdx} token={token} size={size} />
-              ))}
-            </div>
+            <GridRow 
+              key={`row-${rowIdx}`} 
+              row={row} 
+              rowIdx={rowIdx} 
+              size={size} 
+              gapClass={gapClasses[size]} 
+            />
           ))
         ) : (
           // Error/empty state
@@ -175,5 +225,11 @@ export function VestaboardDisplay({ message, isLoading = false, size = "md", cla
       </div>
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  // Only re-render if message, isLoading, size, or className changes
+  return prevProps.message === nextProps.message &&
+         prevProps.isLoading === nextProps.isLoading &&
+         prevProps.size === nextProps.size &&
+         prevProps.className === nextProps.className;
+});
 
