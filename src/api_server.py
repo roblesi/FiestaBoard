@@ -2121,6 +2121,16 @@ async def clear_cache():
     return {"status": "success", "message": "Cache cleared - next update will be sent to board"}
 
 
+@app.get("/api/runtime-config")
+async def get_runtime_config():
+    """Return runtime configuration for UI."""
+    # Allow override via environment variable, default to same origin
+    api_url = os.getenv("VESTA_API_URL", "")
+    return {
+        "apiUrl": api_url
+    }
+
+
 @app.post("/force-refresh")
 async def force_refresh():
     """

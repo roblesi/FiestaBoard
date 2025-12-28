@@ -12,11 +12,8 @@ RUN npm ci
 # Copy source files
 COPY web/ ./
 
-# Set API URL for build time
-ARG NEXT_PUBLIC_API_URL=http://192.168.0.2:6969
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-
 # Build the Next.js app
+# No NEXT_PUBLIC_API_URL needed - API URL is fetched at runtime
 RUN npm run build
 
 # Remove dev dependencies after build to reduce image size

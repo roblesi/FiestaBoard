@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/sonner";
 import { NavigationSidebar } from "@/components/navigation-sidebar";
+import { ConfigLoader } from "@/components/config-loader";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -49,11 +50,13 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen overflow-x-hidden`}
       >
         <Providers>
-          <NavigationSidebar />
-          <main className="min-h-screen pt-14 lg:pt-0 lg:pl-64 overflow-x-hidden w-full max-w-full">
-            {children}
-          </main>
-          <Toaster />
+          <ConfigLoader>
+            <NavigationSidebar />
+            <main className="min-h-screen pt-14 lg:pt-0 lg:pl-64 overflow-x-hidden w-full max-w-full">
+              {children}
+            </main>
+            <Toaster />
+          </ConfigLoader>
         </Providers>
       </body>
     </html>
