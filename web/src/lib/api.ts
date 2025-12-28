@@ -1,12 +1,51 @@
 // API client for Vestaboard service
 // Extensible pattern - easy to add updateConfig(), savePage() later
 
-// In Docker: empty string means relative URL (/api proxied by nginx)
-// In dev: falls back to localhost:8000
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 
-  (typeof window !== "undefined" && window.location.hostname === "localhost" 
-    ? "http://localhost:8000" 
-    : "/api");
+// Runtime configuration - API URL is fetched at startup from /api/runtime-config
+let API_BASE = "";
+let configLoaded = false;
+let configPromise: Promise<void> | null = null;
+
+/**
+ * Load runtime configuration from the API.
+ * This should be called once at app startup.
+ */
+export async function loadRuntimeConfig(): Promise<void> {
+  if (configLoaded) return;
+  
+  // If already loading, return the existing promise
+  if (configPromise) return configPromise;
+  
+  configPromise = (async () => {
+    try {
+      // Fetch runtime config from the API
+      const response = await fetch("/api/runtime-config");
+      const config = await response.json();
+      
+      // Set API_BASE from config, or fall back to sensible defaults
+      if (config.apiUrl) {
+        API_BASE = config.apiUrl;
+      } else if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        API_BASE = "http://localhost:8000";
+      } else {
+        API_BASE = "";  // Same origin
+      }
+      
+      configLoaded = true;
+    } catch (error) {
+      console.error("Failed to load runtime config, using defaults:", error);
+      // Fall back to localhost in development, same origin otherwise
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        API_BASE = "http://localhost:8000";
+      } else {
+        API_BASE = "";
+      }
+      configLoaded = true;
+    }
+  })();
+  
+  return configPromise;
+}
 
 // Types for API responses
 export interface StatusResponse {
@@ -433,6 +472,11 @@ export type FeatureName =
 
 // API client with typed methods
 async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
+  // Ensure config is loaded before making API calls
+  if (!configLoaded) {
+    await loadRuntimeConfig();
+  }
+  
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {

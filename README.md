@@ -260,9 +260,11 @@ Vesta/
 - Sign up at [openweathermap.org](https://openweathermap.org/)
 - Free tier: 1,000 calls/day
 
-## Docker Commands
+## Deployment
 
-### Using Docker Compose (Recommended)
+### Local Development / Testing
+
+Use Docker Compose for local development:
 
 ```bash
 # Build and start services
@@ -284,6 +286,62 @@ docker-compose down
 # Rebuild after code changes
 docker-compose up --build
 ```
+
+### Production Deployment (Synology NAS)
+
+Vesta uses **GitHub Container Registry (GHCR)** for production deployments with automatic builds:
+
+#### Features
+- ✅ **Automatic Builds**: GitHub Actions builds images on every push to `main`
+- ✅ **One-Click Updates**: Use Synology Container Manager's Update button
+- ✅ **Portable Images**: No hardcoded IPs, works anywhere
+- ✅ **Version Control**: Tagged images for easy rollbacks
+
+#### Initial Setup (One-Time)
+
+1. **Create GitHub Personal Access Token**
+   - Go to GitHub → Settings → Developer settings → Personal access tokens
+   - Create token with `read:packages` permission
+   - Add to your `.env` file: `GITHUB_TOKEN=ghp_xxx...`
+
+2. **Configure Synology in `.env`**
+   ```bash
+   SYNOLOGY_HOST=192.168.x.x
+   SYNOLOGY_USER=your-username
+   GITHUB_TOKEN=ghp_xxx...
+   ```
+
+3. **Deploy to Synology**
+   ```bash
+   ./deploy.sh
+   ```
+
+#### Updating to Latest Version
+
+**Method 1: Synology Container Manager (Recommended)**
+1. Open Container Manager on Synology
+2. Select `vestaboard-api` and `vestaboard-ui` containers
+3. Click Action → Update
+4. Done! Latest version is now running
+
+**Method 2: Command Line**
+```bash
+# Re-run deploy script
+./deploy.sh
+
+# Or SSH directly to Synology
+ssh user@synology-ip
+cd ~/vestaboard
+sudo docker-compose pull
+sudo docker-compose down
+sudo docker-compose up -d
+```
+
+#### Complete Documentation
+
+For detailed setup instructions, troubleshooting, and advanced topics:
+- **[GitHub Registry Setup Guide](./docs/deployment/GITHUB_REGISTRY_SETUP.md)** - Complete GHCR deployment guide
+- **[Deploy to Synology](./docs/deployment/DEPLOY_TO_SYNOLOGY.md)** - Synology-specific instructions
 
 
 ## Troubleshooting
@@ -491,6 +549,7 @@ The Vestaboard can display various screens:
 - [Local Development](./docs/setup/LOCAL_DEVELOPMENT.md)
 - [Docker Setup](./docs/setup/DOCKER_SETUP.md)
 - [Cloud API Setup](./docs/setup/CLOUD_API_SETUP.md)
+- [GitHub Registry Setup](./docs/deployment/GITHUB_REGISTRY_SETUP.md) - **Recommended for production**
 - [Deploy to Synology](./docs/deployment/DEPLOY_TO_SYNOLOGY.md)
 - [API Research](./docs/reference/API_RESEARCH.md)
 - [Character Codes](./docs/reference/VESTABOARD_CHARACTER_CODES.md)
