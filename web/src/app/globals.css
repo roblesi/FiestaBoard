@@ -160,3 +160,129 @@
 .animate-accordion-up {
   animation: accordion-up 0.2s ease-out;
 }
+
+/* Page Transitions - CSS-based (works in all browsers) */
+@layer base {
+  /* Animate page content on route changes */
+  main {
+    animation: page-enter 300ms ease-out;
+  }
+
+  /* Slide-up animation for modal-like pages (edit/new) */
+  html[data-transition="slide-up"] main {
+    animation: slide-up-enter 350ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Slide-down animation for returning from modals */
+  html[data-transition="slide-down"] main {
+    animation: slide-down-enter 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Scale-fade for content areas */
+  html[data-transition="scale-fade"] main {
+    animation: scale-fade-enter 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Respect user's motion preferences */
+  @media (prefers-reduced-motion: reduce) {
+    main {
+      animation: none !important;
+    }
+  }
+}
+
+/* Page Transition Keyframes */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-up-enter {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes slide-down-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-fade-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Performance optimizations for interactive elements */
+@layer utilities {
+  /* Optimize hover states for better performance */
+  .hover-optimized {
+    will-change: border-color, background-color;
+    transform: translateZ(0); /* Force GPU acceleration */
+    contain: layout style paint; /* CSS containment for better performance */
+  }
+  
+  /* Optimize transitions to use GPU-accelerated properties */
+  .transition-optimized {
+    transition-property: border-color, background-color, color;
+    transition-timing-function: ease-out;
+    will-change: border-color, background-color, color;
+  }
+  
+  /* Optimize page button container for better hover/click performance */
+  .page-button-container {
+    contain: layout style paint;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-font-smoothing: antialiased;
+    /* Remove all transitions for instant feedback - no sluggishness */
+    transition: none !important;
+  }
+  
+  /* Use compositor-only properties for hover effects - ultra fast for instant feel */
+  .hover-fast {
+    transition: border-color 75ms cubic-bezier(0.4, 0, 0.2, 1), 
+                background-color 75ms cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: border-color, background-color;
+  }
+  
+  /* Instant hover - no transition for maximum responsiveness */
+  .hover-instant {
+    /* No transition - instant color change */
+  }
+  
+  /* Prevent layout shifts on hover */
+  .hover-stable {
+    contain: layout;
+  }
+  
+  /* Use opacity/transform for smoother hover effects */
+  .hover-smooth {
+    transition: opacity 100ms cubic-bezier(0.4, 0, 0.2, 1),
+                transform 100ms cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: opacity, transform;
+  }
+}

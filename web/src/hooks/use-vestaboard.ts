@@ -56,19 +56,44 @@ export function useSetActivePage() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (pageId: string | null) => api.setActivePage(pageId),
+    onMutate: async (newPageId) => {
+      // Cancel any outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: queryKeys.activePage });
+      
+      // Snapshot the previous value
+      const previousActivePage = queryClient.getQueryData(queryKeys.activePage);
+      
+      // Optimistically update to the new value
+      queryClient.setQueryData(queryKeys.activePage, { page_id: newPageId });
+      
+      // Return context with the snapshotted value
+      return { previousActivePage };
+    },
+    onError: (err, newPageId, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousActivePage) {
+        queryClient.setQueryData(queryKeys.activePage, context.previousActivePage);
+      }
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.activePage });
+      // Only invalidate status, not activePage (we already updated it optimistically)
       queryClient.invalidateQueries({ queryKey: queryKeys.status });
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure consistency
+      queryClient.invalidateQueries({ queryKey: queryKeys.activePage });
     },
   });
 }
 
-// Pages list query
+// Pages list query - no auto-refetch since pages don't change frequently
 export function usePages() {
   return useQuery({
     queryKey: queryKeys.pages,
     queryFn: api.getPages,
     retry: 1,
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
   });
 }
 

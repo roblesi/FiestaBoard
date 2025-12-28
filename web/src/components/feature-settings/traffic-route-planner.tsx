@@ -33,7 +33,7 @@ interface TrafficRoutePlannerProps {
 export function TrafficRoutePlanner({
   selectedRoutes,
   onRoutesSelected,
-  maxRoutes = 4,
+  maxRoutes = 20,
 }: TrafficRoutePlannerProps) {
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");

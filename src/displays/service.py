@@ -532,7 +532,7 @@ class DisplayService:
             return DisplayResult(
                 display_type="muni",
                 formatted="Muni: No stops configured",
-                raw={},
+                raw={"stops": []},
                 available=True,
                 error="No stops configured"
             )
@@ -769,4 +769,15 @@ def get_display_service() -> DisplayService:
     if _display_service is None:
         _display_service = DisplayService()
     return _display_service
+
+
+def reset_display_service() -> None:
+    """Reset the display service singleton to force reinitialization.
+    
+    This should be called when configuration changes to ensure
+    data sources are recreated with updated settings.
+    """
+    global _display_service
+    _display_service = None
+    logger.info("Display service singleton reset")
 

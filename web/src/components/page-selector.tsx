@@ -1,7 +1,6 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +18,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import type { PagePreviewResponse } from "@/lib/api";
+import { useViewTransition } from "@/hooks/use-view-transition";
 
 // Page type icons
 const PAGE_TYPE_ICONS: Record<string, typeof FileText> = {
@@ -33,7 +33,7 @@ interface PageSelectorProps {
 }
 
 export function PageSelector({ onCreateNew, onEditPage }: PageSelectorProps) {
-  const router = useRouter();
+  const { push } = useViewTransition();
   const queryClient = useQueryClient();
   const [expandedPage, _setExpandedPage] = useState<string | null>(null);
   const [previewData, setPreviewData] = useState<PagePreviewResponse | null>(null);
@@ -131,7 +131,7 @@ export function PageSelector({ onCreateNew, onEditPage }: PageSelectorProps) {
               if (onCreateNew) {
                 onCreateNew();
               } else {
-                router.push("/pages/new");
+                push("/pages/new", { transitionType: "slide-up" });
               }
             }}
             className="h-9 sm:h-8 px-3 text-xs"
@@ -193,7 +193,7 @@ export function PageSelector({ onCreateNew, onEditPage }: PageSelectorProps) {
                     if (onEditPage) {
                       onEditPage(page.id);
                     } else {
-                      router.push(`/pages/edit?id=${page.id}`);
+                      push(`/pages/edit?id=${page.id}`, { transitionType: "slide-up" });
                     }
                   }}
                 >

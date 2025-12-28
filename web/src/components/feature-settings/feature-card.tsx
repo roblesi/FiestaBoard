@@ -582,6 +582,17 @@ export function FeatureCard({
       queryClient.invalidateQueries({ queryKey: ["features-config"] });
       queryClient.invalidateQueries({ queryKey: ["config"] });
       queryClient.invalidateQueries({ queryKey: ["status"] });
+      
+      // Invalidate live data queries used by VariablePicker sidebar
+      // This ensures the template editor sidebar refreshes with new data
+      if (featureName === "muni") {
+        queryClient.invalidateQueries({ queryKey: ["muni-live-data"] });
+      } else if (featureName === "baywheels") {
+        queryClient.invalidateQueries({ queryKey: ["baywheels-live-data"] });
+      } else if (featureName === "traffic") {
+        queryClient.invalidateQueries({ queryKey: ["traffic-live-data"] });
+      }
+      
       toast.success(`${title} settings saved`);
       setHasChanges(false);
     },
@@ -700,7 +711,9 @@ export function FeatureCard({
   }
 
   return (
-    <Card className={enabled ? "border-primary/30" : ""}>
+    <Card 
+      className={enabled ? "border-primary/30" : ""}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
@@ -774,7 +787,7 @@ export function FeatureCard({
                   setFormData(newData);
                   setHasChanges(true);
                 }}
-                maxStations={4}
+                maxStations={20}
               />
               {/* Show currently selected stations */}
               {((formData.station_ids as string[]) || (formData.station_id ? [formData.station_id as string] : [])).length > 0 && (
@@ -839,7 +852,7 @@ export function FeatureCard({
                   setFormData(newData);
                   setHasChanges(true);
                 }}
-                maxStops={4}
+                maxStops={20}
               />
               {/* Show currently selected stops */}
               {((formData.stop_codes as string[]) || (formData.stop_code ? [formData.stop_code as string] : [])).length > 0 && (
@@ -907,7 +920,7 @@ export function FeatureCard({
                   setFormData(newData);
                   setHasChanges(true);
                 }}
-                maxRoutes={4}
+                maxRoutes={20}
               />
               {/* Show currently selected routes */}
               {((formData.routes as any[]) || []).length > 0 && (

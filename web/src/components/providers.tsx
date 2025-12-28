@@ -13,6 +13,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
           queries: {
             staleTime: 1000 * 60, // 1 minute
             refetchOnWindowFocus: false,
+            refetchOnMount: false, // Don't refetch on mount if data is fresh
+            gcTime: 1000 * 60 * 5, // Keep unused data in cache for 5 minutes
           },
         },
       })

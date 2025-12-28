@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Home, FileText, Settings, Terminal, Menu, X } from "lucide-react";
@@ -9,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ServiceStatus } from "@/components/service-status";
 import { Button } from "@/components/ui/button";
+import { ViewTransitionLink } from "@/components/view-transition-link";
 
 const navigation = [
   {
@@ -108,7 +108,7 @@ export function NavigationSidebar() {
             const Icon = item.icon;
 
             return (
-              <Link
+              <ViewTransitionLink
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
@@ -121,7 +121,7 @@ export function NavigationSidebar() {
               >
                 <Icon className="h-5 w-5" />
                 {item.name}
-              </Link>
+              </ViewTransitionLink>
             );
           })}
         </nav>
@@ -155,7 +155,7 @@ export function NavigationSidebar() {
               const Icon = item.icon;
 
               return (
-                <Link
+                <ViewTransitionLink
                   key={item.href}
                   href={item.href}
                   className={cn(
@@ -167,7 +167,7 @@ export function NavigationSidebar() {
                 >
                   <Icon className="h-5 w-5" />
                   {item.name}
-                </Link>
+                </ViewTransitionLink>
               );
             })}
           </nav>

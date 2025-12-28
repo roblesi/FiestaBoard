@@ -348,6 +348,10 @@ class ConfigManager:
             # Only update provided fields
             for key, value in settings.items():
                 if key in DEFAULT_CONFIG["vestaboard"]:
+                    # IMPORTANT: Don't overwrite real values with masked placeholders
+                    if key in SENSITIVE_FIELDS and value == "***":
+                        logger.debug(f"Preserving existing value for masked field: vestaboard.{key}")
+                        continue
                     self._config["vestaboard"][key] = value
             
             self._save_internal()
@@ -398,6 +402,13 @@ class ConfigManager:
             for key, value in settings.items():
                 # Allow any key that exists in defaults, 'enabled', or 'color_rules'
                 if key in DEFAULT_CONFIG["features"].get(feature_name, {}) or key in ("enabled", "color_rules"):
+                    # IMPORTANT: Don't overwrite real values with masked placeholders
+                    # If the incoming value is "***" (our masking placeholder) and the field
+                    # is a sensitive field, preserve the existing value
+                    if key in SENSITIVE_FIELDS and value == "***":
+                        # Keep the existing value, don't overwrite with the mask
+                        logger.debug(f"Preserving existing value for masked field: {feature_name}.{key}")
+                        continue
                     self._config["features"][feature_name][key] = value
             
             self._save_internal()
@@ -425,6 +436,10 @@ class ConfigManager:
                 
                 for key, value in settings.items():
                     if key in DEFAULT_CONFIG.get("general", {}):
+                        # Don't overwrite real values with masked placeholders
+                        if key in SENSITIVE_FIELDS and value == "***":
+                            logger.debug(f"Preserving existing value for masked field: general.{key}")
+                            continue
                         self._config["general"][key] = value
                 
                 self._save_internal()

@@ -237,6 +237,12 @@ class TemplateEngine:
         self._config_manager = None
         logger.info("TemplateEngine initialized")
     
+    def reset_cache(self):
+        """Reset cached services to pick up configuration changes."""
+        self._display_service = None
+        self._config_manager = None
+        logger.info("TemplateEngine cache reset")
+    
     @property
     def display_service(self):
         """Lazy-load display service to avoid circular imports."""
@@ -1225,4 +1231,16 @@ def get_template_engine() -> TemplateEngine:
     if _template_engine is None:
         _template_engine = TemplateEngine()
     return _template_engine
+
+
+def reset_template_engine() -> None:
+    """Reset the template engine singleton to force reinitialization.
+    
+    This should be called when configuration changes to ensure
+    the template engine picks up updated settings.
+    """
+    global _template_engine
+    if _template_engine is not None:
+        _template_engine.reset_cache()
+    logger.info("Template engine reset")
 
