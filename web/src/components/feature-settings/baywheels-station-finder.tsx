@@ -24,7 +24,7 @@ interface BayWheelsStationFinderProps {
 export function BayWheelsStationFinder({
   selectedStationIds,
   onStationsSelected,
-  maxStations = 4,
+  maxStations = 20,
 }: BayWheelsStationFinderProps) {
   const [searchMethod, setSearchMethod] = useState<"address" | "coordinates" | "geolocation">("address");
   const [address, setAddress] = useState("");

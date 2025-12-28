@@ -19,11 +19,11 @@ from pydantic import BaseModel
 from .main import VestaboardDisplayService
 from .config import Config
 from .config_manager import get_config_manager
-from .displays.service import get_display_service, DISPLAY_TYPES, DisplayResult
+from .displays.service import get_display_service, reset_display_service, DISPLAY_TYPES, DisplayResult
 from .settings.service import get_settings_service, VALID_STRATEGIES, VALID_OUTPUT_TARGETS
 from .pages.service import get_page_service, DeleteResult
 from .pages.models import PageCreate, PageUpdate
-from .templates.engine import get_template_engine
+from .templates.engine import get_template_engine, reset_template_engine
 from .text_to_board import text_to_board_array
 
 logger = logging.getLogger(__name__)
@@ -607,6 +607,15 @@ async def update_feature_config(feature_name: str, request: dict):
     
     # Reload config in the Config class
     Config.reload()
+    
+    # Reset display service singleton to pick up new config
+    # This ensures data sources are recreated with updated settings
+    reset_display_service()
+    
+    # Reset template engine to pick up new display service
+    reset_template_engine()
+    
+    logger.info(f"Services reset after {feature_name} config update")
     
     # Get updated config (masked)
     updated = config_manager.get_feature(feature_name)

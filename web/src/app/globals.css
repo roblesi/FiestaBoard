@@ -160,3 +160,78 @@
 .animate-accordion-up {
   animation: accordion-up 0.2s ease-out;
 }
+
+/* Page Transitions - CSS-based (works in all browsers) */
+@layer base {
+  /* Animate page content on route changes */
+  main {
+    animation: page-enter 300ms ease-out;
+  }
+
+  /* Slide-up animation for modal-like pages (edit/new) */
+  html[data-transition="slide-up"] main {
+    animation: slide-up-enter 350ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Slide-down animation for returning from modals */
+  html[data-transition="slide-down"] main {
+    animation: slide-down-enter 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Scale-fade for content areas */
+  html[data-transition="scale-fade"] main {
+    animation: scale-fade-enter 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Respect user's motion preferences */
+  @media (prefers-reduced-motion: reduce) {
+    main {
+      animation: none !important;
+    }
+  }
+}
+
+/* Page Transition Keyframes */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-up-enter {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes slide-down-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-fade-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

@@ -27,7 +27,7 @@ class TransitCache:
     
     # API configuration
     API_BASE_URL = "http://api.511.org/transit/StopMonitoring"
-    REGIONAL_AGENCY = "RG"  # Regional feed for all Bay Area agencies
+    REGIONAL_AGENCY = "SF"  # SF Muni agency (RG regional feed is empty, use SF directly)
     
     # Cache configuration (defaults, can be overridden)
     DEFAULT_REFRESH_INTERVAL = 90  # seconds

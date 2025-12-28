@@ -35,7 +35,7 @@ interface MuniStopFinderProps {
 export function MuniStopFinder({
   selectedStopCodes,
   onStopsSelected,
-  maxStops = 4,
+  maxStops = 20,
 }: MuniStopFinderProps) {
   const [searchMethod, setSearchMethod] = useState<"address" | "coordinates" | "geolocation" | "manual">("address");
   const [address, setAddress] = useState("");
