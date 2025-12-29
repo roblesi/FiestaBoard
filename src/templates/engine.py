@@ -417,9 +417,11 @@ class TemplateEngine:
             # Check if this line contains a |wrap filter
             if '|wrap}}' in content or '|wrap|' in content:
                 # Find how many empty lines follow (for wrap overflow)
+                # A line is considered empty if it has no content after extracting alignment
                 empty_count = 0
                 for j in range(i + 1, 6):
-                    if lines[j].strip() == "":
+                    _, line_content = self._extract_alignment(lines[j])
+                    if line_content.strip() == "":
                         empty_count += 1
                     else:
                         break
