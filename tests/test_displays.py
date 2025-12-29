@@ -36,7 +36,6 @@ class TestDisplayService:
             # Setup mock sources
             mock_weather.return_value = Mock()
             mock_datetime.return_value = Mock()
-            mock_apple.return_value = None  # Disabled by default
             mock_ha.return_value = None
             mock_trek.return_value = None
             mock_air_fog.return_value = None  # Disabled by default
