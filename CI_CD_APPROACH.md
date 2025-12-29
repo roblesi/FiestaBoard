@@ -65,14 +65,12 @@ Our CI/CD approach prioritizes **developer velocity** while maintaining **produc
   - Create GitHub release
   - **On failure:** Automatic revert + re-open PR
 
-### 3. `publish-images.yml` - Development Images
-- **Triggers:** Push to feature branches (NOT `main`)
-- **Duration:** ~10-15 minutes
-- **Jobs:**
-  - Build and push development images
-  - Tagged with branch name (e.g., `feature-my-feature`)
+### 3. ~~`publish-images.yml` - Development Images~~ (REMOVED)
+- This workflow has been removed
+- **Reason:** We only publish images from `main` on version bumps
+- **For testing:** Build Docker images locally or wait for merge to main
 
-### 4. `pr-label.yml` - Automatic PR Labeling
+### 3. `pr-label.yml` - Automatic PR Labeling
 - **Triggers:** PR opened, edited, or synchronized
 - **Duration:** ~5 seconds
 - **Jobs:**
@@ -209,12 +207,7 @@ docker build -f Dockerfile.api -t vesta-api:test .
 docker build -f Dockerfile.ui -t vesta-ui:test .
 ```
 
-### Option 2: Push to Feature Branch
-- Push to a feature branch
-- `publish-images.yml` will build Docker images
-- Tagged as `branch-name` for testing
-
-### Option 3: Manual Workflow Dispatch
+### Option 2: Manual Workflow Dispatch
 - Go to Actions → "Release and Publish"
 - Click "Run workflow"
 - Select your branch
