@@ -1585,11 +1585,17 @@ async def validate_traffic_route(request: dict):
     
     try:
         # Create a temporary TrafficSource to test the route
+        # Pass as a list of routes (expected format)
+        routes = [{
+            "origin": origin,
+            "destination": destination,
+            "destination_name": destination_name,
+            "travel_mode": request.get("travel_mode", "DRIVE")
+        }]
+        
         traffic_source = TrafficSource(
             api_key=api_key,
-            origin=origin,
-            destination=destination,
-            destination_name=destination_name
+            routes=routes
         )
         
         # Fetch traffic data to validate
@@ -1598,7 +1604,7 @@ async def validate_traffic_route(request: dict):
         if not data:
             return {
                 "valid": False,
-                "error": "Failed to fetch route data. Check that addresses are valid."
+                "error": "Failed to validate route. This could be due to: 1) Invalid addresses, 2) Google Routes API not enabled, 3) API key issues. Check the API logs for details."
             }
         
         # Extract coordinates if available

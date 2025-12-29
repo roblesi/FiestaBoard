@@ -49,7 +49,7 @@ docker-compose down
 - 📶 **Guest WiFi**: Display WiFi credentials for guests (easily toggled on/off)
 - 🚴 **Bay Wheels**: Track bike availability at multiple stations with visual station finder
 - 🚇 **Muni Transit**: Real-time SF Muni arrival predictions with stop finder (search by address or location)
-- 🚗 **Traffic**: Drive time to destinations with live traffic conditions (multiple routes supported)
+- 🚗 **Traffic**: Travel time to destinations with live traffic conditions (multiple routes supported, compare different modes: drive, bike, transit, walk)
 - 🌙 **Silence Schedule**: Configure a time window when the Vestaboard won't send updates (e.g., 8pm-7am)
 
 ### System Features

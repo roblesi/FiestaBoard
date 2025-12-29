@@ -687,7 +687,7 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ address }),
     }),
-  validateTrafficRoute: (origin: string, destination: string, destination_name: string) =>
+  validateTrafficRoute: (origin: string, destination: string, destination_name: string, travel_mode: string = "DRIVE") =>
     fetchApi<{
       valid: boolean;
       distance_km?: number;
@@ -695,7 +695,7 @@ export const api = {
       error?: string;
     }>("/traffic/routes/validate", {
       method: "POST",
-      body: JSON.stringify({ origin, destination, destination_name }),
+      body: JSON.stringify({ origin, destination, destination_name, travel_mode }),
     }),
   
   // General configuration

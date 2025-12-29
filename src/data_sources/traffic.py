@@ -33,6 +33,7 @@ class TrafficSource:
                     - origin: Origin address or lat,lng
                     - destination: Destination address or lat,lng
                     - destination_name: Display name (e.g., "DOWNTOWN", "WORK")
+                    - travel_mode: Optional. One of "DRIVE", "BICYCLE", "TRANSIT", "WALK" (default: "DRIVE")
         """
         self.api_key = api_key
         # Support both new (list of routes) and old (single route) format
@@ -168,7 +169,8 @@ class TrafficSource:
                 data = self._fetch_single_route(
                     origin=route.get("origin", ""),
                     destination=route.get("destination", ""),
-                    destination_name=route.get("destination_name", "DESTINATION")
+                    destination_name=route.get("destination_name", "DESTINATION"),
+                    travel_mode=route.get("travel_mode", "DRIVE")
                 )
                 if data:
                     results.append(data)
@@ -197,7 +199,8 @@ class TrafficSource:
         self,
         origin: str,
         destination: str,
-        destination_name: str
+        destination_name: str,
+        travel_mode: str = "DRIVE"
     ) -> Optional[Dict[str, any]]:
         """
         Fetch traffic data for a single route from Google Routes API.
@@ -208,6 +211,7 @@ class TrafficSource:
             origin: Origin address or lat,lng
             destination: Destination address or lat,lng
             destination_name: Display name for destination
+            travel_mode: Travel mode - one of "DRIVE", "BICYCLE", "TRANSIT", "WALK" (default: "DRIVE")
         
         Returns:
             Dictionary with traffic data, or None if failed
@@ -220,19 +224,40 @@ class TrafficSource:
             "X-Goog-FieldMask": "routes.duration,routes.staticDuration,routes.routeToken"
         }
         
+        # Validate travel mode
+        valid_modes = ["DRIVE", "BICYCLE", "TRANSIT", "WALK", "TWO_WHEELER"]
+        if travel_mode.upper() not in valid_modes:
+            logger.warning(f"Invalid travel mode '{travel_mode}', defaulting to DRIVE")
+            travel_mode = "DRIVE"
+        
         # Build request body
         body = {
             "origin": self._build_waypoint(origin),
             "destination": self._build_waypoint(destination),
-            "travelMode": "DRIVE",
-            "routingPreference": "TRAFFIC_AWARE_OPTIMAL",
+            "travelMode": travel_mode.upper(),
             "computeAlternativeRoutes": False,
             "languageCode": "en-US",
             "units": "IMPERIAL"
         }
         
+        # Only add routing preference for DRIVE and TWO_WHEELER
+        # BICYCLE, WALK, and TRANSIT don't support routing preferences
+        if travel_mode.upper() in ["DRIVE", "TWO_WHEELER"]:
+            body["routingPreference"] = "TRAFFIC_AWARE_OPTIMAL"
+        
         try:
             response = requests.post(url, json=body, headers=headers, timeout=10)
+            
+            # Handle specific HTTP errors with helpful messages
+            if response.status_code == 403:
+                logger.error(f"Google Routes API returned 403 Forbidden. Check: 1) Routes API is enabled, 2) Billing is set up, 3) API key has proper restrictions")
+                logger.error(f"Response: {response.text}")
+                return None
+            elif response.status_code == 400:
+                logger.error(f"Google Routes API returned 400 Bad Request. The addresses may be invalid or improperly formatted.")
+                logger.error(f"Response: {response.text}")
+                return None
+            
             response.raise_for_status()
             data = response.json()
             
@@ -292,6 +317,7 @@ class TrafficSource:
                 "origin": origin,
                 "destination": destination,
                 "destination_name": destination_name,
+                "travel_mode": travel_mode.upper(),
             }
             
         except requests.exceptions.RequestException as e:

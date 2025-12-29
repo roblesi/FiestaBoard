@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Navigation, Loader2, CheckCircle2, AlertCircle, Car, X, Plus } from "lucide-react";
+import { Navigation, Loader2, CheckCircle2, AlertCircle, Car, X, Plus, Bike, TrainFront, Footprints } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 
@@ -15,6 +16,7 @@ interface TrafficRoute {
   origin: string;
   destination: string;
   destination_name: string;
+  travel_mode?: string;
 }
 
 interface RouteValidation {
@@ -30,6 +32,13 @@ interface TrafficRoutePlannerProps {
   maxRoutes?: number;
 }
 
+const TRAVEL_MODES = [
+  { value: "DRIVE", label: "Drive", icon: Car },
+  { value: "BICYCLE", label: "Bicycle", icon: Bike },
+  { value: "TRANSIT", label: "Transit", icon: TrainFront },
+  { value: "WALK", label: "Walk", icon: Footprints },
+];
+
 export function TrafficRoutePlanner({
   selectedRoutes,
   onRoutesSelected,
@@ -38,6 +47,7 @@ export function TrafficRoutePlanner({
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
   const [destinationName, setDestinationName] = useState("");
+  const [travelMode, setTravelMode] = useState("DRIVE");
   const [validating, setValidating] = useState(false);
   const [validation, setValidation] = useState<RouteValidation | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +84,8 @@ export function TrafficRoutePlanner({
       const data = await api.validateTrafficRoute(
         origin.trim(),
         destination.trim(),
-        destinationName.trim() || "DESTINATION"
+        destinationName.trim() || "DESTINATION",
+        travelMode
       );
 
       setValidation(data);
@@ -83,8 +94,9 @@ export function TrafficRoutePlanner({
         setError(data.error || "Route validation failed");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to validate route");
-      setValidation({ valid: false, error: "Validation failed" });
+      const errorMsg = err instanceof Error ? err.message : "Failed to validate route";
+      setError(errorMsg);
+      setValidation({ valid: false, error: errorMsg });
     } finally {
       setValidating(false);
     }
@@ -105,6 +117,7 @@ export function TrafficRoutePlanner({
       origin: origin.trim(),
       destination: destination.trim(),
       destination_name: destinationName.trim() || "DESTINATION",
+      travel_mode: travelMode,
     };
 
     onRoutesSelected([...selectedRoutes, newRoute]);
@@ -113,6 +126,7 @@ export function TrafficRoutePlanner({
     setOrigin("");
     setDestination("");
     setDestinationName("");
+    setTravelMode("DRIVE");
     setValidation(null);
     setError(null);
   };
@@ -192,6 +206,35 @@ export function TrafficRoutePlanner({
             </p>
           </div>
 
+          {/* Travel Mode */}
+          <div className="space-y-2">
+            <Label htmlFor="travelMode">Travel Mode</Label>
+            <Select value={travelMode} onValueChange={(value: string) => {
+              setTravelMode(value);
+              setValidation(null);
+            }}>
+              <SelectTrigger id="travelMode">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TRAVEL_MODES.map((mode) => {
+                  const Icon = mode.icon;
+                  return (
+                    <SelectItem key={mode.value} value={mode.value}>
+                      <div className="flex items-center gap-2">
+                        <Icon className="h-4 w-4" />
+                        <span>{mode.label}</span>
+                      </div>
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Compare different transportation modes (e.g., train vs bike)
+            </p>
+          </div>
+
           {/* Validate Button */}
           <Button
             onClick={handleValidate}
@@ -233,7 +276,15 @@ export function TrafficRoutePlanner({
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>
+                <div className="space-y-2">
+                  <p className="font-medium">{error}</p>
+                  <p className="text-xs">
+                    💡 Tips: Use full addresses with city/state, or try coordinates (lat,lng). 
+                    If you see 403 errors, check that Google Routes API is enabled and billing is set up.
+                  </p>
+                </div>
+              </AlertDescription>
             </Alert>
           )}
 
@@ -272,39 +323,48 @@ export function TrafficRoutePlanner({
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {selectedRoutes.map((route, index) => (
-                <div
-                  key={index}
-                  className="p-3 border rounded-lg"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-xs font-mono">
-                          [{index}]
-                        </Badge>
-                        <span className="font-medium">{route.destination_name}</span>
+              {selectedRoutes.map((route, index) => {
+                const modeInfo = TRAVEL_MODES.find(m => m.value === route.travel_mode) || TRAVEL_MODES[0];
+                const ModeIcon = modeInfo.icon;
+                
+                return (
+                  <div
+                    key={index}
+                    className="p-3 border rounded-lg"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="text-xs font-mono">
+                            [{index}]
+                          </Badge>
+                          <span className="font-medium">{route.destination_name}</span>
+                          <Badge variant="outline" className="text-xs">
+                            <ModeIcon className="h-3 w-3 mr-1" />
+                            {modeInfo.label}
+                          </Badge>
+                        </div>
+                        <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                          <p>
+                            <span className="font-medium">From:</span> {route.origin}
+                          </p>
+                          <p>
+                            <span className="font-medium">To:</span> {route.destination}
+                          </p>
+                        </div>
                       </div>
-                      <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                        <p>
-                          <span className="font-medium">From:</span> {route.origin}
-                        </p>
-                        <p>
-                          <span className="font-medium">To:</span> {route.destination}
-                        </p>
-                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveRoute(index)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveRoute(index)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <p className="text-xs text-muted-foreground mt-4">
               Use <code className="bg-muted px-1 rounded">traffic.routes.{`{index}`}.duration_minutes</code> in templates (e.g., routes.0, routes.1)
