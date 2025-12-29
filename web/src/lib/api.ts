@@ -475,6 +475,12 @@ export type FeatureName =
   | "air_fog"
   | "silence_schedule";
 
+export interface VersionResponse {
+  package_version: string;
+  build_version: string;
+  is_dev: boolean;
+}
+
 // API client with typed methods
 async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
   // Ensure config is loaded before making API calls
@@ -716,4 +722,8 @@ export const api = {
   // Home Assistant endpoints
   getHomeAssistantEntities: () =>
     fetchApi<HomeAssistantEntitiesResponse>("/home-assistant/entities"),
+
+  // Version endpoint
+  getVersion: () =>
+    fetchApi<VersionResponse>("/version"),
 };

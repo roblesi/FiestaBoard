@@ -17,6 +17,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from . import __version__
 from .main import VestaboardDisplayService
 from .config import Config
 from .config_manager import get_config_manager
@@ -225,13 +226,21 @@ class HealthResponse(BaseModel):
     """Response model for health check."""
     status: str
     service_running: bool
+    version: str
+
+
+class VersionResponse(BaseModel):
+    """Response model for version information."""
+    package_version: str
+    build_version: str
+    is_dev: bool
 
 
 # Create FastAPI app
 app = FastAPI(
     title="Vestaboard Display API",
     description="REST API for controlling and monitoring the Vestaboard Display Service",
-    version="1.0.0"
+    version=__version__
 )
 
 # Add CORS middleware
@@ -330,7 +339,23 @@ async def health():
     service = get_service()
     return HealthResponse(
         status="ok",
-        service_running=_service_running and service is not None
+        service_running=_service_running and service is not None,
+        version=__version__
+    )
+
+
+@app.get("/version", response_model=VersionResponse)
+async def version():
+    """Get version information.
+    
+    Returns both the package version (from __version__) and the build version
+    (from VERSION environment variable). In production builds, these should match.
+    """
+    build_version = os.getenv("VERSION", "dev")
+    return VersionResponse(
+        package_version=__version__,
+        build_version=build_version,
+        is_dev=build_version == "dev"
     )
 
 
