@@ -46,7 +46,6 @@ docker-compose down
 - 📅 **Date/Time**: Current date and time with timezone support
 - 🏠 **Home Assistant**: House status display (doors, garage, locks, etc.)
 - 🖖 **Star Trek Quotes**: Random quotes from TNG, Voyager, and DS9 with configurable ratio
-- 🎵 **Apple Music**: "Now Playing" display (artist + song) when music is playing
 - 📶 **Guest WiFi**: Display WiFi credentials for guests (easily toggled on/off)
 - 🚴 **Bay Wheels**: Track bike availability at multiple stations with visual station finder
 - 🚇 **Muni Transit**: Real-time SF Muni arrival predictions with stop finder (search by address or location)
@@ -142,7 +141,6 @@ See [CODESPACES_SETUP.md](./docs/setup/CODESPACES_SETUP.md) for detailed instruc
 
 For detailed setup instructions for specific features, see:
 - **Home Assistant**: [HOME_ASSISTANT_SETUP.md](./docs/features/HOME_ASSISTANT_SETUP.md)
-- **Apple Music**: [APPLE_MUSIC_SETUP.md](./docs/features/APPLE_MUSIC_SETUP.md)
 - **Star Trek Quotes**: [STAR_TREK_QUOTES_SETUP.md](./docs/features/STAR_TREK_QUOTES_SETUP.md)
 - **Guest WiFi**: [GUEST_WIFI_SETUP.md](./docs/features/GUEST_WIFI_SETUP.md)
 
@@ -173,11 +171,6 @@ All configuration is done via environment variables in `.env`:
 - `HOME_ASSISTANT_BASE_URL`: Your Home Assistant URL
 - `HOME_ASSISTANT_ACCESS_TOKEN`: Long-lived access token
 - `HOME_ASSISTANT_ENTITIES`: JSON array of entities to monitor
-
-#### Apple Music
-- `APPLE_MUSIC_ENABLED`: Enable Apple Music "Now Playing" (default: `false`)
-- `APPLE_MUSIC_SERVICE_URL`: URL to macOS helper service
-- `APPLE_MUSIC_REFRESH_SECONDS`: How often to check for playing music (default: `10`)
 
 #### Guest WiFi
 - `GUEST_WIFI_ENABLED`: Display guest WiFi credentials (default: `false`)
@@ -385,15 +378,6 @@ See [HOME_ASSISTANT_SETUP.md](./docs/features/HOME_ASSISTANT_SETUP.md) for:
 - Status indicators ([G] = good, [R] = attention needed)
 - Entity configuration
 
-### Apple Music "Now Playing"
-Display currently playing music from Apple Music on your Mac.
-
-See [APPLE_MUSIC_SETUP.md](./docs/features/APPLE_MUSIC_SETUP.md) for:
-- macOS helper service setup
-- Network configuration
-- LaunchAgent for auto-start
-- Troubleshooting
-
 ### Guest WiFi Display
 Easily display WiFi credentials for guests, toggled on/off via configuration.
 
@@ -547,7 +531,6 @@ The Vestaboard can display various screens:
 - **Weather + DateTime**: Current conditions with temperature and text-based weather icons
 - **Home Assistant**: House status with green ([G]) and red ([R]) indicators
 - **Star Trek Quotes**: Inspiring quotes from TNG, Voyager, and DS9
-- **Apple Music**: Currently playing artist and song
 - **Guest WiFi**: SSID and password for guests
 
 **System Features:**

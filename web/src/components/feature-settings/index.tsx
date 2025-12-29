@@ -8,7 +8,6 @@ import {
   Cloud,
   Calendar,
   Home,
-  Music,
   Wifi,
   Sparkles,
   Wind,
@@ -187,50 +186,6 @@ const FEATURE_DEFINITIONS: Record<
     outputs: [
       { name: "{entity}.state", description: "Entity state value", example: "on", maxChars: 10, typical: "2-10 chars" },
       { name: "{entity}.friendly_name", description: "Entity display name", example: "Front Door", maxChars: 15 },
-    ],
-  },
-  apple_music: {
-    title: "Apple Music",
-    description: "Display now playing info from macOS helper or Home Assistant",
-    icon: Music,
-    hasRefreshInterval: true,
-    defaultRefreshSeconds: 10,
-    fields: [
-      {
-        key: "service_url",
-        label: "Service URL (macOS Helper)",
-        type: "text",
-        placeholder: "http://localhost:5123",
-        required: false,
-        description: "URL of the macOS helper service (leave empty to use Home Assistant)",
-      },
-      {
-        key: "home_assistant_entity_id",
-        label: "Home Assistant Entity ID",
-        type: "text",
-        placeholder: "media_player.homepod",
-        required: false,
-        description: "Home Assistant media_player entity ID for HomePod (e.g., media_player.homepod_living_room). Requires Home Assistant to be configured.",
-      },
-      {
-        key: "timeout",
-        label: "Timeout (seconds)",
-        type: "number",
-        placeholder: "5",
-      },
-      {
-        key: "refresh_seconds",
-        label: "Refresh Interval (seconds)",
-        type: "number",
-        placeholder: "10",
-        description: "How often to check now playing (min: 5)",
-      },
-    ],
-    outputs: [
-      { name: "track", description: "Song/track name", example: "Bohemian Rhapsody", maxChars: 22, typical: "5-22 chars" },
-      { name: "artist", description: "Artist name", example: "Queen", maxChars: 22, typical: "3-22 chars" },
-      { name: "album", description: "Album name", example: "A Night at the Opera", maxChars: 22, typical: "5-22 chars" },
-      { name: "playing", description: "Is playing (bool)", example: "Yes", maxChars: 3, typical: "Yes/No" },
     ],
   },
   guest_wifi: {

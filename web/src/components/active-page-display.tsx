@@ -12,9 +12,11 @@ import {
   FileText, 
   Grid3X3, 
   Code2,
+  Moon,
 } from "lucide-react";
 import { VestaboardDisplay } from "@/components/vestaboard-display";
-import type { Page, PagePreviewResponse } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
+import type { Page, PagePreviewResponse, SilenceStatus } from "@/lib/api";
 import { api } from "@/lib/api";
 
 // Page type icons
@@ -26,6 +28,83 @@ const PAGE_TYPE_ICONS: Record<string, typeof FileText> = {
 
 // Cache key prefix for localStorage
 const PREVIEW_CACHE_PREFIX = "vestaboard_preview_";
+
+// Parse a line into tokens (same logic as VestaboardDisplay)
+type Token = { type: "char"; value: string } | { type: "color"; code: string };
+
+function parseLine(line: string): Token[] {
+  const tokens: Token[] = [];
+  let i = 0;
+  
+  while (i < line.length) {
+    if (line[i] === "{") {
+      const closingBrace = line.indexOf("}", i);
+      if (closingBrace !== -1) {
+        const content = line.substring(i + 1, closingBrace);
+        
+        // Skip end tags {/...} or {/}
+        if (content.startsWith("/")) {
+          i = closingBrace + 1;
+          continue;
+        }
+        
+        // Check if it's a color code (63-70 or named colors)
+        if (/^\d+$/.test(content) && parseInt(content) >= 63 && parseInt(content) <= 70) {
+          tokens.push({ type: "color", code: content });
+          i = closingBrace + 1;
+          continue;
+        }
+      }
+    }
+    
+    // Convert to uppercase since Vestaboard only supports uppercase letters
+    tokens.push({ type: "char", value: line[i].toUpperCase() });
+    i++;
+  }
+  
+  return tokens;
+}
+
+function tokensToString(tokens: Token[]): string {
+  return tokens.map(token => {
+    if (token.type === "color") {
+      return `{${token.code}}`;
+    }
+    return token.value;
+  }).join('');
+}
+
+// Add snoozing indicator to bottom right of board content
+function addSnoozingIndicator(content: string): string {
+  const lines = content.split('\n');
+  
+  // Ensure we have exactly 6 lines (Vestaboard rows)
+  while (lines.length < 6) {
+    lines.push("");
+  }
+  
+  // Parse the last line into tokens (each token = 1 board position)
+  const lastLineTokens = parseLine(lines[5] || "");
+  
+  // Pad to 22 tokens total
+  while (lastLineTokens.length < 22) {
+    lastLineTokens.push({ type: "char", value: " " });
+  }
+  
+  // Truncate if too long
+  const boardTokens = lastLineTokens.slice(0, 22);
+  
+  // Replace positions 14-21 with "SNOOZING" (8 characters)
+  const indicator = "SNOOZING";
+  for (let i = 0; i < indicator.length; i++) {
+    boardTokens[14 + i] = { type: "char", value: indicator[i] };
+  }
+  
+  // Convert back to string
+  lines[5] = tokensToString(boardTokens);
+  
+  return lines.slice(0, 6).join('\n');
+}
 
 // Get cached preview from localStorage
 function getCachedPreview(pageId: string, pageUpdatedAt: string): PagePreviewResponse | null {
@@ -223,6 +302,13 @@ export function ActivePageDisplay() {
   // Fetch all pages for selection
   const { data: pagesData, isLoading: isLoadingPages } = usePages();
   
+  // Fetch silence mode status to show snoozing indicator
+  const { data: silenceStatus } = useQuery<SilenceStatus>({
+    queryKey: ["silenceStatus"],
+    queryFn: api.getSilenceStatus,
+    refetchInterval: 30000, // Refresh every 30 seconds to stay in sync
+  });
+  
   // Set active page mutation
   const setActivePageMutation = useSetActivePage();
   
@@ -309,6 +395,19 @@ export function ActivePageDisplay() {
     refetchPreview();
   }, [refetchActivePage, refetchPreview]);
 
+  // Compute the display message with snoozing indicator if needed
+  const displayMessage = useMemo(() => {
+    const baseMessage = previewData?.message || null;
+    if (!baseMessage) return null;
+    
+    // If silence mode is active, add the snoozing indicator
+    if (silenceStatus?.active) {
+      return addSnoozingIndicator(baseMessage);
+    }
+    
+    return baseMessage;
+  }, [previewData?.message, silenceStatus?.active]);
+
   const isLoading = isLoadingActivePage || isLoadingPages;
 
   return (
@@ -328,18 +427,24 @@ export function ActivePageDisplay() {
         </div>
         
         {/* Status indicator */}
-        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-3">
+        <div className="flex items-center gap-4 text-xs text-muted-foreground mt-3">
           <div className="flex items-center gap-1.5">
             <div className="w-1.5 h-1.5 rounded-full bg-vesta-green animate-pulse" />
             <span>Auto-refresh every 30s</span>
           </div>
+          {silenceStatus?.active && (
+            <div className="flex items-center gap-1.5">
+              <Moon className="h-3 w-3 text-blue-500" />
+              <span className="text-blue-500">Silence mode active</span>
+            </div>
+          )}
         </div>
       </CardHeader>
       
       <CardContent className="space-y-4">
         {/* Vestaboard Frame */}
         <VestaboardDisplay 
-          message={previewData?.message || null} 
+          message={displayMessage} 
           isLoading={isLoadingPreview || (!!activePageId && !previewData)}
           size="md"
         />

@@ -63,7 +63,6 @@ AVAILABLE_VARIABLES = {
     "weather": ["temperature", "condition", "humidity", "location", "wind_speed", "temperature_color"],
     "datetime": ["time", "date", "day", "day_of_week", "month", "year", "hour", "minute"],
     "home_assistant": ["state_color"],  # Dynamic based on entities
-    "apple_music": ["track", "artist", "album", "playing"],
     "star_trek": ["quote", "character", "series", "series_color"],
     "guest_wifi": ["ssid", "password"],
     "air_fog": ["aqi", "air_status", "air_color", "fog_status", "fog_color", "is_foggy", "visibility", "formatted"],
@@ -101,10 +100,6 @@ VARIABLE_MAX_LENGTHS = {
     "datetime.year": 4,
     "datetime.hour": 2,
     "datetime.minute": 2,
-    "apple_music.track": 22,
-    "apple_music.artist": 22,
-    "apple_music.album": 22,
-    "apple_music.playing": 3,
     "star_trek.quote": 120,  # Multi-line, handled by |wrap
     "star_trek.character": 15,
     "star_trek.series": 3,
@@ -569,7 +564,7 @@ class TemplateEngine:
         context = {}
         
         # Fetch from each source
-        sources = ["weather", "datetime", "home_assistant", "apple_music", "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels", "traffic"]
+        sources = ["weather", "datetime", "home_assistant", "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels", "traffic"]
         
         for source in sources:
             try:
@@ -643,7 +638,6 @@ class TemplateEngine:
             "weather": "weather",
             "datetime": "datetime",
             "home_assistant": "home_assistant",
-            "apple_music": "apple_music",
             "star_trek": "star_trek_quotes",
             "guest_wifi": "guest_wifi",
             "air_fog": "air_fog",
@@ -906,7 +900,6 @@ class TemplateEngine:
             "weather": "weather",
             "datetime": "datetime",
             "home_assistant": "home_assistant",
-            "apple_music": "apple_music",
             "star_trek": "star_trek_quotes",
             "guest_wifi": "guest_wifi",
             "air_fog": "air_fog",
@@ -1153,7 +1146,7 @@ class TemplateEngine:
             List of source names that are configured
         """
         available = []
-        sources = ["weather", "datetime", "home_assistant", "apple_music", "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels", "traffic"]
+        sources = ["weather", "datetime", "home_assistant", "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels", "traffic"]
         
         for source in sources:
             try:

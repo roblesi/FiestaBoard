@@ -477,13 +477,12 @@ async def send_message(request: MessageRequest):
             "dev_mode": True
         }
     
-    # Check if we're in silence mode - absolute preference
+    # CRITICAL: Block ALL manual sends during silence mode to prevent wake-ups
     if Config.is_silence_mode_active():
-        logger.info("Silence mode is active, skipping board update")
+        logger.info("Silence mode is active - blocking manual message send to prevent wake-up")
         return {
-            "status": "success",
-            "message": "Message skipped (silence mode is active)",
-            "skipped": True,
+            "status": "blocked",
+            "message": "Manual sends blocked during silence mode to prevent wake-ups",
             "silence_mode": True
         }
     
@@ -553,7 +552,7 @@ async def get_feature_config(feature_name: str):
     Get configuration for a specific feature.
     
     Args:
-        feature_name: One of: weather, datetime, home_assistant, apple_music,
+        feature_name: One of: weather, datetime, home_assistant,
                       guest_wifi, star_trek_quotes, rotation
     """
     config_manager = get_config_manager()
@@ -806,7 +805,7 @@ async def get_display(display_type: str):
     
     Args:
         display_type: One of: weather, datetime, weather_datetime, 
-                      home_assistant, apple_music, star_trek, guest_wifi
+                      home_assistant, star_trek, guest_wifi
     
     Returns:
         Formatted message text ready for display on Vestaboard.
@@ -841,7 +840,7 @@ async def get_display_raw(display_type: str):
     
     Args:
         display_type: One of: weather, datetime, weather_datetime,
-                      home_assistant, apple_music, star_trek, guest_wifi
+                      home_assistant, star_trek, guest_wifi
     
     Returns:
         Raw data dictionary from the source.
@@ -1966,10 +1965,11 @@ async def send_page(page_id: str, target: Optional[str] = None):
     # Send to board if appropriate
     sent_to_board = False
     if send_to_board and not _dev_mode:
-        # Check if we're in silence mode - absolute preference
+        # CRITICAL: Block ALL manual sends during silence mode to prevent wake-ups
         if Config.is_silence_mode_active():
-            logger.info("Silence mode is active, skipping board update")
+            logger.info("Silence mode is active - blocking manual page send to prevent wake-up")
             sent_to_board = False
+            # Don't raise error, just skip sending
         else:
             # Use page-level transitions if set, otherwise fall back to system defaults
             system_transition = settings_service.get_transition_settings()
