@@ -2,8 +2,69 @@
 
 This guide will help you set up Apple Music "Now Playing" display on your Vestaboard.
 
-## Architecture
+## Two Integration Methods
 
+You can use Apple Music integration in two ways:
+
+1. **Home Assistant Mode (Recommended - Standalone)**: Query HomePod playback state directly through Home Assistant - no macOS helper needed!
+2. **macOS Helper Mode (Legacy)**: Use a macOS helper service to query the Music app
+
+### Home Assistant Mode (Standalone - No Helper Required!)
+
+If you have Home Assistant set up and your HomePod is integrated, you can display what's playing directly without any macOS helper service.
+
+**Architecture:**
+```
+HomePod                    Home Assistant              Docker Service
+     │                            │                            │
+     │  Media Player Entity       │                            │
+     │  (media_player.homepod)    │                            │
+     │                            │                            │
+     └──────────HomeKit───────────┘                            │
+                                    └──────REST API────────────┘
+                                                      │
+                                                      └──→ Vestaboard
+```
+
+**Requirements:**
+- Home Assistant server running
+- HomePod integrated in Home Assistant (should appear as `media_player.homepod` or similar)
+- Home Assistant access token configured
+
+**Setup Steps:**
+
+1. **Find Your HomePod Entity ID**
+   - Open Home Assistant web interface
+   - Go to **Settings** → **Devices & Services**
+   - Find your HomePod device
+   - Click on it and note the entity ID (e.g., `media_player.homepod_living_room`)
+
+2. **Configure Apple Music Feature**
+   - In your Vestaboard config, set:
+     ```json
+     "apple_music": {
+       "enabled": true,
+       "home_assistant_entity_id": "media_player.homepod_living_room",
+       "timeout": 5,
+       "refresh_seconds": 10
+     }
+     ```
+   - **Important**: Leave `service_url` empty when using Home Assistant mode
+   - Make sure Home Assistant is also configured (see [Home Assistant Setup](./HOME_ASSISTANT_SETUP.md))
+
+3. **That's it!** The service will query Home Assistant for HomePod playback state.
+
+**Benefits:**
+- ✅ No macOS helper service needed
+- ✅ Works with any HomePod in your Home Assistant setup
+- ✅ Can select which HomePod to monitor
+- ✅ Works even if HomePod is playing music directly (not AirPlayed)
+
+---
+
+### macOS Helper Mode (Legacy)
+
+**Architecture:**
 ```
 Mac Studio (macOS)          Synology (Linux Docker)
      │                            │
@@ -223,6 +284,28 @@ Apple Music checks every 10 seconds
 4. **When music stops**, Vestaboard falls back to weather/date display
 
 ## Troubleshooting
+
+### Home Assistant Mode Issues
+
+**"Home Assistant not configured"**
+- Make sure Home Assistant feature is enabled and configured first
+- Check that `HOME_ASSISTANT_BASE_URL` and `HOME_ASSISTANT_ACCESS_TOKEN` are set
+
+**"Could not fetch state for media_player.homepod"**
+- Verify the entity ID is correct (check in Home Assistant → Settings → Developer Tools → States)
+- Make sure your HomePod is actually integrated in Home Assistant
+- Entity ID format should be `media_player.homepod` or `media_player.homepod_room_name`
+
+**"HomePod state is 'idle', not playing"**
+- This is normal - the service only displays when music is actually playing
+- Try playing music on your HomePod and wait a few seconds
+
+**"No media info available"**
+- HomePod may not be reporting media info to Home Assistant
+- Try playing music directly on HomePod (not AirPlayed)
+- Check Home Assistant logs for any HomePod integration errors
+
+### macOS Helper Mode Issues
 
 ### "Could not connect to Apple Music service"
 

@@ -6,6 +6,7 @@ import threading
 import time
 import os
 import json
+import requests
 from typing import Optional, Dict, Any, List
 from contextlib import contextmanager
 from collections import deque
@@ -1754,6 +1755,43 @@ async def set_active_page(request: dict):
     }
 
 
+@app.get("/settings/polling")
+async def get_polling_settings():
+    """Get current polling interval settings."""
+    settings_service = get_settings_service()
+    polling = settings_service.get_polling_settings()
+    return {
+        "interval_seconds": polling.interval_seconds
+    }
+
+
+@app.put("/settings/polling")
+async def update_polling_settings(request: dict):
+    """
+    Update polling interval settings.
+    
+    Body should include:
+    - interval_seconds: Polling interval in seconds (minimum 10)
+    
+    Note: Changing this setting requires restarting the service to take effect.
+    """
+    if "interval_seconds" not in request:
+        raise HTTPException(status_code=400, detail="interval_seconds parameter required")
+    
+    settings_service = get_settings_service()
+    
+    try:
+        interval_seconds = int(request["interval_seconds"])
+        polling = settings_service.set_polling_interval(interval_seconds)
+        return {
+            "status": "success",
+            "settings": polling.to_dict(),
+            "requires_restart": True
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 # =============================================================================
 # Pages Endpoints
 # =============================================================================
@@ -2161,6 +2199,50 @@ async def force_refresh():
     except Exception as e:
         logger.error(f"Error force-refreshing display: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to force refresh: {str(e)}")
+
+
+# =============================================================================
+# Home Assistant Endpoints
+# =============================================================================
+
+@app.get("/home-assistant/entities")
+async def get_home_assistant_entities():
+    """
+    Get all available entities from Home Assistant.
+    
+    Returns list of entities with their current state and all attributes.
+    Used by the UI to populate entity picker dropdowns.
+    """
+    from .data_sources.home_assistant import get_home_assistant_source
+    
+    ha_source = get_home_assistant_source()
+    if not ha_source:
+        raise HTTPException(status_code=503, detail="Home Assistant not configured")
+    
+    try:
+        # Call Home Assistant /api/states to get ALL entities
+        response = requests.get(
+            f"{ha_source.base_url}/api/states",
+            headers=ha_source.headers,
+            timeout=ha_source.timeout
+        )
+        response.raise_for_status()
+        entities = response.json()
+        
+        # Transform to simpler format for UI
+        return {
+            "entities": [
+                {
+                    "entity_id": e["entity_id"],
+                    "state": e["state"],
+                    "attributes": e["attributes"],
+                    "friendly_name": e["attributes"].get("friendly_name", e["entity_id"])
+                }
+                for e in entities
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Failed to fetch entities: {str(e)}")
 
 
 # Legacy endpoints /preview and /publish-preview have been removed.

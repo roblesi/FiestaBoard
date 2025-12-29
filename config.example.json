@@ -31,6 +31,7 @@
     "apple_music": {
       "enabled": false,
       "service_url": "http://localhost:5123",
+      "home_assistant_entity_id": "",
       "timeout": 5,
       "refresh_seconds": 10
     },

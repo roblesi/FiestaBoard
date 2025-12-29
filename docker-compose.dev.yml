@@ -8,7 +8,7 @@ services:
     env_file:
       - .env
     ports:
-      - "8000:8000"
+      - "6969:8000"
     environment:
       - PRODUCTION=false
     volumes:
@@ -34,7 +34,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_API_URL=http://localhost:6969
       - WATCHPACK_POLLING=true  # Enable polling for file changes in Docker
     command: sh -c "npm install && npm run dev -- -H 0.0.0.0"
     depends_on:

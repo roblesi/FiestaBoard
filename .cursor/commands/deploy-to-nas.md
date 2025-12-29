@@ -13,3 +13,5 @@ This script will:
 
 The script reads credentials from .env and will prompt for confirmation before deploying. After deployment, the Web UI will be available at http://192.168.0.2:4420 and the API at http://192.168.0.2:6969.
 
+
+

@@ -9,8 +9,9 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { TimePicker } from "@/components/ui/time-picker";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Settings, Save, Clock, FlaskConical, Moon } from "lucide-react";
+import { Settings, Save, Clock, FlaskConical, Moon, RefreshCw, AlertCircle } from "lucide-react";
 import { api } from "@/lib/api";
 import { TimezonePicker } from "@/components/ui/timezone-picker";
 import { formatInTimeZone } from "date-fns-tz";
@@ -24,6 +25,7 @@ export function GeneralSettings() {
   const [silenceEnabled, setSilenceEnabled] = useState(false);
   const [silenceStartTime, setSilenceStartTime] = useState("20:00");
   const [silenceEndTime, setSilenceEndTime] = useState("07:00");
+  const [pollingInterval, setPollingInterval] = useState(60);
 
   // Fetch general config
   const { data: generalConfig, isLoading: isLoadingConfig } = useQuery({
@@ -35,6 +37,12 @@ export function GeneralSettings() {
   const { data: silenceConfig, isLoading: isLoadingSilence } = useQuery({
     queryKey: ["features-config", "silence_schedule"],
     queryFn: () => api.getFeatureConfig("silence_schedule"),
+  });
+
+  // Fetch polling settings
+  const { data: pollingSettings, isLoading: isLoadingPolling } = useQuery({
+    queryKey: ["polling-settings"],
+    queryFn: api.getPollingSettings,
   });
 
   // Fetch service status
@@ -70,6 +78,13 @@ export function GeneralSettings() {
     }
   }, [silenceConfig, generalConfig?.timezone]);
 
+  // Initialize polling interval when settings load
+  useEffect(() => {
+    if (pollingSettings) {
+      setPollingInterval(pollingSettings.interval_seconds);
+    }
+  }, [pollingSettings]);
+
   // Update general config mutation
   const updateGeneralMutation = useMutation({
     mutationFn: api.updateGeneralConfig,
@@ -97,9 +112,36 @@ export function GeneralSettings() {
     },
   });
 
+  // Update polling settings mutation
+  const updatePollingMutation = useMutation({
+    mutationFn: (interval: number) => api.updatePollingSettings(interval),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["polling-settings"] });
+      if (data.requires_restart) {
+        toast.success("Polling interval updated. Restart service to apply changes.", {
+          duration: 5000,
+        });
+      } else {
+        toast.success("Polling interval updated");
+      }
+      setHasChanges(false);
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to update polling interval: ${error.message}`);
+    },
+  });
+
   const handleTimezoneChange = (newTimezone: string) => {
     setTimezone(newTimezone);
     setHasChanges(true);
+  };
+
+  const handlePollingIntervalChange = (value: string) => {
+    const interval = parseInt(value, 10);
+    if (!isNaN(interval) && interval >= 10) {
+      setPollingInterval(interval);
+      setHasChanges(true);
+    }
   };
 
   const handleSilenceToggle = async (checked: boolean) => {
@@ -171,10 +213,10 @@ export function GeneralSettings() {
     }
   };
 
-  const isLoading = isLoadingConfig || isLoadingStatus || isLoadingSilence;
+  const isLoading = isLoadingConfig || isLoadingStatus || isLoadingSilence || isLoadingPolling;
   const isRunning = status?.running ?? false;
   const devMode = status?.config_summary?.dev_mode ?? false;
-  const isSaving = updateGeneralMutation.isPending || updateSilenceMutation.isPending;
+  const isSaving = updateGeneralMutation.isPending || updateSilenceMutation.isPending || updatePollingMutation.isPending;
 
   if (isLoading) {
     return (
@@ -248,6 +290,43 @@ export function GeneralSettings() {
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Clock className="h-4 w-4" />
             <span>Current time: {getCurrentTimeInTimezone()}</span>
+          </div>
+        </div>
+
+        {/* Polling Interval Setting */}
+        <div className="space-y-3 pb-6 border-b">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className="flex-1">
+              <Label htmlFor="polling-interval" className="text-sm font-medium">
+                Board Update Interval
+              </Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                How often the board checks for content updates (in seconds)
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <Input
+              id="polling-interval"
+              type="number"
+              min={10}
+              max={3600}
+              value={pollingInterval}
+              onChange={(e) => handlePollingIntervalChange(e.target.value)}
+              disabled={isSaving}
+              className="w-32"
+            />
+            <span className="text-sm text-muted-foreground">seconds</span>
+          </div>
+          
+          <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/50 p-3 rounded-md">
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium">Requires service restart</p>
+              <p className="mt-1">Changes to the polling interval will take effect after restarting the service.</p>
+            </div>
           </div>
         </div>
 

@@ -296,3 +296,5 @@ class TestLogFilePersistence:
                 assert isinstance(entry, dict)
 
 
+
+

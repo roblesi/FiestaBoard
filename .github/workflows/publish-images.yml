@@ -78,3 +78,5 @@ jobs:
           echo "API: ${{ env.IMAGE_PREFIX }}/vesta-api:latest"
           echo "UI: ${{ env.IMAGE_PREFIX }}/vesta-ui:latest"
 
+
+

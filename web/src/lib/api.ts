@@ -233,6 +233,17 @@ export interface TemplateVariables {
   syntax_examples: Record<string, string>;
 }
 
+export interface HomeAssistantEntity {
+  entity_id: string;
+  state: string;
+  attributes: Record<string, any>;
+  friendly_name: string;
+}
+
+export interface HomeAssistantEntitiesResponse {
+  entities: HomeAssistantEntity[];
+}
+
 export interface TemplateValidationResponse {
   valid: boolean;
   errors: Array<{
@@ -283,6 +294,7 @@ export interface HomeAssistantFeatureConfig {
 export interface AppleMusicFeatureConfig {
   enabled: boolean;
   service_url: string;
+  home_assistant_entity_id?: string;
   timeout: number;
   refresh_seconds: number;
 }
@@ -409,6 +421,10 @@ export interface SilenceStatus {
   end_time_utc: string;
   current_time_utc: string;
   next_change_utc: string;
+}
+
+export interface PollingSettings {
+  interval_seconds: number;
 }
 
 export interface FullConfig {
@@ -698,4 +714,17 @@ export const api = {
   
   // Silence mode status
   getSilenceStatus: () => fetchApi<SilenceStatus>("/silence-status"),
+
+  // Polling settings
+  getPollingSettings: () => fetchApi<PollingSettings>("/settings/polling"),
+  updatePollingSettings: (interval_seconds: number) =>
+    fetchApi<{ status: string; settings: PollingSettings; requires_restart: boolean }>("/settings/polling", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ interval_seconds }),
+    }),
+
+  // Home Assistant endpoints
+  getHomeAssistantEntities: () =>
+    fetchApi<HomeAssistantEntitiesResponse>("/home-assistant/entities"),
 };

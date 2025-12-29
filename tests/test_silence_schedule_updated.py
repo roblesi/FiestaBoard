@@ -287,3 +287,5 @@ class TestConfigManagerGeneralSettings:
             os.unlink(temp_path)
             ConfigManager._instance = None
 
+
+
