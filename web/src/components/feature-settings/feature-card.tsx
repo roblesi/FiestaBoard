@@ -894,7 +894,8 @@ export function FeatureCard({
                 selectedRoutes={(formData.routes as any[]) || (formData.origin && formData.destination ? [{
                   origin: formData.origin as string,
                   destination: formData.destination as string,
-                  destination_name: (formData.destination_name as string) || "DESTINATION"
+                  destination_name: (formData.destination_name as string) || "DESTINATION",
+                  travel_mode: (formData.travel_mode as string) || "DRIVE"
                 }] : [])}
                 onRoutesSelected={(routes) => {
                   // Migrate from old origin/destination to new routes format

@@ -674,10 +674,14 @@ class DisplayService:
         
         if not routes:
             # No routes configured yet or failed to fetch - still mark as available
+            # Include empty routes array so UI can show "Routes (0)" instead of "None configured"
             return DisplayResult(
                 display_type="traffic",
                 formatted="Traffic: No routes configured",
-                raw={},
+                raw={
+                    "routes": [],
+                    "route_count": 0,
+                },
                 available=True,
                 error="No routes configured"
             )
