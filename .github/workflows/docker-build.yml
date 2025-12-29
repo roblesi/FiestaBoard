@@ -21,10 +21,10 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: API
+          - name: api
             dockerfile: Dockerfile.api
             context: .
-          - name: UI
+          - name: ui
             dockerfile: Dockerfile.ui
             context: .
     
