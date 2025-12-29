@@ -236,6 +236,15 @@
   }
 }
 
+/* Sheet/Drawer smooth animations */
+[data-radix-dialog-overlay] {
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+[data-radix-dialog-content] {
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
 /* Performance optimizations for interactive elements */
 @layer utilities {
   /* Optimize hover states for better performance */

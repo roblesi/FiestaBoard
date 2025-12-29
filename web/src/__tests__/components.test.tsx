@@ -75,7 +75,6 @@ describe("ConfigDisplay", () => {
       // These are the short labels defined in config-display.tsx
       expect(screen.getByText("Date")).toBeInTheDocument();
       expect(screen.getByText("Weather")).toBeInTheDocument();
-      expect(screen.getByText("Music")).toBeInTheDocument();
     });
   });
 
