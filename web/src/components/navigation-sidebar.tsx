@@ -7,6 +7,7 @@ import { Home, FileText, Settings, Terminal, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ServiceStatus } from "@/components/service-status";
+import { VersionDisplay } from "@/components/version-display";
 import { Button } from "@/components/ui/button";
 import { ViewTransitionLink } from "@/components/view-transition-link";
 
@@ -125,7 +126,8 @@ export function NavigationSidebar() {
             );
           })}
         </nav>
-        <div className="border-t px-4 py-3 flex justify-end">
+        <div className="border-t px-4 py-3 flex items-center justify-between">
+          <VersionDisplay />
           <ThemeToggle />
         </div>
       </div>
@@ -173,7 +175,8 @@ export function NavigationSidebar() {
           </nav>
 
           {/* Footer */}
-          <div className="border-t px-6 py-4 flex justify-end">
+          <div className="border-t px-6 py-4 flex items-center justify-between">
+            <VersionDisplay />
             <ThemeToggle />
           </div>
         </div>

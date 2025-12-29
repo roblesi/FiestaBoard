@@ -1,5 +1,9 @@
 FROM python:3.11-slim
 
+# Version argument (injected at build time)
+ARG VERSION=dev
+ENV VERSION=${VERSION}
+
 # Set working directory
 WORKDIR /app
 

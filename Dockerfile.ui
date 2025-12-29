@@ -1,6 +1,9 @@
 # Build stage
 FROM node:20-alpine AS builder
 
+# Version argument (injected at build time)
+ARG VERSION=dev
+
 WORKDIR /app
 
 # Copy package files
@@ -18,6 +21,10 @@ RUN npm run build
 
 # Production stage - Run Next.js server
 FROM node:20-alpine AS runner
+
+# Version argument (passed from builder stage)
+ARG VERSION=dev
+ENV VERSION=${VERSION}
 
 WORKDIR /app
 
