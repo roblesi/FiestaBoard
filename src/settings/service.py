@@ -75,6 +75,23 @@ class ActivePageSettings:
         return cls(page_id=data.get("page_id"))
 
 
+@dataclass
+class PollingSettings:
+    """Polling interval settings for board updates."""
+    interval_seconds: int = 60  # Default to 60 seconds (1 minute)
+    
+    def to_dict(self) -> dict:
+        return asdict(self)
+    
+    @classmethod
+    def from_dict(cls, data: dict) -> "PollingSettings":
+        interval = data.get("interval_seconds", 60)
+        # Ensure minimum of 10 seconds to avoid overloading
+        if interval < 10:
+            interval = 10
+        return cls(interval_seconds=interval)
+
+
 class SettingsService:
     """Service for managing runtime settings.
     
@@ -101,6 +118,7 @@ class SettingsService:
         self._transition = self._load_transition_settings()
         self._output = self._load_output_settings()
         self._active_page = self._load_active_page_settings()
+        self._polling = self._load_polling_settings()
         
         logger.info(f"SettingsService initialized (file: {self.settings_file})")
     
@@ -120,7 +138,8 @@ class SettingsService:
             data = {
                 "transitions": self._transition.to_dict(),
                 "output": self._output.to_dict(),
-                "active_page": self._active_page.to_dict()
+                "active_page": self._active_page.to_dict(),
+                "polling": self._polling.to_dict()
             }
             with open(self.settings_file, 'w') as f:
                 json.dump(data, f, indent=2)
@@ -160,6 +179,13 @@ class SettingsService:
         if "active_page" in file_data:
             return ActivePageSettings.from_dict(file_data["active_page"])
         return ActivePageSettings()
+    
+    def _load_polling_settings(self) -> PollingSettings:
+        """Load polling settings from file."""
+        file_data = self._load_from_file()
+        if "polling" in file_data:
+            return PollingSettings.from_dict(file_data["polling"])
+        return PollingSettings()  # Default to 60 seconds
     
     # Transition settings
     def get_transition_settings(self) -> TransitionSettings:
@@ -279,6 +305,40 @@ class SettingsService:
             ActivePageSettings instance
         """
         return self._active_page
+    
+    # Polling settings
+    def get_polling_interval(self) -> int:
+        """Get the current polling interval in seconds.
+        
+        Returns:
+            Polling interval in seconds
+        """
+        return self._polling.interval_seconds
+    
+    def set_polling_interval(self, interval_seconds: int) -> PollingSettings:
+        """Set the polling interval.
+        
+        Args:
+            interval_seconds: Polling interval in seconds (minimum 10)
+            
+        Returns:
+            Updated PollingSettings
+        """
+        if interval_seconds < 10:
+            raise ValueError("Polling interval must be at least 10 seconds")
+        
+        self._polling.interval_seconds = interval_seconds
+        self._save_to_file()
+        logger.info(f"Polling interval set to: {interval_seconds} seconds")
+        return self._polling
+    
+    def get_polling_settings(self) -> PollingSettings:
+        """Get current polling settings.
+        
+        Returns:
+            PollingSettings instance
+        """
+        return self._polling
 
 
 # Singleton instance

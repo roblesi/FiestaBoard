@@ -204,6 +204,12 @@ class Config:
         """Apple Music refresh interval."""
         return cls._get_feature("apple_music").get("refresh_seconds", 10)
     
+    @classmethod
+    @property
+    def APPLE_MUSIC_HOME_ASSISTANT_ENTITY_ID(cls) -> Optional[str]:
+        """Home Assistant media_player entity ID for HomePod (e.g., "media_player.homepod")."""
+        return cls._get_feature("apple_music").get("home_assistant_entity_id")
+    
     # ==================== Surf Configuration ====================
     
     @classmethod

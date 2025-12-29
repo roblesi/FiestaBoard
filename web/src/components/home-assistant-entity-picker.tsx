@@ -1,0 +1,208 @@
+"use client";
+
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
+import { api, HomeAssistantEntity } from "@/lib/api";
+
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  onSelect: (variable: string) => void;
+}
+
+export function HomeAssistantEntityPicker({ open, onClose, onSelect }: Props) {
+  const [selectedEntity, setSelectedEntity] = useState<HomeAssistantEntity | null>(null);
+  const [selectedAttribute, setSelectedAttribute] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
+  
+  // Fetch entities from Home Assistant
+  const { data: entitiesData, isLoading } = useQuery({
+    queryKey: ["home-assistant-entities"],
+    queryFn: () => api.getHomeAssistantEntities(),
+    enabled: open,
+  });
+  
+  const handleInsert = () => {
+    if (selectedEntity && selectedAttribute) {
+      // Convert entity_id dots to underscores for template syntax
+      // e.g., sensor.temperature -> sensor_temperature
+      const entityIdForTemplate = selectedEntity.entity_id.replace(/\./g, '_');
+      const variable = `{{home_assistant.${entityIdForTemplate}.${selectedAttribute}}}`;
+      onSelect(variable);
+      onClose();
+      // Reset state
+      setSelectedEntity(null);
+      setSelectedAttribute("");
+    }
+  };
+  
+  const handleClose = () => {
+    onClose();
+    // Reset state
+    setSelectedEntity(null);
+    setSelectedAttribute("");
+  };
+  
+  // Get available attributes for selected entity
+  const availableAttributes = selectedEntity
+    ? ["state", ...Object.keys(selectedEntity.attributes).sort()]
+    : [];
+  
+  // Filter entities based on search
+  const filteredEntities = entitiesData?.entities.filter((entity) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      entity.entity_id.toLowerCase().includes(query) ||
+      entity.friendly_name.toLowerCase().includes(query) ||
+      entity.state.toLowerCase().includes(query)
+    );
+  }) || [];
+  
+  if (!open) return null;
+  
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-background rounded-lg shadow-lg max-w-2xl w-full max-h-[80vh] flex flex-col m-4">
+        <div className="px-4 py-3 border-b">
+          <h2 className="text-base font-semibold">Select Home Assistant Entity</h2>
+        </div>
+        
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="text-sm text-muted-foreground">Loading entities...</div>
+          </div>
+        ) : (
+          <div className="space-y-3 p-4 flex-1 overflow-y-auto">
+            {/* Entity Selector - Searchable List */}
+            {!selectedEntity ? (
+              <div className="space-y-2">
+                <Input
+                  placeholder="Type to search entities..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  autoFocus
+                  className="h-9"
+                />
+                <ScrollArea className="h-[400px] border rounded-md">
+                  <div className="p-1">
+                    {filteredEntities.length === 0 ? (
+                      <div className="text-sm text-muted-foreground text-center py-3">
+                        No entities found
+                      </div>
+                    ) : (
+                      filteredEntities.map((entity) => (
+                        <button
+                          key={entity.entity_id}
+                          onClick={() => {
+                            setSelectedEntity(entity);
+                            setSelectedAttribute("");
+                          }}
+                          className="w-full text-left px-3 py-1.5 rounded hover:bg-muted transition-colors flex items-center gap-2"
+                        >
+                          <span className="font-mono text-sm flex-1">{entity.entity_id}</span>
+                          <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                            {entity.friendly_name !== entity.entity_id ? entity.friendly_name : ""}
+                          </span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+            ) : (
+              <>
+                {/* Selected Entity Display */}
+                <div className="space-y-1.5">
+                  <div className="px-2 py-1.5 bg-muted rounded flex items-center justify-between gap-2">
+                    <span className="font-mono text-sm flex-1 truncate">{selectedEntity.entity_id}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedEntity(null);
+                        setSelectedAttribute("");
+                        setSearchQuery("");
+                      }}
+                      className="h-7 px-2 text-xs"
+                    >
+                      Change
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Attribute Selector */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground px-1">Select Attribute</label>
+                  <ScrollArea className="h-[250px] border rounded-md">
+                    <div className="p-1">
+                      {availableAttributes.map((attr) => {
+                        const value = attr === "state" 
+                          ? selectedEntity.state 
+                          : selectedEntity.attributes[attr];
+                        const displayValue = typeof value === "object" 
+                          ? JSON.stringify(value).slice(0, 50) 
+                          : String(value).slice(0, 50);
+                        
+                        return (
+                          <button
+                            key={attr}
+                            onClick={() => setSelectedAttribute(attr)}
+                            className={cn(
+                              "w-full text-left px-2 py-1 rounded hover:bg-muted transition-colors",
+                              selectedAttribute === attr && "bg-primary/10 border border-primary"
+                            )}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-mono text-xs font-medium">{attr}</span>
+                              {displayValue && (
+                                <span className="text-xs text-muted-foreground truncate max-w-[150px]">
+                                  {displayValue}
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
+                </div>
+              </>
+            )}
+            
+            {/* Preview */}
+            {selectedEntity && selectedAttribute && (
+              <div className="px-2 py-1.5 bg-muted rounded space-y-1">
+                <code className="text-xs font-mono block">
+                  {`{{home_assistant.${selectedEntity.entity_id.replace(/\./g, '_')}.${selectedAttribute}}}`}
+                </code>
+                <div className="text-xs text-muted-foreground">
+                  Value: {
+                    selectedAttribute === "state" 
+                      ? selectedEntity.state 
+                      : String(selectedEntity.attributes[selectedAttribute] || "N/A")
+                  }
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        
+        <div className="flex justify-end gap-2 px-4 py-3 border-t">
+          <Button variant="outline" onClick={handleClose} size="sm">Cancel</Button>
+          <Button 
+            onClick={handleInsert} 
+            disabled={!selectedEntity || !selectedAttribute || isLoading}
+            size="sm"
+          >
+            Insert
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+

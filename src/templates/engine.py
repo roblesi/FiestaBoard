@@ -417,9 +417,11 @@ class TemplateEngine:
             # Check if this line contains a |wrap filter
             if '|wrap}}' in content or '|wrap|' in content:
                 # Find how many empty lines follow (for wrap overflow)
+                # A line is considered empty if it has no content after extracting alignment
                 empty_count = 0
                 for j in range(i + 1, 6):
-                    if lines[j].strip() == "":
+                    _, line_content = self._extract_alignment(lines[j])
+                    if line_content.strip() == "":
                         empty_count += 1
                     else:
                         break
@@ -572,8 +574,24 @@ class TemplateEngine:
         for source in sources:
             try:
                 result = self.display_service.get_display(source)
-                if result.available and result.raw:
-                    context[source] = result.raw
+                if result.available:
+                    # For home_assistant, fetch all entities directly for template context
+                    # Don't rely on display-configured entities (which may be empty)
+                    if source == "home_assistant":
+                        try:
+                            from ..data_sources.home_assistant import get_home_assistant_source
+                            ha_source = get_home_assistant_source()
+                            if ha_source:
+                                all_entities = ha_source.get_all_entities_for_context()
+                                context[source] = all_entities
+                        except Exception as e:
+                            logger.debug(f"Failed to fetch all home_assistant entities: {e}")
+                            # Fall back to display result's raw data if fetching all entities failed
+                            if result.raw:
+                                context[source] = result.raw
+                    elif result.raw:
+                        # For other sources, use the display result's raw data
+                        context[source] = result.raw
             except Exception as e:
                 logger.debug(f"Failed to fetch {source} for template context: {e}")
         
@@ -724,6 +742,10 @@ class TemplateEngine:
         - {{baywheels.stations.0.electric_bikes}} - Access first station's e-bikes
         - {{baywheels.stations.1.station_name}} - Access second station's name
         
+        Supports Home Assistant entity_id based lookups:
+        - {{home_assistant.sensor_temperature.state}} - Get state of sensor.temperature
+        - {{home_assistant.media_player_living_room.media_title}} - Get media_title attribute
+        
         Special variables:
         - fill_space: Returns a placeholder that will be expanded later
         
@@ -739,6 +761,81 @@ class TemplateEngine:
             return "???"  # Invalid expression
         
         source = parts[0].lower()
+        
+        # Special handling for home_assistant with entity_id syntax
+        # Format: home_assistant.entity_id.attribute (3 parts minimum)
+        if source == 'home_assistant' and len(parts) >= 3:
+            # Convert underscores back to dots for entity_id
+            # (entity_id uses dots like sensor.temperature, but dots can't be in template syntax)
+            # So we expect: home_assistant.sensor_temperature.state
+            # Which maps to: entity_id=sensor.temperature, attribute=state
+            entity_id_part = parts[1]
+            attribute = parts[2]
+            
+            # Get home_assistant context data first
+            ha_data = context.get('home_assistant', {})
+            
+            # Smart entity_id conversion: try different underscore positions
+            # Some domains have underscores (media_player, binary_sensor, device_tracker, etc.)
+            # Try to find the entity by testing different split points
+            entity_id = None
+            entity_data = {}
+            
+            if '_' in entity_id_part:
+                # Try each underscore position as a potential domain/entity split
+                parts_split = entity_id_part.split('_')
+                for i in range(1, len(parts_split)):
+                    # Try domain as first i parts, rest as entity name
+                    test_domain = '_'.join(parts_split[:i])
+                    test_entity = '_'.join(parts_split[i:])
+                    test_entity_id = f"{test_domain}.{test_entity}"
+                    
+                    if test_entity_id in ha_data:
+                        entity_id = test_entity_id
+                        entity_data = ha_data[test_entity_id]
+                        break
+                
+                # Fallback to old behavior if no match found (replace first underscore)
+                if not entity_data:
+                    entity_id = entity_id_part.replace('_', '.', 1)
+                    entity_data = ha_data.get(entity_id, {})
+            else:
+                entity_id = entity_id_part
+                entity_data = ha_data.get(entity_id, {})
+            
+            if not entity_data:
+                return "???"  # Entity not found
+            
+            # Check if requesting the state directly
+            if attribute == 'state':
+                return str(entity_data.get('state', '???'))
+            
+            # Check if requesting an attribute
+            attributes = entity_data.get('attributes', {})
+            if attribute in attributes:
+                value = attributes[attribute]
+                # Convert to string
+                if value is None:
+                    return "???"
+                if isinstance(value, bool):
+                    return "Yes" if value else "No"
+                if isinstance(value, (int, float)):
+                    return str(int(value) if float(value).is_integer() else round(value, 1))
+                return str(value)
+            
+            # Check if attribute exists at top level
+            if attribute in entity_data:
+                value = entity_data[attribute]
+                if value is None:
+                    return "???"
+                if isinstance(value, bool):
+                    return "Yes" if value else "No"
+                if isinstance(value, (int, float)):
+                    return str(int(value) if float(value).is_integer() else round(value, 1))
+                return str(value)
+            
+            return "???"  # Attribute not found
+        
         field = parts[1]
         
         # Check if this is a _color request

@@ -84,6 +84,11 @@ function applyAlignment(alignment: LineAlignment, content: string): string {
   else if (content.startsWith("{right}")) cleanContent = content.slice(7);
   else if (content.startsWith("{left}")) cleanContent = content.slice(6);
   
+  // Don't add alignment prefix to empty lines - they need to stay empty for |wrap to work
+  if (cleanContent === "") {
+    return "";
+  }
+  
   switch (alignment) {
     case "center":
       return `{center}${cleanContent}`;

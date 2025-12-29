@@ -265,3 +265,5 @@ This implementation follows the same pattern as BayWheels:
 
 This pattern can be reused for future multi-item features (e.g., multiple weather locations, multiple Home Assistant entities, etc.).
 
+
+

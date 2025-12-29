@@ -184,10 +184,14 @@ class VestaboardDisplayService:
             logger.error("Initialization failed, exiting")
             sys.exit(1)
         
-        # Schedule active page polling every 1 minute
+        # Get polling interval from settings
+        settings_service = get_settings_service()
+        polling_interval = settings_service.get_polling_interval()
+        
+        # Schedule active page polling based on configured interval
         # This is the ONLY way content gets sent to the board - via configured pages
-        schedule.every(1).minutes.do(lambda: self.check_and_send_active_page(dev_mode=False))
-        logger.info("Active page polling scheduled every 1 minute")
+        schedule.every(polling_interval).seconds.do(lambda: self.check_and_send_active_page(dev_mode=False))
+        logger.info(f"Active page polling scheduled every {polling_interval} seconds")
         
         # Send initial active page on startup
         logger.info("Sending initial active page...")

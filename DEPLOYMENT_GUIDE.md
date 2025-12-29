@@ -149,3 +149,5 @@ ssh jeffredod@192.168.0.2 'cd /volume1/docker/vestaboard && docker-compose logs'
 4. Monitor logs for any issues
 
 
+
+

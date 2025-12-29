@@ -55,6 +55,7 @@ docker-compose down
 
 ### System Features
 - 📄 **Page-Based Display**: Create and select pages via the web UI
+- 🔄 **Configurable Update Interval**: Adjust how often the board checks for new content (10-3600 seconds)
 - 🐳 **Docker Ready**: Containerized for easy deployment on any system
 - ⚙️ **Highly Configurable**: Environment-based configuration for all features
 - 🔒 **Secure**: API token support for all integrations
@@ -400,6 +401,21 @@ See [GUEST_WIFI_SETUP.md](./docs/features/GUEST_WIFI_SETUP.md) for:
 - Simple toggle setup
 - Display format
 - Security considerations
+
+### Board Update Interval
+Configure how often the board checks for new content to display. The default is 60 seconds (1 minute).
+
+**Features:**
+- Adjustable from 10 seconds to 3600 seconds (1 hour)
+- Configure via web UI Settings page
+- Requires service restart to take effect
+
+**Use Cases:**
+- **Faster updates (10-30 seconds)**: For time-sensitive displays like transit arrivals or traffic
+- **Standard updates (60 seconds)**: Default, good balance for most use cases
+- **Slower updates (300+ seconds)**: For static content or to reduce API calls
+
+**To configure:** Go to Settings → General Settings → Board Update Interval in the web UI.
 
 ### Silence Schedule
 Configure a time window when the Vestaboard won't send updates. Perfect for quiet hours (e.g., 8pm to 7am).

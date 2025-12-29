@@ -8,10 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { api } from "@/lib/api";
-import { ChevronDown, Bike, TrainFront, Car } from "lucide-react";
+import { ChevronDown, Bike, TrainFront, Car, Home } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { VESTABOARD_COLORS } from "@/lib/vestaboard-colors";
+import { HomeAssistantEntityPicker } from "./home-assistant-entity-picker";
 
 // Color mapping with contrast info - uses Vestaboard's official colors
 const COLOR_MAP: Record<string, { bg: string; needsDarkText: boolean }> = {
@@ -146,6 +147,8 @@ export function VariablePicker({
   onInsert,
   showColors = true,
 }: VariablePickerProps) {
+  const [showEntityPicker, setShowEntityPicker] = useState(false);
+  
   const { data: templateVars, isLoading } = useQuery({
     queryKey: ["template-variables"],
     queryFn: api.getTemplateVariables,
@@ -240,7 +243,8 @@ export function VariablePicker({
   }
 
   return (
-    <Card className="flex flex-col h-full min-h-0">
+    <>
+      <Card className="flex flex-col h-full min-h-0">
       <CardHeader className="flex-shrink-0 px-4 sm:px-6 pb-2">
         <CardTitle className="text-base">Template Variables</CardTitle>
         <CardDescription className="text-xs sm:text-sm">
@@ -323,6 +327,33 @@ export function VariablePicker({
                           ))}
                           </Accordion>
                         </div>
+                      </div>
+                    </div>
+                  </CollapsibleSection>
+                );
+              }
+
+              // Special handling for Home Assistant - opens entity picker modal
+              if (category === "home_assistant") {
+                return (
+                  <CollapsibleSection key={category} title="Home Assistant" defaultOpen={false}>
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => setShowEntityPicker(true)}
+                        className="w-full text-left p-3 rounded-md border border-dashed border-primary/50 hover:border-primary hover:bg-primary/5 transition-all"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Home className="h-4 w-4 text-primary" />
+                          <div>
+                            <div className="font-medium text-sm">Select Entity</div>
+                            <div className="text-xs text-muted-foreground">
+                              Click to choose an entity and attribute
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                      <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded">
+                        <p>Opens a modal to browse all Home Assistant entities</p>
                       </div>
                     </div>
                   </CollapsibleSection>
@@ -656,5 +687,15 @@ export function VariablePicker({
         </div>
       </CardContent>
     </Card>
+      
+      <HomeAssistantEntityPicker
+        open={showEntityPicker}
+        onClose={() => setShowEntityPicker(false)}
+        onSelect={(variable) => {
+          handleInsert(variable);
+          setShowEntityPicker(false);
+        }}
+      />
+    </>
   );
 }

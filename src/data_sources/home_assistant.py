@@ -95,6 +95,33 @@ class HomeAssistantSource:
         
         return status
     
+    def get_all_entities_for_context(self) -> Dict[str, Dict]:
+        """
+        Get all entity states for template context.
+        
+        Returns:
+            Dict mapping entity_id to state data with attributes
+        """
+        try:
+            url = f"{self.api_url}/states"
+            response = requests.get(url, headers=self.headers, timeout=self.timeout)
+            response.raise_for_status()
+            entities = response.json()
+            
+            # Transform to dict keyed by entity_id
+            result = {}
+            for entity in entities:
+                entity_id = entity["entity_id"]
+                result[entity_id] = {
+                    "state": entity["state"],
+                    "attributes": entity.get("attributes", {}),
+                    "friendly_name": entity.get("attributes", {}).get("friendly_name", entity_id)
+                }
+            return result
+        except Exception as e:
+            logger.error(f"Failed to fetch all entities: {e}")
+            return {}
+    
     def test_connection(self) -> bool:
         """
         Test connection to Home Assistant.
