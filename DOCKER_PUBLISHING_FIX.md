@@ -12,10 +12,7 @@ This happened because two workflows were running on every push to `main`:
 2. `release.yml` - Created version tags
 
 ## Solution
-Modified `.github/workflows/publish-images.yml` to:
-- **Not run on `main` branch** - Avoids creating commit-hash tags
-- **Only run on feature branches** - Useful for testing development images
-- **Tag with branch name only** - Development images tagged as `feature-branch-name`
+**Deleted** `.github/workflows/publish-images.yml` entirely.
 
 Now only `release.yml` runs on `main` branch, which:
 - Automatically bumps version based on PR labels (major/minor/patch)
@@ -23,13 +20,13 @@ Now only `release.yml` runs on `main` branch, which:
 - Tags images with `latest`
 - Creates GitHub releases with release notes
 
+**Important:** Docker images are ONLY published from `main` on version bumps. No images are published from PRs or feature branches.
+
 ## Changes Made
 
-### 1. Updated `.github/workflows/publish-images.yml`
-- Changed workflow name to "Build and Publish Docker Images (Dev)"
-- Changed trigger from `branches: [main]` to `branches-ignore: [main]`
-- Changed tagging strategy from commit hashes to branch names
-- Updated output messages to reflect development purpose
+### 1. Deleted `.github/workflows/publish-images.yml`
+- Completely removed to prevent publishing images from PRs/feature branches
+- Only `release.yml` publishes images (from `main` only)
 
 ### 2. Updated `docs/deployment/GITHUB_REGISTRY_SETUP.md`
 - Removed references to commit-hash tags
@@ -82,35 +79,36 @@ After the next push to `main`, verify:
 2. Check GHCR packages - Should see new version tag (e.g., `1.1.1`) and updated `latest`
 3. No new commit-hash tags should appear
 
-## Development Workflow
-
-For testing on feature branches:
-```bash
-# Create feature branch
-git checkout -b feature/my-feature
-
-# Make changes and push
-git push origin feature/my-feature
-
-# This triggers publish-images.yml which creates:
-# - ghcr.io/roblesi/vesta-api:feature-my-feature
-# - ghcr.io/roblesi/vesta-ui:feature-my-feature
-```
-
-These development images can be used for testing before merging to `main`.
-
 ## CI/CD Philosophy
 
 We've optimized our CI/CD for **speed and cost efficiency**:
 
 - ✅ **No Docker builds on PRs** - Too slow (~10 min), most issues caught by tests
-- ✅ **Docker builds only on main** - After merge, as part of release
+- ✅ **Docker builds and publishing ONLY on main** - After merge, as part of release
 - ✅ **Automatic rollback on failure** - If Docker builds fail on main, automatically revert merge and re-open PR
 
 This approach:
 - Saves ~50% CI time and costs
 - Provides faster PR feedback (2-3 min vs 12-13 min)
 - Maintains safety through automatic rollback
+- No Docker images published from PRs or feature branches
+
+## Testing Docker Builds Before Merge
+
+If you need to test Docker builds before merging:
+
+### Option 1: Local Testing (Recommended)
+```bash
+# Test API build
+docker build -f Dockerfile.api -t vesta-api:test .
+
+# Test UI build
+docker build -f Dockerfile.ui -t vesta-ui:test .
+```
+
+### Option 2: Wait for Merge
+- Merge to `main` and let `release.yml` build the images
+- If builds fail, automatic rollback will revert and re-open PR
 
 See [CI_CD_APPROACH.md](./CI_CD_APPROACH.md) for complete details.
 
