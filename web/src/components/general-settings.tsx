@@ -58,14 +58,15 @@ export function GeneralSettings() {
 
   // Initialize silence schedule when config loads
   useEffect(() => {
-    if (silenceConfig && generalConfig?.timezone) {
+    if (silenceConfig?.config && generalConfig?.timezone) {
       const userTimezone = generalConfig.timezone;
+      const config = silenceConfig.config;
       
-      setSilenceEnabled(silenceConfig.enabled ?? false);
+      setSilenceEnabled((config.enabled as boolean) ?? false);
       
       // Convert UTC times to local for display
-      const startUtc = silenceConfig.start_time as string;
-      const endUtc = silenceConfig.end_time as string;
+      const startUtc = config.start_time as string;
+      const endUtc = config.end_time as string;
       
       if (startUtc && endUtc) {
         const startLocal = utcToLocalTime(startUtc, userTimezone) || "20:00";
@@ -144,19 +145,9 @@ export function GeneralSettings() {
     }
   };
 
-  const handleSilenceToggle = async (checked: boolean) => {
+  const handleSilenceToggle = (checked: boolean) => {
     setSilenceEnabled(checked);
-    // Immediately save when toggling
-    const startUtc = localTimeToUTC(silenceStartTime, timezone);
-    const endUtc = localTimeToUTC(silenceEndTime, timezone);
-    
-    if (startUtc && endUtc) {
-      await updateSilenceMutation.mutateAsync({
-        enabled: checked,
-        start_time: startUtc,
-        end_time: endUtc,
-      });
-    }
+    setHasChanges(true);
   };
 
   const handleSilenceTimeChange = (field: "start" | "end", value: string) => {
@@ -270,62 +261,67 @@ export function GeneralSettings() {
           </label>
         </div>
 
-        {/* Timezone Setting */}
-        <div className="space-y-3 pb-6 border-b">
-          <div>
-            <Label htmlFor="timezone" className="text-sm font-medium">
-              Timezone
-            </Label>
-            <p className="text-xs text-muted-foreground mt-1">
-              All times in the application will be displayed in this timezone
-            </p>
-          </div>
-          
-          <TimezonePicker
-            value={timezone}
-            onChange={handleTimezoneChange}
-          />
-          
-          {/* Current time display */}
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Clock className="h-4 w-4" />
-            <span>Current time: {getCurrentTimeInTimezone()}</span>
-          </div>
-        </div>
-
-        {/* Polling Interval Setting */}
-        <div className="space-y-3 pb-6 border-b">
-          <div className="flex items-center gap-2">
-            <RefreshCw className="h-4 w-4 text-muted-foreground shrink-0" />
-            <div className="flex-1">
-              <Label htmlFor="polling-interval" className="text-sm font-medium">
-                Board Update Interval
-              </Label>
-              <p className="text-xs text-muted-foreground mt-1">
-                How often the board checks for content updates (in seconds)
-              </p>
+        {/* Timezone & Polling Interval - Side by Side */}
+        <div className="pb-6 border-b">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Timezone Setting */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div className="flex-1">
+                  <Label htmlFor="timezone" className="text-sm font-medium">
+                    Timezone
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    All times in the application will be displayed in this timezone
+                  </p>
+                </div>
+              </div>
+              
+              <TimezonePicker
+                value={timezone}
+                onChange={handleTimezoneChange}
+              />
+              
+              {/* Current time display */}
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Clock className="h-4 w-4" />
+                <span>Current time: {getCurrentTimeInTimezone()}</span>
+              </div>
             </div>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <Input
-              id="polling-interval"
-              type="number"
-              min={10}
-              max={3600}
-              value={pollingInterval}
-              onChange={(e) => handlePollingIntervalChange(e.target.value)}
-              disabled={isSaving}
-              className="w-32"
-            />
-            <span className="text-sm text-muted-foreground">seconds</span>
-          </div>
-          
-          <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/50 p-3 rounded-md">
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-medium">Requires service restart</p>
-              <p className="mt-1">Changes to the polling interval will take effect after restarting the service.</p>
+
+            {/* Polling Interval Setting */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <RefreshCw className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div className="flex-1">
+                  <Label htmlFor="polling-interval" className="text-sm font-medium">
+                    Board Update Interval
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    How often the board checks for content updates (in seconds)
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <Input
+                  id="polling-interval"
+                  type="number"
+                  min={10}
+                  max={3600}
+                  value={pollingInterval}
+                  onChange={(e) => handlePollingIntervalChange(e.target.value)}
+                  disabled={isSaving}
+                  className="w-32"
+                />
+                <span className="text-sm text-muted-foreground">seconds</span>
+              </div>
+              
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <AlertCircle className="h-4 w-4" />
+                <span>Requires service restart</span>
+              </div>
             </div>
           </div>
         </div>

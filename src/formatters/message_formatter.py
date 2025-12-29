@@ -109,49 +109,6 @@ class MessageFormatter:
         
         return "\n".join(lines[:self.MAX_ROWS])
     
-    def format_apple_music(self, music_data: Dict) -> str:
-        """
-        Format Apple Music now playing data for display.
-        
-        Args:
-            music_data: Dictionary with music information
-            
-        Returns:
-            Formatted string (max 6 lines)
-        """
-        if not music_data:
-            return "Music: Not Playing"
-        
-        lines = []
-        
-        # Header with violet tile indicator for music
-        lines.append("{{violet}} Now Playing")
-        
-        # Artist and Track
-        artist = music_data.get("artist", "")
-        track = music_data.get("track", "")
-        
-        if artist and track:
-            # Try to fit both on one line
-            combined = f"{artist} - {track}"
-            if len(combined) <= self.MAX_COLS:
-                lines.append(combined)
-            else:
-                # Split across lines
-                lines.append(artist[:self.MAX_COLS])
-                lines.append(track[:self.MAX_COLS])
-        elif track:
-            lines.append(track[:self.MAX_COLS])
-        elif artist:
-            lines.append(artist[:self.MAX_COLS])
-        
-        # Album (optional, if space)
-        album = music_data.get("album", "")
-        if album and len(lines) < self.MAX_ROWS:
-            lines.append(f"Album: {album}"[:self.MAX_COLS])
-        
-        return "\n".join(lines[:self.MAX_ROWS])
-    
     def format_guest_wifi(self, ssid: str, password: str) -> str:
         """
         Format guest WiFi credentials for display.

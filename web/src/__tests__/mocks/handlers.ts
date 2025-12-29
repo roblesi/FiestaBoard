@@ -33,7 +33,6 @@ export const mockStatus: StatusResponse = {
   config_summary: {
     weather_enabled: true,
     home_assistant_enabled: false,
-    apple_music_enabled: true,
     guest_wifi_enabled: false,
     star_trek_quotes_enabled: true,
     rotation_enabled: true,
@@ -57,7 +56,6 @@ export const mockPreview: PreviewResponse = {
 export const mockConfig: ConfigSummary = {
   weather_enabled: true,
   home_assistant_enabled: false,
-  apple_music_enabled: true,
   guest_wifi_enabled: false,
   star_trek_quotes_enabled: true,
   rotation_enabled: true,
@@ -70,7 +68,6 @@ export const mockDisplays: DisplaysResponse = {
     { type: "datetime", available: true, description: "Current date and time" },
     { type: "weather_datetime", available: true, description: "Combined weather and datetime" },
     { type: "home_assistant", available: false, description: "Home Assistant status" },
-    { type: "apple_music", available: true, description: "Apple Music now playing" },
     { type: "star_trek", available: true, description: "Star Trek quotes" },
     { type: "guest_wifi", available: false, description: "Guest WiFi credentials" },
   ],

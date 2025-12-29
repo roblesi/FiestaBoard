@@ -7,7 +7,6 @@ export type ServiceKey =
   | "datetime_enabled"
   | "weather_enabled"
   | "home_assistant_enabled"
-  | "apple_music_enabled"
   | "guest_wifi_enabled"
   | "star_trek_quotes_enabled"
   | "rotation_enabled";
@@ -16,7 +15,6 @@ export const SERVICE_KEYS: ServiceKey[] = [
   "datetime_enabled",
   "weather_enabled",
   "home_assistant_enabled",
-  "apple_music_enabled",
   "guest_wifi_enabled",
   "star_trek_quotes_enabled",
   "rotation_enabled",
@@ -38,7 +36,6 @@ const defaultOverrides: Overrides = {
   datetime_enabled: null,
   weather_enabled: null,
   home_assistant_enabled: null,
-  apple_music_enabled: null,
   guest_wifi_enabled: null,
   star_trek_quotes_enabled: null,
   rotation_enabled: null,

@@ -57,7 +57,6 @@ export interface StatusResponse {
 export interface ConfigSummary {
   weather_enabled: boolean;
   home_assistant_enabled: boolean;
-  apple_music_enabled: boolean;
   guest_wifi_enabled: boolean;
   star_trek_quotes_enabled: boolean;
   dev_mode: boolean;
@@ -291,14 +290,6 @@ export interface HomeAssistantFeatureConfig {
   refresh_seconds: number;
 }
 
-export interface AppleMusicFeatureConfig {
-  enabled: boolean;
-  service_url: string;
-  home_assistant_entity_id?: string;
-  timeout: number;
-  refresh_seconds: number;
-}
-
 export interface GuestWifiFeatureConfig {
   enabled: boolean;
   ssid: string;
@@ -397,7 +388,6 @@ export interface FeaturesConfig {
   weather: WeatherFeatureConfig;
   datetime: DateTimeFeatureConfig;
   home_assistant: HomeAssistantFeatureConfig;
-  apple_music: AppleMusicFeatureConfig;
   guest_wifi: GuestWifiFeatureConfig;
   star_trek_quotes: StarTrekQuotesFeatureConfig;
   air_fog: AirFogFeatureConfig;
@@ -476,7 +466,6 @@ export type FeatureName =
   | "weather"
   | "datetime"
   | "home_assistant"
-  | "apple_music"
   | "guest_wifi"
   | "star_trek_quotes"
   | "baywheels"
@@ -485,6 +474,12 @@ export type FeatureName =
   | "traffic"
   | "air_fog"
   | "silence_schedule";
+
+export interface VersionResponse {
+  package_version: string;
+  build_version: string;
+  is_dev: boolean;
+}
 
 // API client with typed methods
 async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
@@ -727,4 +722,8 @@ export const api = {
   // Home Assistant endpoints
   getHomeAssistantEntities: () =>
     fetchApi<HomeAssistantEntitiesResponse>("/home-assistant/entities"),
+
+  // Version endpoint
+  getVersion: () =>
+    fetchApi<VersionResponse>("/version"),
 };

@@ -47,7 +47,8 @@ function parseLine(line: string): Token[] {
       }
     }
     
-    tokens.push({ type: "char", value: line[i] });
+    // Convert to uppercase since Vestaboard only supports uppercase letters
+    tokens.push({ type: "char", value: line[i].toUpperCase() });
     i++;
   }
   

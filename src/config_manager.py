@@ -71,13 +71,6 @@ DEFAULT_CONFIG: Dict[str, Any] = {
                 ],
             },
         },
-        "apple_music": {
-            "enabled": False,
-            "service_url": "",
-            "timeout": 5,
-            "refresh_seconds": 10,  # 10 seconds to catch song changes
-            "color_rules": {},
-        },
         "guest_wifi": {
             "enabled": False,
             "ssid": "",
@@ -519,10 +512,6 @@ class ConfigManager:
                 errors.append("Home Assistant base_url is required when enabled")
             if not ha.get("access_token"):
                 errors.append("Home Assistant access_token is required when enabled")
-        
-        if features.get("apple_music", {}).get("enabled"):
-            if not features["apple_music"].get("service_url"):
-                errors.append("Apple Music service_url is required when enabled")
         
         if features.get("guest_wifi", {}).get("enabled"):
             wifi = features["guest_wifi"]

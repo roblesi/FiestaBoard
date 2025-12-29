@@ -35,6 +35,8 @@ class VestaboardDisplayService:
         # Active page polling state
         self._last_active_page_content: Optional[str] = None
         self._last_active_page_id: Optional[str] = None
+        self._last_silence_mode_active: bool = False
+        self._snoozing_message_sent: bool = False
         
         # Setup signal handlers for graceful shutdown
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -119,28 +121,70 @@ class VestaboardDisplayService:
                 logger.warning(f"Failed to render active page: {active_page_id}")
                 return False
             
-            # Check if content changed
+            # Check current silence mode state
+            silence_mode_active = Config.is_silence_mode_active()
+            entering_silence_mode = silence_mode_active and not self._last_silence_mode_active
+            exiting_silence_mode = not silence_mode_active and self._last_silence_mode_active
+            
+            # Check if board currently has the snoozing indicator
+            board_has_indicator = self._last_active_page_content and "snoozing" in self._last_active_page_content
+            
+            # CRITICAL: If in silence mode BUT board doesn't have indicator yet, allow ONE update
+            # This handles power outages, restarts, or any scenario where indicator is missing
+            if silence_mode_active and not board_has_indicator:
+                logger.info("🔄 Silence mode active but board missing snoozing indicator - allowing update")
+                # Will add indicator and send below
+            # CRITICAL: If in silence mode AND board already has indicator, BLOCK ALL UPDATES
+            elif silence_mode_active and board_has_indicator:
+                logger.info("Silence mode active - blocking update to prevent wake-up (indicator already shown)")
+                return False
+            
+            # Get base content
             current_content = result.formatted
-            if (current_content == self._last_active_page_content and 
-                active_page_id == self._last_active_page_id):
-                logger.debug("Active page content unchanged, skipping send")
-                return False
+            content_to_send = current_content
             
-            # Content changed, send to board
-            logger.info(f"Active page content changed, sending to board: {active_page_id}")
+            # Handle entering silence mode - send ONE update with indicator
+            if entering_silence_mode:
+                logger.info("⏸️  Entering silence mode - sending snoozing indicator")
+                content_to_send = current_content
+                # Indicator will be added to board array before sending
             
-            # Check if we're in silence mode - absolute preference
-            if Config.is_silence_mode_active():
-                logger.info("Silence mode is active, skipping board update")
-                # Still update our cache so we don't keep trying
-                self._last_active_page_content = current_content
-                self._last_active_page_id = active_page_id
-                return False
+            # Handle exiting silence mode - resume normal operation
+            elif exiting_silence_mode:
+                logger.info("▶️  Exiting silence mode - resuming normal updates")
+                self._snoozing_message_sent = False
+                content_to_send = current_content
+                # No indicator will be added
+            
+            # Handle silence mode active but indicator missing (power outage, restart, etc.)
+            elif silence_mode_active and not board_has_indicator:
+                logger.info("⚡ Silence mode active - ensuring snoozing indicator is displayed")
+                content_to_send = current_content
+                # Indicator will be added to board array before sending
+            
+            # Normal mode (not in silence) - check if content changed
+            elif not silence_mode_active:
+                if (current_content == self._last_active_page_content and 
+                    active_page_id == self._last_active_page_id):
+                    logger.debug("Active page content unchanged, skipping send")
+                    return False
+                logger.info(f"Active page content changed, sending to board: {active_page_id}")
+            
+            # At this point, we're going to send an update
             
             if dev_mode:
                 logger.info("[DEV MODE] Would send active page (not actually sending)")
-                self._last_active_page_content = current_content
+                self._last_active_page_content = content_to_send
                 self._last_active_page_id = active_page_id
+                self._last_silence_mode_active = silence_mode_active
+                
+                # Mark snoozing message as sent in dev mode if content has indicator
+                if silence_mode_active and "snoozing" in content_to_send:
+                    self._snoozing_message_sent = True
+                    logger.info("[DEV MODE] 🔇 Silence mode fully activated - ALL further updates blocked")
+                elif exiting_silence_mode:
+                    self._snoozing_message_sent = False
+                
                 return False
             
             if not self.vb_client:
@@ -154,7 +198,17 @@ class VestaboardDisplayService:
             step_size = page.transition_step_size if page.transition_step_size is not None else system_transition.step_size
             
             # Send to board
-            board_array = text_to_board_array(current_content)
+            board_array = text_to_board_array(content_to_send)
+            
+            # If in silence mode, add "SNOOZING" indicator to bottom right
+            if silence_mode_active:
+                indicator = "SNOOZING"
+                for i, char in enumerate(indicator):
+                    col = 14 + i  # Start at position 14 (last 8 positions of row)
+                    char_code = VestaboardChars.get_char_code(char)
+                    if char_code is not None:
+                        board_array[5][col] = char_code
+            
             success, was_sent = self.vb_client.send_characters(
                 board_array,
                 strategy=strategy,
@@ -163,8 +217,19 @@ class VestaboardDisplayService:
             )
             
             if success:
-                self._last_active_page_content = current_content
+                self._last_active_page_content = content_to_send
                 self._last_active_page_id = active_page_id
+                self._last_silence_mode_active = silence_mode_active
+                
+                # Mark snoozing message as sent if we sent content WITH indicator during silence mode
+                # This covers entering silence mode AND edge cases (restart, power outage, etc.)
+                if silence_mode_active and "snoozing" in content_to_send:
+                    self._snoozing_message_sent = True
+                    logger.info("🔇 Silence mode fully activated - ALL further updates blocked until silence ends")
+                # Clear flag when exiting silence mode
+                elif exiting_silence_mode:
+                    self._snoozing_message_sent = False
+                
                 if was_sent:
                     logger.info(f"Active page sent to board: {active_page_id}")
                 else:

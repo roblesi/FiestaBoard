@@ -65,12 +65,12 @@ class TestVariableSubstitution:
     
     def test_boolean_value(self, engine):
         """Test boolean values are converted to Yes/No."""
-        context = {"apple_music": {"playing": True}}
-        result = engine.render("Playing: {{apple_music.playing}}", context)
+        context = {"baywheels": {"is_renting": True}}
+        result = engine.render("Renting: {{baywheels.is_renting}}", context)
         assert "Yes" in result
         
-        context = {"apple_music": {"playing": False}}
-        result = engine.render("Playing: {{apple_music.playing}}", context)
+        context = {"baywheels": {"is_renting": False}}
+        result = engine.render("Renting: {{baywheels.is_renting}}", context)
         assert "No" in result
     
     def test_numeric_value(self, engine):
@@ -244,7 +244,7 @@ class TestAvailableVariables:
     
     def test_all_sources_listed(self):
         """Test all sources are listed."""
-        expected = ["weather", "datetime", "home_assistant", "apple_music", "star_trek", "guest_wifi"]
+        expected = ["weather", "datetime", "home_assistant", "star_trek", "guest_wifi"]
         for source in expected:
             assert source in AVAILABLE_VARIABLES
     

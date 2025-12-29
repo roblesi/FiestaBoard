@@ -10,22 +10,13 @@ import { toast } from "sonner";
 import { 
   LayoutGrid, 
   Plus, 
-  FileText, 
-  Grid3X3, 
-  Code2,
+  LayoutTemplate,
   ChevronRight,
   X
 } from "lucide-react";
 import { useState } from "react";
 import type { PagePreviewResponse } from "@/lib/api";
 import { useViewTransition } from "@/hooks/use-view-transition";
-
-// Page type icons
-const PAGE_TYPE_ICONS: Record<string, typeof FileText> = {
-  single: FileText,
-  composite: Grid3X3,
-  template: Code2,
-};
 
 interface PageSelectorProps {
   onCreateNew?: () => void;
@@ -177,7 +168,7 @@ export function PageSelector({ onCreateNew, onEditPage }: PageSelectorProps) {
           </p>
         ) : (
           pages.map((page) => {
-            const TypeIcon = PAGE_TYPE_ICONS[page.type] || FileText;
+            const TypeIcon = LayoutTemplate;
             const isExpanded = expandedPage === page.id;
 
             return (

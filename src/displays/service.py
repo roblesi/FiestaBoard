@@ -11,7 +11,6 @@ from dataclasses import dataclass
 from ..config import Config
 from ..data_sources.weather import get_weather_source
 from ..data_sources.datetime import get_datetime_source
-from ..data_sources.apple_music import get_apple_music_source
 from ..data_sources.home_assistant import get_home_assistant_source
 from ..data_sources.star_trek_quotes import get_star_trek_quotes_source
 from ..data_sources.air_fog import get_air_fog_source
@@ -29,7 +28,6 @@ DISPLAY_TYPES = [
     "datetime",
     "weather_datetime",  # Combined view
     "home_assistant",
-    "apple_music",
     "star_trek",
     "guest_wifi",
     "air_fog",
@@ -66,7 +64,6 @@ class DisplayService:
         # Initialize data sources
         self.weather_source = get_weather_source()
         self.datetime_source = get_datetime_source()
-        self.apple_music_source = get_apple_music_source()
         self.home_assistant_source = get_home_assistant_source()
         self.star_trek_quotes_source = get_star_trek_quotes_source()
         self.air_fog_source = get_air_fog_source()
@@ -106,11 +103,6 @@ class DisplayService:
                 "type": "home_assistant",
                 "available": self.home_assistant_source is not None and Config.HOME_ASSISTANT_ENABLED,
                 "description": "Home Assistant entity status",
-            },
-            {
-                "type": "apple_music",
-                "available": self.apple_music_source is not None and Config.APPLE_MUSIC_ENABLED,
-                "description": "Currently playing music from Apple Music",
             },
             {
                 "type": "star_trek",
@@ -177,8 +169,6 @@ class DisplayService:
                 return self._get_weather_datetime()
             elif display_type == "home_assistant":
                 return self._get_home_assistant()
-            elif display_type == "apple_music":
-                return self._get_apple_music()
             elif display_type == "star_trek":
                 return self._get_star_trek()
             elif display_type == "guest_wifi":
@@ -328,35 +318,6 @@ class DisplayService:
         formatted = self.formatter.format_house_status(raw_data)
         return DisplayResult(
             display_type="home_assistant",
-            formatted=formatted,
-            raw=raw_data,
-            available=True
-        )
-    
-    def _get_apple_music(self) -> DisplayResult:
-        """Get Apple Music display."""
-        if not self.apple_music_source or not Config.APPLE_MUSIC_ENABLED:
-            return DisplayResult(
-                display_type="apple_music",
-                formatted="",
-                raw={},
-                available=False,
-                error="Apple Music not configured or disabled"
-            )
-        
-        raw_data = self.apple_music_source.fetch_now_playing()
-        
-        if not raw_data:
-            return DisplayResult(
-                display_type="apple_music",
-                formatted="Music: Not Playing",
-                raw={"playing": False},
-                available=True
-            )
-        
-        formatted = self.formatter.format_apple_music(raw_data)
-        return DisplayResult(
-            display_type="apple_music",
             formatted=formatted,
             raw=raw_data,
             available=True

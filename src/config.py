@@ -178,38 +178,6 @@ class Config:
         """Star Trek quotes ratio (TNG:Voyager:DS9)."""
         return cls._get_feature("star_trek_quotes").get("ratio", "3:5:9")
     
-    # ==================== Apple Music Configuration ====================
-    
-    @classmethod
-    @property
-    def APPLE_MUSIC_ENABLED(cls) -> bool:
-        """Whether Apple Music is enabled."""
-        return cls._get_feature("apple_music").get("enabled", False)
-    
-    @classmethod
-    @property
-    def APPLE_MUSIC_SERVICE_URL(cls) -> str:
-        """Apple Music service URL."""
-        return cls._get_feature("apple_music").get("service_url", "")
-    
-    @classmethod
-    @property
-    def APPLE_MUSIC_TIMEOUT(cls) -> int:
-        """Apple Music request timeout."""
-        return cls._get_feature("apple_music").get("timeout", 5)
-    
-    @classmethod
-    @property
-    def APPLE_MUSIC_REFRESH_SECONDS(cls) -> int:
-        """Apple Music refresh interval."""
-        return cls._get_feature("apple_music").get("refresh_seconds", 10)
-    
-    @classmethod
-    @property
-    def APPLE_MUSIC_HOME_ASSISTANT_ENTITY_ID(cls) -> Optional[str]:
-        """Home Assistant media_player entity ID for HomePod (e.g., "media_player.homepod")."""
-        return cls._get_feature("apple_music").get("home_assistant_entity_id")
-    
     # ==================== Surf Configuration ====================
     
     @classmethod
@@ -657,7 +625,6 @@ class Config:
             # Service enabled flags (for UI display)
             "datetime_enabled": cls.DATETIME_ENABLED,
             "weather_enabled": cls.WEATHER_ENABLED and bool(cls.WEATHER_API_KEY),
-            "apple_music_enabled": cls.APPLE_MUSIC_ENABLED,
             "guest_wifi_enabled": cls.GUEST_WIFI_ENABLED,
             "home_assistant_enabled": cls.HOME_ASSISTANT_ENABLED,
             "star_trek_quotes_enabled": cls.STAR_TREK_QUOTES_ENABLED,
