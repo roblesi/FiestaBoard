@@ -205,7 +205,7 @@ VESTA_API_URL=http://192.168.1.100:6969
 
 ### Rolling Back to Previous Version
 
-If a new version has issues, you can rollback:
+If a new version has issues, you can rollback to a specific version:
 
 ```bash
 cd ~/vestaboard
@@ -213,11 +213,12 @@ cd ~/vestaboard
 # Stop current version
 sudo docker-compose down
 
-# Pull specific version by commit SHA
-sudo docker pull ghcr.io/roblesi/vesta-api:main-abc1234
-sudo docker pull ghcr.io/roblesi/vesta-ui:main-abc1234
+# Pull specific version by version number
+sudo docker pull ghcr.io/roblesi/vesta-api:1.0.1
+sudo docker pull ghcr.io/roblesi/vesta-ui:1.0.1
 
-# Update docker-compose.yml to use specific tags
+# Update docker-compose.yml to use specific version tags
+# Change image tags from :latest to :1.0.1
 # Then restart
 sudo docker-compose up -d
 ```
@@ -259,11 +260,13 @@ sudo docker inspect vestaboard-api
 
 When you push to `main`:
 
-1. **GitHub Actions Triggered** - `.github/workflows/publish-images.yml` runs
-2. **Images Built** - Both API and UI images are built for `linux/amd64`
-3. **Images Tagged** - Tagged as `latest` and `main-[commit-sha]`
-4. **Images Pushed** - Uploaded to GitHub Container Registry
-5. **Ready to Deploy** - Images available for Synology to pull
+1. **GitHub Actions Triggered** - `.github/workflows/release.yml` runs
+2. **Version Bumped** - Automatically increments version based on PR labels (major/minor/patch)
+3. **Images Built** - Both API and UI images are built for `linux/amd64`
+4. **Images Tagged** - Tagged as `<version>` (e.g., `1.1.0`) and `latest`
+5. **Images Pushed** - Uploaded to GitHub Container Registry
+6. **Release Created** - GitHub release is automatically created with release notes
+7. **Ready to Deploy** - Images available for Synology to pull
 
 ### Build Time
 

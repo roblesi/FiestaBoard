@@ -112,10 +112,4 @@ jobs:
         test -f src/main.py || (echo "❌ src/main.py missing" && exit 1)
         test -f src/config.py || (echo "❌ src/config.py missing" && exit 1)
         echo "✅ Package structure is valid"
-    
-    - name: Test Docker build (dry run)
-      run: |
-        echo "Checking Dockerfile syntax..."
-        docker run --rm -i hadolint/hadolint < Dockerfile || echo "⚠️  Hadolint not available, skipping"
-      continue-on-error: true
 

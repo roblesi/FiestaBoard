@@ -1,8 +1,9 @@
-name: Build and Publish Docker Images
+name: Build and Publish Docker Images (Dev)
 
 on:
   push:
-    branches: [main]
+    branches-ignore: 
+      - main  # Don't run on main - use release.yml instead
   workflow_dispatch:  # Allow manual trigger
 
 env:
@@ -36,8 +37,7 @@ jobs:
         with:
           images: ${{ env.IMAGE_PREFIX }}/vesta-api
           tags: |
-            type=raw,value=latest
-            type=sha,prefix={{branch}}-
+            type=ref,event=branch
       
       - name: Extract metadata for UI
         id: meta-ui
@@ -45,8 +45,7 @@ jobs:
         with:
           images: ${{ env.IMAGE_PREFIX }}/vesta-ui
           tags: |
-            type=raw,value=latest
-            type=sha,prefix={{branch}}-
+            type=ref,event=branch
       
       - name: Build and push API image
         uses: docker/build-push-action@v5
@@ -74,9 +73,9 @@ jobs:
       
       - name: Image URLs
         run: |
-          echo "✅ Images published:"
-          echo "API: ${{ env.IMAGE_PREFIX }}/vesta-api:latest"
-          echo "UI: ${{ env.IMAGE_PREFIX }}/vesta-ui:latest"
+          echo "✅ Development images published:"
+          echo "API: ${{ env.IMAGE_PREFIX }}/vesta-api:${{ github.ref_name }}"
+          echo "UI: ${{ env.IMAGE_PREFIX }}/vesta-ui:${{ github.ref_name }}"
 
 
 

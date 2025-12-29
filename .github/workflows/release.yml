@@ -103,6 +103,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push API image
+        id: build-api
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -117,6 +118,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and push UI image
+        id: build-ui
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -131,6 +133,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Create GitHub Release
+        id: create-release
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -197,4 +200,95 @@ jobs:
             });
             
             console.log(`Created release: ${release.html_url}`);
+      
+      - name: Revert on build failure
+        if: failure() && (steps.build-api.outcome == 'failure' || steps.build-ui.outcome == 'failure')
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            console.log('🚨 Docker build failed! Reverting merge...');
+            
+            // Get the commit that triggered this workflow
+            const { data: commit } = await github.rest.repos.getCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.sha
+            });
+            
+            // Check if this is a merge commit
+            let prNumber = null;
+            let revertMessage = `Revert: ${commit.commit.message.split('\n')[0]}`;
+            
+            // Try to extract PR number from merge commit message
+            const prMatch = commit.commit.message.match(/Merge pull request #(\d+)/);
+            if (prMatch) {
+              prNumber = parseInt(prMatch[1]);
+              revertMessage = `Revert merge of PR #${prNumber} - Docker build failed`;
+            }
+            
+            // Create revert commit
+            try {
+              // Get the parent commit (the one before the merge)
+              const parentSha = commit.parents[0].sha;
+              
+              // Update the main branch to point to the parent
+              await github.rest.git.updateRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: 'heads/main',
+                sha: parentSha,
+                force: true
+              });
+              
+              console.log(`✅ Successfully reverted main to ${parentSha}`);
+              
+              // If we found a PR, comment on it
+              if (prNumber) {
+                try {
+                  // Get PR details
+                  const { data: pr } = await github.rest.pulls.get({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    pull_request_number: prNumber
+                  });
+                  
+                  // Re-open the PR if it was closed
+                  if (pr.state === 'closed') {
+                    await github.rest.pulls.update({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      pull_request_number: prNumber,
+                      state: 'open'
+                    });
+                    console.log(`✅ Re-opened PR #${prNumber}`);
+                  }
+                  
+                  // Add comment to PR
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: prNumber,
+                    body: `## 🚨 Docker Build Failed\n\nThe merge to \`main\` has been automatically reverted because the Docker build failed.\n\n**Build logs:** ${context.payload.repository.html_url}/actions/runs/${context.runId}\n\nPlease fix the Docker build issues and re-submit this PR.`
+                  });
+                  
+                  console.log(`✅ Posted comment to PR #${prNumber}`);
+                } catch (error) {
+                  console.log(`⚠️  Could not update PR #${prNumber}: ${error.message}`);
+                }
+              } else {
+                // Create an issue if we can't find the PR
+                await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: '🚨 Docker Build Failed - Merge Reverted',
+                  body: `The merge to \`main\` at commit ${context.sha} has been automatically reverted because the Docker build failed.\n\n**Build logs:** ${context.payload.repository.html_url}/actions/runs/${context.runId}\n\nPlease investigate and fix the Docker build issues.`,
+                  labels: ['bug', 'build-failure']
+                });
+                console.log('✅ Created issue for build failure');
+              }
+            } catch (error) {
+              console.error(`❌ Failed to revert: ${error.message}`);
+              core.setFailed(`Failed to revert merge: ${error.message}`);
+            }
 
