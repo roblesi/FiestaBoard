@@ -212,15 +212,34 @@ class DisplayService:
                 error="Weather source not configured"
             )
         
-        raw_data = self.weather_source.fetch_current_weather()
-        if not raw_data:
+        # Get data for all configured locations
+        locations = self.weather_source.fetch_multiple_locations()
+        
+        if not locations:
             return DisplayResult(
                 display_type="weather",
                 formatted="Weather: Unavailable",
-                raw={},
+                raw={"locations": []},
                 available=True,
-                error="Failed to fetch weather data"
+                error="No locations configured or failed to fetch"
             )
+        
+        # Build raw data with all template variables
+        raw_data = {
+            "locations": locations,
+            "location_count": len(locations),
+        }
+        
+        # For backward compatibility, include first location data at top level
+        if locations:
+            first_loc = locations[0]
+            raw_data["temperature"] = first_loc.get("temperature", 0)
+            raw_data["feels_like"] = first_loc.get("feels_like", 0)
+            raw_data["condition"] = first_loc.get("condition", "")
+            raw_data["humidity"] = first_loc.get("humidity", 0)
+            raw_data["wind_speed"] = first_loc.get("wind_speed", 0)
+            raw_data["wind_mph"] = first_loc.get("wind_mph", 0)
+            raw_data["location"] = first_loc.get("location", "")
         
         formatted = self.formatter.format_weather(raw_data)
         return DisplayResult(

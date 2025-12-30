@@ -199,6 +199,21 @@ export function VariablePicker({
     enabled: templateVars?.variables?.traffic !== undefined,
   });
 
+  // Fetch live Weather location data
+  const { data: weatherData } = useQuery({
+    queryKey: ["weather-live-data"],
+    queryFn: async () => {
+      try {
+        const display = await api.getDisplayRaw("weather");
+        return display.data as { locations?: any[] };
+      } catch {
+        return null;
+      }
+    },
+    refetchInterval: 30000,
+    enabled: templateVars?.variables?.weather !== undefined,
+  });
+
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success("Copied to clipboard");
@@ -591,6 +606,76 @@ export function VariablePicker({
                             <p className="mb-2">Configure routes in Settings to see indexed variables here.</p>
                             <p className="font-mono text-[10px]">
                               Example: <code className="bg-background px-1 rounded">routes.0.duration_minutes</code>, <code className="bg-background px-1 rounded">routes.1.formatted</code>
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CollapsibleSection>
+                );
+              }
+
+              // Special handling for Weather with live location data
+              if (category === "weather") {
+                return (
+                  <CollapsibleSection key={category} title={category} defaultOpen={false}>
+                    <div className="space-y-3">
+                      {/* General Variables */}
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1.5">General</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {vars.filter(v => !v.startsWith("locations.")).map((variable) => {
+                            const varValue = `{{${category}.${variable}}}`;
+                            return (
+                              <VariablePill
+                                key={variable}
+                                label={variable}
+                                value={varValue}
+                                onInsert={() => handleInsert(varValue)}
+                                onDragStart={(e) => handleDragStart(e, varValue)}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Individual Locations */}
+                      <div className="space-y-1.5">
+                        <p className="text-xs text-muted-foreground">
+                          Locations {weatherData?.locations ? `(${weatherData.locations.length})` : "(1)"}
+                        </p>
+                        {weatherData?.locations && weatherData.locations.length > 0 ? (
+                          <div className="space-y-2">
+                            {weatherData.locations.map((location: any, index: number) => (
+                              <div key={index} className="p-2 bg-muted/30 rounded-lg">
+                                <p className="text-xs font-medium mb-1.5">
+                                  {location.location_name || `Location ${index}`} - {location.location || "Unknown"}
+                                </p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {["temperature", "condition", "humidity", "wind_speed", "location_name", "feels_like"].map((field) => {
+                                    const varValue = `{{${category}.locations.${index}.${field}}}`;
+                                    return (
+                                      <VariablePill
+                                        key={field}
+                                        label={field}
+                                        value={varValue}
+                                        onInsert={() => handleInsert(varValue)}
+                                        onDragStart={(e) => handleDragStart(e, varValue)}
+                                      />
+                                    );
+                                  })}
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-1.5 font-mono">
+                                  <code className="text-[10px]">locations.{index}.*</code>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="p-3 bg-muted/30 rounded-lg text-xs text-muted-foreground">
+                            <p className="mb-2">Configure locations in Settings to see indexed variables here.</p>
+                            <p className="font-mono text-[10px]">
+                              Example: <code className="bg-background px-1 rounded">locations.0.temperature</code>, <code className="bg-background px-1 rounded">locations.1.condition</code>
                             </p>
                           </div>
                         )}
