@@ -225,8 +225,7 @@ export function PageGridSelector({
             {label}
           </label>
         )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          <Skeleton className="h-32 w-full" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-32 w-full" />
         </div>
@@ -254,7 +253,7 @@ export function PageGridSelector({
           {label}
         </label>
       )}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {pages.map((page) => (
           <PageButton
             key={page.id}

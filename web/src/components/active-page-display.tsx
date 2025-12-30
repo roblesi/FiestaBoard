@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useTransition, useRef, useDeferredValue, useCallback, useState } from "react";
-import { useActivePage, useSetActivePage, usePagePreview, usePages } from "@/hooks/use-vestaboard";
+import { useActivePage, useSetActivePage, usePagePreview, usePages, useBoardSettings } from "@/hooks/use-vestaboard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -119,6 +119,9 @@ export function ActivePageDisplay() {
     queryKey: ["silenceStatus"],
     queryFn: api.getSilenceStatus,
   });
+  
+  // Fetch board settings for display type
+  const { data: boardSettings } = useBoardSettings();
   
   // Set active page mutation
   const setActivePageMutation = useSetActivePage();
@@ -259,6 +262,7 @@ export function ActivePageDisplay() {
             message={displayMessage} 
             isLoading={isLoadingPreview || (!!activePageId && !previewData)}
             size="md"
+            boardType={boardSettings?.board_type || "black"}
           />
         </CardContent>
       </Card>
@@ -278,7 +282,7 @@ export function ActivePageDisplay() {
 
       {/* Page Selector Sheet - grid is already cached so opens instantly */}
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
+        <SheetContent side="right" className="w-full sm:max-w-4xl overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Select Page</SheetTitle>
             <SheetDescription>
