@@ -282,7 +282,15 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
       }
     },
     onSuccess: () => {
+      // Invalidate pages list
       queryClient.invalidateQueries({ queryKey: ["pages"] });
+      
+      // Invalidate the specific page and its preview to bust the cache
+      if (pageId) {
+        queryClient.invalidateQueries({ queryKey: ["page", pageId] });
+        queryClient.invalidateQueries({ queryKey: ["pagePreview", pageId] });
+      }
+      
       toast.success(pageId ? "Page updated" : "Page created");
       onSave?.();
       onClose();
@@ -297,6 +305,13 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
     mutationFn: () => api.deletePage(pageId!),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["pages"] });
+      
+      // Invalidate the specific page and its preview to bust the cache
+      if (pageId) {
+        queryClient.invalidateQueries({ queryKey: ["page", pageId] });
+        queryClient.invalidateQueries({ queryKey: ["pagePreview", pageId] });
+      }
+      
       // Also invalidate active page if it was updated
       if (data.active_page_updated) {
         queryClient.invalidateQueries({ queryKey: ["active-page"] });
@@ -575,12 +590,14 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
               {/* Live preview */}
               <div className="mt-4">
                 <label className="text-xs sm:text-sm font-medium mb-2 block">Preview</label>
-                <VestaboardDisplay 
-                  message={preview} 
-                  isLoading={previewMutation.isPending}
-                  size="md"
-                  boardType={boardSettings?.board_type ?? "black"}
-                />
+                <div className="flex justify-center">
+                  <VestaboardDisplay 
+                    message={preview} 
+                    isLoading={previewMutation.isPending}
+                    size="md"
+                    boardType={boardSettings?.board_type ?? "black"}
+                  />
+                </div>
               </div>
 
               {/* Transition Settings - Collapsible */}

@@ -39,8 +39,13 @@ export function PageSelector({ onCreateNew, onEditPage }: PageSelectorProps) {
   // Delete page mutation
   const _deleteMutation = useMutation({
     mutationFn: (pageId: string) => api.deletePage(pageId),
-    onSuccess: (data) => {
+    onSuccess: (data, pageId) => {
       queryClient.invalidateQueries({ queryKey: ["pages"] });
+      
+      // Invalidate the specific page and its preview to bust the cache
+      queryClient.invalidateQueries({ queryKey: ["page", pageId] });
+      queryClient.invalidateQueries({ queryKey: ["pagePreview", pageId] });
+      
       // Also invalidate active page if it was updated
       if (data.active_page_updated) {
         queryClient.invalidateQueries({ queryKey: ["active-page"] });

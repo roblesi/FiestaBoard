@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { TimePicker } from "@/components/ui/time-picker";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Settings, Save, Clock, FlaskConical, Moon, RefreshCw, AlertCircle } from "lucide-react";
+import { Settings, Clock, FlaskConical, Moon, RefreshCw, AlertCircle } from "lucide-react";
 import { api } from "@/lib/api";
 import { TimezonePicker } from "@/components/ui/timezone-picker";
 import { formatInTimeZone } from "date-fns-tz";
@@ -184,6 +184,22 @@ export function GeneralSettings() {
     await Promise.all(promises);
     setHasChanges(false);
   };
+
+  // Auto-save when form data changes (debounced)
+  useEffect(() => {
+    // Skip if no changes or if mutations are already in progress
+    if (!hasChanges || updateGeneralMutation.isPending || updateSilenceMutation.isPending) {
+      return;
+    }
+
+    // Debounce auto-save by 1 second
+    const timeoutId = setTimeout(() => {
+      handleSave();
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timezone, silenceEnabled, silenceStartTime, silenceEndTime, hasChanges]);
 
   const handleDevModeToggle = async (checked: boolean) => {
     try {
@@ -372,17 +388,11 @@ export function GeneralSettings() {
           )}
         </div>
 
-        {/* Save Button */}
-        {hasChanges && (
-          <div className="flex justify-end pt-4 border-t">
-            <Button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="gap-2"
-            >
-              <Save className="h-4 w-4" />
-              {isSaving ? "Saving..." : "Save Changes"}
-            </Button>
+        {/* Auto-save indicator */}
+        {isSaving && (
+          <div className="flex items-center justify-center gap-2 pt-4 border-t text-xs text-muted-foreground">
+            <div className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <span>Saving...</span>
           </div>
         )}
       </CardContent>

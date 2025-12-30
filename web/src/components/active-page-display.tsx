@@ -256,7 +256,7 @@ export function ActivePageDisplay() {
           </div>
         </CardHeader>
         
-        <CardContent>
+        <CardContent className="flex justify-center">
           {/* Vestaboard Frame */}
           <VestaboardDisplay 
             message={displayMessage} 
