@@ -126,6 +126,30 @@ class Config:
     
     @classmethod
     @property
+    def WEATHER_LOCATIONS(cls) -> List[Dict[str, str]]:
+        """Weather locations to monitor (list of dicts with location and name)."""
+        feature_config = cls._get_feature("weather")
+        
+        # Check for new locations array format
+        locations = feature_config.get("locations")
+        if locations:
+            if isinstance(locations, list):
+                return locations
+            else:
+                return [locations]
+        
+        # Fallback to old single location format
+        location = feature_config.get("location", "")
+        if location:
+            return [{
+                "location": location,
+                "name": "HOME"  # Default name
+            }]
+        
+        return []
+    
+    @classmethod
+    @property
     def WEATHER_ENABLED(cls) -> bool:
         """Whether weather is enabled."""
         return cls._get_feature("weather").get("enabled", False)

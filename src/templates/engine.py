@@ -60,7 +60,7 @@ SYMBOL_CHARS = {
 # Available data sources and their fields
 # Fields ending in _color return just the color tile based on color rules
 AVAILABLE_VARIABLES = {
-    "weather": ["temperature", "condition", "humidity", "location", "wind_speed", "temperature_color"],
+    "weather": ["temperature", "condition", "humidity", "location", "wind_speed", "temperature_color", "location_count", "locations"],
     "datetime": ["time", "date", "day", "day_of_week", "month", "year", "hour", "minute"],
     "home_assistant": ["state_color"],  # Dynamic based on entities
     "star_trek": ["quote", "character", "series", "series_color"],
@@ -92,6 +92,27 @@ VARIABLE_MAX_LENGTHS = {
     "weather.location": 15,
     "weather.wind_speed": 3,
     "weather.temperature_color": 4,  # Color tile like {65}
+    # Multi-location weather fields
+    "weather.location_count": 1,
+    "weather.locations.0.temperature": 3,
+    "weather.locations.0.condition": 12,
+    "weather.locations.0.location": 15,
+    "weather.locations.0.location_name": 10,
+    "weather.locations.0.wind_speed": 3,
+    "weather.locations.0.humidity": 3,
+    "weather.locations.0.feels_like": 3,
+    "weather.locations.1.temperature": 3,
+    "weather.locations.1.condition": 12,
+    "weather.locations.1.location": 15,
+    "weather.locations.1.location_name": 10,
+    "weather.locations.1.wind_speed": 3,
+    "weather.locations.1.humidity": 3,
+    "weather.locations.1.feels_like": 3,
+    "weather.locations.2.temperature": 3,
+    "weather.locations.2.condition": 12,
+    "weather.locations.2.location_name": 10,
+    "weather.locations.3.temperature": 3,
+    "weather.locations.3.location_name": 10,
     "datetime.time": 5,
     "datetime.date": 10,
     "datetime.day": 2,

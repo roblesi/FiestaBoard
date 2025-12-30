@@ -273,7 +273,12 @@ export interface WeatherFeatureConfig {
   enabled: boolean;
   api_key: string;
   provider: "weatherapi" | "openweathermap";
-  location: string;
+  location: string;  // Keep for backward compat
+  locations?: Array<{
+    location: string;
+    name: string;
+  }>;
+  refresh_seconds?: number;
 }
 
 export interface DateTimeFeatureConfig {

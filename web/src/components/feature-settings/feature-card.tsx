@@ -18,6 +18,7 @@ import { VESTABOARD_COLORS, AVAILABLE_COLORS as VESTA_AVAILABLE_COLORS, Vestaboa
 import { BayWheelsStationFinder } from "./baywheels-station-finder";
 import { MuniStopFinder } from "./muni-stop-finder";
 import { TrafficRoutePlanner } from "./traffic-route-planner";
+import { WeatherLocationManager } from "./weather-location-manager";
 import { utcToLocalTime, localTimeToUTC } from "@/lib/timezone-utils";
 
 export interface FeatureField {
@@ -591,6 +592,8 @@ export function FeatureCard({
         queryClient.invalidateQueries({ queryKey: ["baywheels-live-data"] });
       } else if (featureName === "traffic") {
         queryClient.invalidateQueries({ queryKey: ["traffic-live-data"] });
+      } else if (featureName === "weather") {
+        queryClient.invalidateQueries({ queryKey: ["weather-live-data"] });
       }
       
       toast.success(`${title} settings saved`);
@@ -756,6 +759,38 @@ export function FeatureCard({
 
       {expanded && (
         <CardContent className="pt-0 space-y-6">
+          {/* Weather Location Manager */}
+          {(featureName as string) === "weather" && (
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium text-muted-foreground">Locations</h4>
+              <WeatherLocationManager
+                selectedLocations={(formData.locations as any[]) || (formData.location ? [{
+                  location: formData.location as string,
+                  name: "HOME"
+                }] : [])}
+                onLocationsSelected={(locations) => {
+                  // Migrate from old location to new locations format
+                  const newData = { ...formData };
+                  if (locations.length > 0) {
+                    newData.locations = locations;
+                    // Keep location for backward compatibility if only one location
+                    if (locations.length === 1) {
+                      newData.location = locations[0].location;
+                    } else {
+                      delete newData.location;
+                    }
+                  } else {
+                    delete newData.locations;
+                    delete newData.location;
+                  }
+                  setFormData(newData);
+                  setHasChanges(true);
+                }}
+                maxLocations={10}
+              />
+            </div>
+          )}
+
           {/* Bay Wheels Station Finder */}
           {(featureName as string) === "baywheels" && (
             <div className="space-y-4">
@@ -967,6 +1002,10 @@ export function FeatureCard({
                 }
                 // Hide origin/destination fields for Traffic (replaced by route planner)
                 if ((featureName as string) === "traffic" && (field.key === "origin" || field.key === "destination" || field.key === "destination_name")) {
+                  return false;
+                }
+                // Hide location field for weather when using locations array
+                if ((featureName as string) === "weather" && field.key === "location" && (formData.locations as any[])?.length > 0) {
                   return false;
                 }
                 return true;
