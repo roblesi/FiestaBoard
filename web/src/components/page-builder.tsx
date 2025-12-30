@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -159,6 +159,9 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
   const [transitionStepSize, setTransitionStepSize] = useState<number | null>(null);
   const [isTransitionOpen, setIsTransitionOpen] = useState(false);
 
+  // Track if we need to re-preview after current mutation completes
+  const needsRePreview = useRef(false);
+
   // Fetch existing page if editing
   const { data: existingPage, isLoading: loadingPage } = useQuery({
     queryKey: ["page", pageId],
@@ -316,9 +319,18 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
     mutationFn: () => api.renderTemplate(getTemplateWithAlignments()),
     onSuccess: (data) => {
       setPreview(data.rendered);
+      
+      // If changes occurred while this preview was rendering, trigger another preview
+      if (needsRePreview.current) {
+        needsRePreview.current = false;
+        previewMutation.mutate();
+      }
     },
     onError: () => {
       setPreview(null);
+      
+      // Reset the flag on error too
+      needsRePreview.current = false;
     },
   });
 
@@ -333,7 +345,14 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
 
     // Debounce the preview
     const timeoutId = setTimeout(() => {
-      previewMutation.mutate();
+      // Only start a new preview if there isn't one already pending
+      // If one is pending, set a flag so it re-runs after completion
+      if (!previewMutation.isPending) {
+        previewMutation.mutate();
+      } else {
+        // Mark that we need to re-preview after the current mutation completes
+        needsRePreview.current = true;
+      }
     }, 500); // 500ms debounce
 
     return () => clearTimeout(timeoutId);
