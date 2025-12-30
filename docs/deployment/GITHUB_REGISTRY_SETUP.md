@@ -134,6 +134,15 @@ After merging to `main`, GitHub Actions automatically builds and publishes:
 - **API:** `ghcr.io/roblesi/vesta-api:latest`
 - **UI:** `ghcr.io/roblesi/vesta-ui:latest`
 
+### Multi-Architecture Support
+
+Docker images are built for multiple architectures, so the same image works on different devices:
+- **linux/amd64** - Synology NAS, x86-64 computers, cloud servers
+- **linux/arm/v7** - Raspberry Pi 3B+, Pi Zero 2W (32-bit ARM)
+- **linux/arm64** - Raspberry Pi 4, Pi 5 (64-bit ARM)
+
+Docker automatically pulls the correct architecture for your device. No special configuration needed!
+
 ### Configuration Files
 
 The system uses three key files on Synology:
@@ -207,6 +216,28 @@ VESTA_API_URL=http://192.168.1.100:6969
 
 If a new version has issues, you can rollback to a specific version:
 
+**Method 1: Edit docker-compose.yml (Recommended)**
+
+```bash
+cd ~/vestaboard
+
+# Stop current version
+sudo docker-compose down
+
+# Edit docker-compose.yml
+sudo nano docker-compose.yml
+
+# Change the image tags from:
+#   image: ghcr.io/roblesi/vesta-api:latest
+# To a specific version:
+#   image: ghcr.io/roblesi/vesta-api:1.2.2
+
+# Save and restart
+sudo docker-compose up -d
+```
+
+**Method 2: Manual Pull**
+
 ```bash
 cd ~/vestaboard
 
@@ -214,13 +245,30 @@ cd ~/vestaboard
 sudo docker-compose down
 
 # Pull specific version by version number
-sudo docker pull ghcr.io/roblesi/vesta-api:1.0.1
-sudo docker pull ghcr.io/roblesi/vesta-ui:1.0.1
+sudo docker pull ghcr.io/roblesi/vesta-api:1.2.2
+sudo docker pull ghcr.io/roblesi/vesta-ui:1.2.2
 
-# Update docker-compose.yml to use specific version tags
-# Change image tags from :latest to :1.0.1
-# Then restart
+# Tag as latest locally (so docker-compose.yml doesn't need changes)
+sudo docker tag ghcr.io/roblesi/vesta-api:1.2.2 ghcr.io/roblesi/vesta-api:latest
+sudo docker tag ghcr.io/roblesi/vesta-ui:1.2.2 ghcr.io/roblesi/vesta-ui:latest
+
+# Restart
 sudo docker-compose up -d
+```
+
+**Finding Available Versions:**
+
+Visit the GitHub Container Registry pages to see all available versions:
+- [vesta-api versions](https://github.com/roblesi/vesta/pkgs/container/vesta-api)
+- [vesta-ui versions](https://github.com/roblesi/vesta/pkgs/container/vesta-ui)
+
+Or check from command line:
+```bash
+# List all available tags for API
+curl -s https://api.github.com/users/roblesi/packages/container/vesta-api/versions | grep 'name' | head -10
+
+# List all available tags for UI
+curl -s https://api.github.com/users/roblesi/packages/container/vesta-ui/versions | grep 'name' | head -10
 ```
 
 ### Viewing Container Logs

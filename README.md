@@ -337,6 +337,70 @@ For detailed setup instructions, troubleshooting, and advanced topics:
 - **[GitHub Registry Setup Guide](./docs/deployment/GITHUB_REGISTRY_SETUP.md)** - Complete GHCR deployment guide
 - **[Deploy to Synology](./docs/deployment/DEPLOY_TO_SYNOLOGY.md)** - Synology-specific instructions
 
+### Raspberry Pi Deployment
+
+Run Vesta on a Raspberry Pi for a low-cost, dedicated Vestaboard controller!
+
+#### Supported Models
+- 🍓 **Raspberry Pi 3 Model B+** - Minimum (1GB RAM)
+- 🍓 **Raspberry Pi 4** - Recommended (2GB+ RAM)
+- 🍓 **Raspberry Pi 5** - Best performance (4GB+ RAM)
+- 🍓 **Raspberry Pi Zero 2 W** - Budget option (512MB RAM, limited performance)
+
+#### Quick Start
+
+**Option 1: Pre-Built Image (Easiest)**
+
+1. Download the appropriate image from the [latest release](https://github.com/roblesi/vesta/releases/latest):
+   - `vesta-pi-arm32-vX.X.X.img.gz` - For Pi 3B+, Zero 2W
+   - `vesta-pi-arm64-vX.X.X.img.gz` - For Pi 4, Pi 5
+
+2. Flash to SD card using [Raspberry Pi Imager](https://www.raspberrypi.com/software/) or [Balena Etcher](https://etcher.balena.io/)
+
+3. Insert SD card and boot your Pi
+
+4. Access web UI at `http://raspberrypi.local:4420`
+
+5. Run setup wizard:
+   ```bash
+   ssh pi@raspberrypi.local
+   sudo /opt/vesta/first-boot-setup.sh
+   ```
+
+**Option 2: Manual Docker Installation**
+
+If you already have Raspberry Pi OS running:
+
+```bash
+# Install Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# Create Vesta directory
+sudo mkdir -p /opt/vesta && cd /opt/vesta
+
+# Create docker-compose.yml
+sudo curl -o docker-compose.yml https://raw.githubusercontent.com/roblesi/vesta/main/docker-compose.ghcr.yml
+
+# Create .env with your API keys
+sudo nano .env
+
+# Start Vesta
+sudo docker-compose up -d
+```
+
+#### Multi-Architecture Support
+
+Docker images automatically work on all Pi models:
+- **ARM32** - Pi 3B+, Zero 2W (32-bit)
+- **ARM64** - Pi 4, Pi 5 (64-bit)
+- **x86-64** - Also works on regular PCs and NAS devices
+
+#### Complete Documentation
+
+For detailed instructions, performance optimization, and troubleshooting:
+- **[Raspberry Pi Quick Start Guide](./docs/deployment/RASPBERRY_PI_QUICK_START.md)** - Complete Pi setup guide
+
 
 ## Troubleshooting
 

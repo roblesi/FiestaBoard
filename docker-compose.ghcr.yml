@@ -3,6 +3,8 @@ version: '3.8'
 services:
   # API Service - REST API for controlling the Vestaboard display
   vestaboard-api:
+    # Use :latest for automatic updates, or pin to a specific version (e.g., :1.2.3)
+    # To rollback: change :latest to a previous version number
     image: ghcr.io/roblesi/vesta-api:latest
     container_name: vestaboard-api
     env_file:
@@ -28,6 +30,8 @@ services:
 
   # Web UI - Monitoring and control interface
   vestaboard-ui:
+    # Use :latest for automatic updates, or pin to a specific version (e.g., :1.2.3)
+    # To rollback: change :latest to a previous version number
     image: ghcr.io/roblesi/vesta-ui:latest
     container_name: vestaboard-ui
     restart: unless-stopped

@@ -13,6 +13,8 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -109,6 +111,7 @@ jobs:
           context: .
           file: ./Dockerfile.api
           push: true
+          platforms: linux/amd64,linux/arm/v7,linux/arm64
           build-args: |
             VERSION=${{ steps.version.outputs.version }}
           tags: |
@@ -124,6 +127,7 @@ jobs:
           context: .
           file: ./Dockerfile.ui
           push: true
+          platforms: linux/amd64,linux/arm/v7,linux/arm64
           build-args: |
             VERSION=${{ steps.version.outputs.version }}
           tags: |
@@ -184,9 +188,39 @@ jobs:
               releaseNotes += 'See commit history for changes.';
             }
             
-            releaseNotes += `\n\n## Docker Images\n\n`;
-            releaseNotes += `- \`ghcr.io/${{ github.repository_owner }}/vesta-api:${version}\`\n`;
-            releaseNotes += `- \`ghcr.io/${{ github.repository_owner }}/vesta-ui:${version}\`\n`;
+            releaseNotes += `\n\n## 🐳 Docker Images\n\n`;
+            releaseNotes += `Multi-architecture images available for:\n`;
+            releaseNotes += `- **linux/amd64** - Synology NAS, x86-64 systems\n`;
+            releaseNotes += `- **linux/arm/v7** - Raspberry Pi 3B+, Zero 2W (32-bit)\n`;
+            releaseNotes += `- **linux/arm64** - Raspberry Pi 4, Pi 5 (64-bit)\n\n`;
+            releaseNotes += `### Pull Commands\n\n`;
+            releaseNotes += `\`\`\`bash\n`;
+            releaseNotes += `docker pull ghcr.io/${{ github.repository_owner }}/vesta-api:${version}\n`;
+            releaseNotes += `docker pull ghcr.io/${{ github.repository_owner }}/vesta-ui:${version}\n`;
+            releaseNotes += `\`\`\`\n\n`;
+            releaseNotes += `### Use in docker-compose.yml\n\n`;
+            releaseNotes += `\`\`\`yaml\n`;
+            releaseNotes += `services:\n`;
+            releaseNotes += `  vestaboard-api:\n`;
+            releaseNotes += `    image: ghcr.io/${{ github.repository_owner }}/vesta-api:${version}\n`;
+            releaseNotes += `  vestaboard-ui:\n`;
+            releaseNotes += `    image: ghcr.io/${{ github.repository_owner }}/vesta-ui:${version}\n`;
+            releaseNotes += `\`\`\`\n\n`;
+            releaseNotes += `### Container Registry Links\n\n`;
+            releaseNotes += `- [vesta-api packages](https://github.com/${{ github.repository_owner }}/vesta/pkgs/container/vesta-api)\n`;
+            releaseNotes += `- [vesta-ui packages](https://github.com/${{ github.repository_owner }}/vesta/pkgs/container/vesta-ui)\n`;
+            releaseNotes += `\n## 🍓 Raspberry Pi Images\n\n`;
+            releaseNotes += `Pre-configured bootable images for Raspberry Pi. Flash to SD card and boot!\n\n`;
+            releaseNotes += `**Downloads:**\n`;
+            releaseNotes += `- \`vesta-pi-arm32-v${version}.img.gz\` - For Raspberry Pi 3B+, Zero 2W\n`;
+            releaseNotes += `- \`vesta-pi-arm64-v${version}.img.gz\` - For Raspberry Pi 4, Pi 5\n\n`;
+            releaseNotes += `**Quick Start:**\n`;
+            releaseNotes += `1. Download the appropriate image for your Pi model\n`;
+            releaseNotes += `2. Flash to SD card using [Raspberry Pi Imager](https://www.raspberrypi.com/software/) or [Balena Etcher](https://etcher.balena.io/)\n`;
+            releaseNotes += `3. Insert SD card and boot your Pi\n`;
+            releaseNotes += `4. Access web UI at http://raspberrypi.local:4420\n`;
+            releaseNotes += `5. Follow the first-boot setup wizard\n\n`;
+            releaseNotes += `See [Raspberry Pi Quick Start Guide](docs/deployment/RASPBERRY_PI_QUICK_START.md) for detailed instructions.\n`;
             
             // Create the release
             const { data: release } = await github.rest.repos.createRelease({
@@ -291,4 +325,34 @@ jobs:
               console.error(`❌ Failed to revert: ${error.message}`);
               core.setFailed(`Failed to revert merge: ${error.message}`);
             }
+
+  build-pi-images:
+    runs-on: ubuntu-latest
+    needs: release
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget unzip parted kpartx qemu-user-static
+
+      - name: Build ARM32 Pi image
+        run: |
+          chmod +x scripts/build-pi-image.sh
+          ./scripts/build-pi-image.sh arm32 ${{ needs.release.outputs.version }}
+
+      - name: Build ARM64 Pi image
+        run: |
+          chmod +x scripts/build-pi-image.sh
+          ./scripts/build-pi-image.sh arm64 ${{ needs.release.outputs.version }}
+
+      - name: Upload Pi images to release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.release.outputs.version }}
+          files: |
+            vesta-pi-arm32-v${{ needs.release.outputs.version }}.img.gz
+            vesta-pi-arm64-v${{ needs.release.outputs.version }}.img.gz
 
