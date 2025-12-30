@@ -262,7 +262,7 @@ export function ActivePageDisplay() {
             message={displayMessage} 
             isLoading={isLoadingPreview || (!!activePageId && !previewData)}
             size="md"
-            boardType={boardSettings?.board_type || "black"}
+            boardType={boardSettings?.board_type ?? "black"}
           />
         </CardContent>
       </Card>

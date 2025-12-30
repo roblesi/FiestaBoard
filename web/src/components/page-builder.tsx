@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { api, PageCreate, PageUpdate, PageType } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useBoardSettings } from "@/hooks/use-vestaboard";
 
 // Transition strategy display names
 const STRATEGY_LABELS: Record<string, string> = {
@@ -144,6 +145,9 @@ interface PageBuilderProps {
 
 export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
   const queryClient = useQueryClient();
+
+  // Fetch board settings for display type
+  const { data: boardSettings } = useBoardSettings();
 
   // Form state
   const [name, setName] = useState("");
@@ -575,6 +579,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
                   message={preview} 
                   isLoading={previewMutation.isPending}
                   size="md"
+                  boardType={boardSettings?.board_type ?? "black"}
                 />
               </div>
 

@@ -10,6 +10,7 @@ export const queryKeys = {
   activePage: ["activePage"] as const,
   pages: ["pages"] as const,
   pagePreview: (pageId: string) => ["pagePreview", pageId] as const,
+  boardSettings: ["boardSettings"] as const,
 };
 
 // Status query - refetches every 5 seconds
@@ -105,5 +106,15 @@ export function usePagePreview(pageId: string | null, options?: { enabled?: bool
     enabled: !!pageId && (options?.enabled !== false),
     retry: 1,
     refetchInterval: options?.refetchInterval,
+  });
+}
+
+// Board settings query - for UI display preferences
+export function useBoardSettings() {
+  return useQuery({
+    queryKey: queryKeys.boardSettings,
+    queryFn: api.getBoardSettings,
+    retry: 1,
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
   });
 }

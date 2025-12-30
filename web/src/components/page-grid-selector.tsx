@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useCallback, useMemo, useState, memo } from "react";
-import { usePages } from "@/hooks/use-vestaboard";
+import { usePages, useBoardSettings } from "@/hooks/use-vestaboard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LayoutTemplate } from "lucide-react";
 import { VestaboardDisplay } from "@/components/vestaboard-display";
@@ -55,7 +55,13 @@ function setCachedPreview(pageId: string, pageUpdatedAt: string, preview: PagePr
 
 // Mini preview component for each page button - uses localStorage caching
 // Memoized to prevent unnecessary re-renders when parent updates
-const PageButtonPreview = memo(function PageButtonPreview({ page }: { page: Page }) {
+const PageButtonPreview = memo(function PageButtonPreview({ 
+  page, 
+  boardType = "black" 
+}: { 
+  page: Page;
+  boardType?: "black" | "white" | null;
+}) {
   const pageId = page.id;
   // Use empty string as fallback for optional updated_at
   const pageUpdatedAt = page.updated_at || "";
@@ -107,13 +113,15 @@ const PageButtonPreview = memo(function PageButtonPreview({ page }: { page: Page
         message={preview?.message || null} 
         isLoading={isLoading}
         size="sm"
+        boardType={boardType ?? "black"}
       />
     </div>
   );
 }, (prevProps, nextProps) => {
-  // Custom comparison: only re-render if page ID or updated_at changes
+  // Custom comparison: only re-render if page ID, updated_at, or boardType changes
   return prevProps.page.id === nextProps.page.id && 
-         prevProps.page.updated_at === nextProps.page.updated_at;
+         prevProps.page.updated_at === nextProps.page.updated_at &&
+         prevProps.boardType === nextProps.boardType;
 });
 
 // Memoized page button component to prevent unnecessary re-renders
@@ -123,12 +131,14 @@ const PageButton = memo(function PageButton({
   isPending,
   onSelect,
   showActiveIndicator = true,
+  boardType = "black",
 }: {
   page: Page;
   isActive: boolean;
   isPending: boolean;
   onSelect: (pageId: string) => void;
   showActiveIndicator?: boolean;
+  boardType?: "black" | "white" | null;
 }) {
   const TypeIcon = LayoutTemplate;
   
@@ -173,7 +183,7 @@ const PageButton = memo(function PageButton({
       
       {/* Mini preview - isolated to prevent hover re-renders */}
       <div className="hover-stable">
-        <PageButtonPreview page={page} />
+        <PageButtonPreview page={page} boardType={boardType} />
       </div>
       
       {/* Active indicator */}
@@ -188,7 +198,8 @@ const PageButton = memo(function PageButton({
          prevProps.isActive === nextProps.isActive &&
          prevProps.isPending === nextProps.isPending &&
          prevProps.page.updated_at === nextProps.page.updated_at &&
-         prevProps.showActiveIndicator === nextProps.showActiveIndicator;
+         prevProps.showActiveIndicator === nextProps.showActiveIndicator &&
+         prevProps.boardType === nextProps.boardType;
 });
 
 export interface PageGridSelectorProps {
@@ -213,6 +224,9 @@ export function PageGridSelector({
 }: PageGridSelectorProps) {
   // Fetch all pages
   const { data: pagesData, isLoading: isLoadingPages } = usePages();
+  
+  // Fetch board settings for display type
+  const { data: boardSettings } = useBoardSettings();
   
   // Memoize pages array to prevent unnecessary re-renders
   const pages = useMemo(() => pagesData?.pages || [], [pagesData]);
@@ -262,6 +276,7 @@ export function PageGridSelector({
             isPending={isPending}
             onSelect={onSelectPage}
             showActiveIndicator={showActiveIndicator}
+            boardType={boardSettings?.board_type ?? "black"}
           />
         ))}
       </div>

@@ -92,6 +92,23 @@ class PollingSettings:
         return cls(interval_seconds=interval)
 
 
+@dataclass
+class BoardSettings:
+    """Board display settings for UI rendering."""
+    board_type: Optional[Literal["black", "white"]] = "black"
+    
+    def to_dict(self) -> dict:
+        return asdict(self)
+    
+    @classmethod
+    def from_dict(cls, data: dict) -> "BoardSettings":
+        board_type = data.get("board_type", "black")
+        # Validate board type
+        if board_type not in ["black", "white", None]:
+            board_type = "black"
+        return cls(board_type=board_type)
+
+
 class SettingsService:
     """Service for managing runtime settings.
     
@@ -119,6 +136,7 @@ class SettingsService:
         self._output = self._load_output_settings()
         self._active_page = self._load_active_page_settings()
         self._polling = self._load_polling_settings()
+        self._board = self._load_board_settings()
         
         logger.info(f"SettingsService initialized (file: {self.settings_file})")
     
@@ -139,7 +157,8 @@ class SettingsService:
                 "transitions": self._transition.to_dict(),
                 "output": self._output.to_dict(),
                 "active_page": self._active_page.to_dict(),
-                "polling": self._polling.to_dict()
+                "polling": self._polling.to_dict(),
+                "board": self._board.to_dict()
             }
             with open(self.settings_file, 'w') as f:
                 json.dump(data, f, indent=2)
@@ -186,6 +205,13 @@ class SettingsService:
         if "polling" in file_data:
             return PollingSettings.from_dict(file_data["polling"])
         return PollingSettings()  # Default to 60 seconds
+    
+    def _load_board_settings(self) -> BoardSettings:
+        """Load board settings from file."""
+        file_data = self._load_from_file()
+        if "board" in file_data:
+            return BoardSettings.from_dict(file_data["board"])
+        return BoardSettings()  # Default to black board
     
     # Transition settings
     def get_transition_settings(self) -> TransitionSettings:
@@ -339,6 +365,32 @@ class SettingsService:
             PollingSettings instance
         """
         return self._polling
+    
+    # Board settings
+    def get_board_settings(self) -> BoardSettings:
+        """Get current board settings.
+        
+        Returns:
+            BoardSettings instance
+        """
+        return self._board
+    
+    def set_board_type(self, board_type: Optional[Literal["black", "white"]]) -> BoardSettings:
+        """Set the board type for UI rendering.
+        
+        Args:
+            board_type: "black", "white", or None for default
+            
+        Returns:
+            Updated BoardSettings
+        """
+        if board_type is not None and board_type not in ["black", "white"]:
+            raise ValueError(f"Invalid board_type: {board_type}. Must be 'black' or 'white'")
+        
+        self._board.board_type = board_type
+        self._save_to_file()
+        logger.info(f"Board type set to: {board_type}")
+        return self._board
 
 
 # Singleton instance
