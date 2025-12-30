@@ -25,7 +25,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Determine version bump type
+      - name: Determine version bump type and build platforms
         id: bump_type
         uses: actions/github-script@v7
         with:
@@ -48,6 +48,7 @@ jobs:
             );
             
             let bumpType = 'patch'; // default
+            let buildPi = false; // default
             
             if (mergedPR) {
               console.log(`Found merged PR #${mergedPR.number}: ${mergedPR.title}`);
@@ -62,11 +63,23 @@ jobs:
               } else if (labels.includes('patch')) {
                 bumpType = 'patch';
               }
+              
+              // Check if Pi builds are requested
+              if (labels.includes('pi') || labels.includes('raspberry-pi')) {
+                buildPi = true;
+                console.log('🍓 Raspberry Pi builds enabled via label');
+              }
             } else {
               console.log('No recently merged PR found, using default: patch');
             }
             
             console.log(`Version bump type: ${bumpType}`);
+            console.log(`Build Pi images: ${buildPi}`);
+            
+            // Set outputs
+            core.setOutput('bump_type', bumpType);
+            core.setOutput('build_pi', buildPi);
+            
             return bumpType;
           result-encoding: string
 
@@ -109,6 +122,7 @@ jobs:
           context: .
           file: ./Dockerfile.api
           push: true
+          platforms: ${{ steps.bump_type.outputs.build_pi == 'true' && 'linux/amd64,linux/arm/v7,linux/arm64' || 'linux/amd64' }}
           build-args: |
             VERSION=${{ steps.version.outputs.version }}
           tags: |
@@ -124,6 +138,7 @@ jobs:
           context: .
           file: ./Dockerfile.ui
           push: true
+          platforms: ${{ steps.bump_type.outputs.build_pi == 'true' && 'linux/amd64,linux/arm/v7,linux/arm64' || 'linux/amd64' }}
           build-args: |
             VERSION=${{ steps.version.outputs.version }}
           tags: |
@@ -185,8 +200,23 @@ jobs:
             }
             
             releaseNotes += `\n\n## Docker Images\n\n`;
-            releaseNotes += `- \`ghcr.io/${{ github.repository_owner }}/vesta-api:${version}\`\n`;
-            releaseNotes += `- \`ghcr.io/${{ github.repository_owner }}/vesta-ui:${version}\`\n`;
+            
+            const buildPi = '${{ steps.bump_type.outputs.build_pi }}' === 'true';
+            const platforms = buildPi 
+              ? '`linux/amd64`, `linux/arm/v7`, `linux/arm64` 🍓' 
+              : '`linux/amd64`';
+            
+            releaseNotes += `**Platforms:** ${platforms}\n\n`;
+            releaseNotes += `\`\`\`bash\n`;
+            releaseNotes += `docker pull ghcr.io/${{ github.repository_owner }}/vesta-api:${version}\n`;
+            releaseNotes += `docker pull ghcr.io/${{ github.repository_owner }}/vesta-ui:${version}\n`;
+            releaseNotes += `\`\`\`\n`;
+            
+            if (buildPi) {
+              releaseNotes += `\n### 🍓 Raspberry Pi Support\n\n`;
+              releaseNotes += `This release includes multi-architecture images that work on Raspberry Pi (arm/v7 and arm64).\n`;
+              releaseNotes += `Simply use the same \`docker pull\` commands above on your Pi!\n`;
+            }
             
             // Create the release
             const { data: release } = await github.rest.repos.createRelease({
