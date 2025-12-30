@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Monitor, Save, Eye, EyeOff, AlertCircle, Check } from "lucide-react";
+import { Monitor, Eye, EyeOff, AlertCircle, Check } from "lucide-react";
 import { api, VestaboardConfig } from "@/lib/api";
 
 export function VestaboardSettings() {
@@ -56,6 +56,22 @@ export function VestaboardSettings() {
   const handleSave = () => {
     updateMutation.mutate(formData);
   };
+
+  // Auto-save when form data changes (debounced)
+  useEffect(() => {
+    // Skip if no changes or if a mutation is already in progress
+    if (!hasChanges || updateMutation.isPending) {
+      return;
+    }
+
+    // Debounce auto-save by 1 second
+    const timeoutId = setTimeout(() => {
+      handleSave();
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData, hasChanges]);
 
   const apiMode = formData.api_mode ?? "local";
   const hasLocalKey = formData.local_api_key === "***" || (formData.local_api_key && formData.local_api_key.length > 0);
@@ -261,17 +277,11 @@ export function VestaboardSettings() {
           </div>
         )}
 
-        {/* Save button */}
-        {hasChanges && (
-          <div className="pt-2">
-            <Button
-              onClick={handleSave}
-              disabled={updateMutation.isPending}
-              className="w-full"
-            >
-              <Save className="h-4 w-4 mr-2" />
-              {updateMutation.isPending ? "Saving..." : "Save Changes"}
-            </Button>
+        {/* Auto-save indicator */}
+        {updateMutation.isPending && (
+          <div className="flex items-center justify-center gap-2 pt-2 text-xs text-muted-foreground">
+            <div className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <span>Saving...</span>
           </div>
         )}
       </CardContent>

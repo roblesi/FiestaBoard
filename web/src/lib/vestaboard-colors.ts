@@ -43,6 +43,7 @@ export const COLOR_CODE_MAP: Record<string, string> = {
   "68": VESTABOARD_COLORS.violet,
   "69": VESTABOARD_COLORS.white,
   "70": VESTABOARD_COLORS.black,
+  "71": VESTABOARD_COLORS.black, // Filled tile
 };
 
 // Combined mapping for both numeric codes and named colors

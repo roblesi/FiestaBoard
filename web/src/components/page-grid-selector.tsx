@@ -108,7 +108,13 @@ const PageButtonPreview = memo(function PageButtonPreview({
   }, [pageId, pageUpdatedAt, pageName]);
   
   return (
-    <div className="w-full hover-stable">
+    <div 
+      className="w-full hover-stable overflow-hidden -mr-3"
+      style={{
+        maskImage: 'linear-gradient(to right, black 60%, transparent 100%)',
+        WebkitMaskImage: 'linear-gradient(to right, black 60%, transparent 100%)'
+      }}
+    >
       <VestaboardDisplay 
         message={preview?.message || null} 
         isLoading={isLoading}
@@ -239,7 +245,9 @@ export function PageGridSelector({
             {label}
           </label>
         )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-32 w-full" />
         </div>
@@ -267,7 +275,7 @@ export function PageGridSelector({
           {label}
         </label>
       )}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {pages.map((page) => (
           <PageButton
             key={page.id}

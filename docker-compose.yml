@@ -9,6 +9,8 @@ services:
     container_name: vestaboard-api
     env_file:
       - .env
+    environment:
+      - PRODUCTION=true
     restart: unless-stopped
     ports:
       - "8000:8000"

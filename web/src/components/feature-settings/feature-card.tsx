@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TimePicker } from "@/components/ui/time-picker";
 import { toast } from "sonner";
-import { ChevronDown, ChevronUp, Save, Eye, EyeOff, AlertCircle, Copy, Check, Plus, Trash2, ArrowUp, ArrowDown, MapPin, Loader2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Eye, EyeOff, AlertCircle, Copy, Check, Plus, Trash2, ArrowUp, ArrowDown, MapPin, Loader2, X } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { api, FeatureName, GeneralConfig } from "@/lib/api";
 import { LucideIcon } from "lucide-react";
@@ -643,6 +643,22 @@ export function FeatureCard({
     }
   };
 
+  // Auto-save when form data changes (debounced)
+  useEffect(() => {
+    // Skip if no changes or if a mutation is already in progress
+    if (!hasChanges || updateMutation.isPending) {
+      return;
+    }
+
+    // Debounce auto-save by 1 second
+    const timeoutId = setTimeout(() => {
+      handleSave();
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData, hasChanges]);
+
   // Copy template variable
   const handleCopyVar = (varName: string) => {
     const templateVar = `{{${featureName}.${varName}}}`;
@@ -1221,18 +1237,11 @@ export function FeatureCard({
             </div>
           )}
 
-          {/* Save button */}
-          {hasChanges && (
-            <div className="pt-2">
-              <Button
-                size="sm"
-                onClick={handleSave}
-                disabled={updateMutation.isPending}
-                className="w-full"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {updateMutation.isPending ? "Saving..." : "Save Changes"}
-              </Button>
+          {/* Auto-save indicator */}
+          {updateMutation.isPending && (
+            <div className="flex items-center justify-center gap-2 pt-2 text-xs text-muted-foreground">
+              <div className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <span>Saving...</span>
             </div>
           )}
         </CardContent>
