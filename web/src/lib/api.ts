@@ -422,6 +422,10 @@ export interface PollingSettings {
   interval_seconds: number;
 }
 
+export interface BoardSettings {
+  board_type: "black" | "white" | null;
+}
+
 export interface FullConfig {
   vestaboard: VestaboardConfig;
   features: FeaturesConfig;
@@ -722,6 +726,15 @@ export const api = {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ interval_seconds }),
+    }),
+
+  // Board settings
+  getBoardSettings: () => fetchApi<BoardSettings>("/settings/board"),
+  updateBoardSettings: (board_type: "black" | "white" | null) =>
+    fetchApi<{ status: string; settings: BoardSettings }>("/settings/board", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ board_type }),
     }),
 
   // Home Assistant endpoints

@@ -1822,6 +1822,40 @@ async def update_polling_settings(request: dict):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@app.get("/settings/board")
+async def get_board_settings():
+    """Get current board display settings."""
+    settings_service = get_settings_service()
+    board = settings_service.get_board_settings()
+    return {
+        "board_type": board.board_type
+    }
+
+
+@app.put("/settings/board")
+async def update_board_settings(request: dict):
+    """
+    Update board display settings.
+    
+    Body should include:
+    - board_type: "black", "white", or null for default
+    """
+    if "board_type" not in request:
+        raise HTTPException(status_code=400, detail="board_type parameter required")
+    
+    settings_service = get_settings_service()
+    
+    try:
+        board_type = request["board_type"]
+        board = settings_service.set_board_type(board_type)
+        return {
+            "status": "success",
+            "settings": board.to_dict()
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 # =============================================================================
 # Pages Endpoints
 # =============================================================================
