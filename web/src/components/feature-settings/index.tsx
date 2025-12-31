@@ -16,6 +16,7 @@ import {
   Bike,
   Car,
   Moon,
+  TrendingUp,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 
@@ -447,6 +448,70 @@ const FEATURE_DEFINITIONS: Record<
       { name: "routes.1.duration_minutes", description: "Travel time for second route", example: "35", maxChars: 3, typical: "1-3 digits" },
       { name: "routes.2.duration_minutes", description: "Travel time for third route", example: "45", maxChars: 3, typical: "1-3 digits" },
       { name: "routes.3.duration_minutes", description: "Travel time for fourth route", example: "20", maxChars: 3, typical: "1-3 digits" },
+    ],
+  },
+  stocks: {
+    title: "Stocks",
+    description: "Display US stock market prices and percentage changes",
+    icon: TrendingUp,
+    hasRefreshInterval: true,
+    defaultRefreshSeconds: 300,
+    fields: [
+      {
+        key: "finnhub_api_key",
+        label: "Finnhub API Key (Optional)",
+        type: "password",
+        placeholder: "Enter Finnhub API key for better symbol search",
+        required: false,
+        description: "Optional - enables better symbol search/autocomplete. Get free key at finnhub.io",
+      },
+      {
+        key: "symbols",
+        label: "Stock Symbols",
+        type: "stocks",  // Custom type for stock symbol input
+        placeholder: "Search and select stock symbols",
+        required: true,
+        description: "Select up to 5 stock symbols to monitor",
+      },
+      {
+        key: "time_window",
+        label: "Time Window",
+        type: "select",
+        options: [
+          { value: "1 Day", label: "1 Day" },
+          { value: "5 Days", label: "5 Days" },
+          { value: "1 Month", label: "1 Month" },
+          { value: "3 Months", label: "3 Months" },
+          { value: "6 Months", label: "6 Months" },
+          { value: "1 Year", label: "1 Year" },
+          { value: "2 Years", label: "2 Years" },
+          { value: "5 Years", label: "5 Years" },
+          { value: "ALL", label: "All Time" },
+        ],
+        description: "Compare current price to price from this time period",
+      },
+      {
+        key: "refresh_seconds",
+        label: "Refresh Interval (seconds)",
+        type: "number",
+        placeholder: "300",
+        description: "How often to fetch new stock data (min: 60, default: 5 min)",
+      },
+    ],
+    outputs: [
+      { name: "symbol", description: "Stock symbol (first stock)", example: "GOOG", maxChars: 5, typical: "1-5 chars" },
+      { name: "current_price", description: "Current price (first stock)", example: "150.25", maxChars: 8, typical: "6-8 chars" },
+      { name: "change_percent", description: "Percentage change (first stock)", example: "+1.18", maxChars: 6, typical: "4-6 chars" },
+      { name: "formatted", description: "Pre-formatted display (first stock)", example: "GOOG{green} $150.25 +1.18%", maxChars: 22, typical: "15-22 chars" },
+      { name: "symbol_count", description: "Number of tracked symbols", example: "3", maxChars: 1, typical: "1 digit" },
+      { name: "stocks.0.symbol", description: "Symbol of first stock", example: "GOOG", maxChars: 5, typical: "1-5 chars" },
+      { name: "stocks.0.current_price", description: "Current price of first stock", example: "150.25", maxChars: 8, typical: "6-8 chars" },
+      { name: "stocks.0.change_percent", description: "Percentage change of first stock", example: "+1.18", maxChars: 6, typical: "4-6 chars" },
+      { name: "stocks.0.formatted", description: "Formatted display of first stock", example: "GOOG{green} $150.25 +1.18%", maxChars: 22, typical: "15-22 chars" },
+      { name: "stocks.1.symbol", description: "Symbol of second stock", example: "AAPL", maxChars: 5, typical: "1-5 chars" },
+      { name: "stocks.1.current_price", description: "Current price of second stock", example: "175.50", maxChars: 8, typical: "6-8 chars" },
+      { name: "stocks.2.symbol", description: "Symbol of third stock", example: "MSFT", maxChars: 5, typical: "1-5 chars" },
+      { name: "stocks.3.symbol", description: "Symbol of fourth stock", example: "TSLA", maxChars: 5, typical: "1-5 chars" },
     ],
   },
 };

@@ -170,6 +170,19 @@ DEFAULT_CONFIG: Dict[str, Any] = {
             "start_time": "20:00",  # 8pm (will be migrated to UTC ISO format)
             "end_time": "07:00",  # 7am (will be migrated to UTC ISO format)
         },
+        "stocks": {
+            "enabled": False,
+            "finnhub_api_key": "",  # Optional - enables better symbol search/autocomplete
+            "symbols": ["GOOG"],  # List of stock symbols (max 5)
+            "time_window": "1 Day",  # Options: "1 Day", "5 Days", "1 Month", "3 Months", "6 Months", "1 Year", "2 Years", "5 Years", "ALL"
+            "refresh_seconds": 300,  # 5 minutes default
+            "color_rules": {
+                "change_percent": [
+                    {"condition": ">", "value": 0, "color": "green"},  # Positive = green
+                    {"condition": "<", "value": 0, "color": "red"},   # Negative = red
+                ],
+            },
+        },
     },
     "general": {
         "timezone": "America/Los_Angeles",  # User's timezone for display purposes
@@ -185,6 +198,7 @@ SENSITIVE_FIELDS = {
     "cloud_key",
     "access_token",
     "password",
+    "finnhub_api_key",
 }
 
 
@@ -225,6 +239,7 @@ class ConfigManager:
         
         self._config: Dict[str, Any] = {}
         self._load_or_create()
+        self._apply_env_overrides()
         self._initialized = True
 
     def _load_or_create(self) -> None:
@@ -292,9 +307,33 @@ class ConfigManager:
             logger.error(f"Failed to save config: {e}")
             raise
 
+    def _apply_env_overrides(self) -> None:
+        """Apply environment variable overrides to config.
+        
+        Only sets values if they're empty in config (allows env vars to provide defaults).
+        """
+        # Ensure features structure exists
+        if "features" not in self._config:
+            self._config["features"] = {}
+        if "stocks" not in self._config["features"]:
+            self._config["features"]["stocks"] = {}
+        
+        # Load environment variables
+        finnhub_api_key = os.getenv("FINNHUB_API_KEY", "").strip()
+        
+        # Apply to stocks config if not already set
+        if finnhub_api_key:
+            stocks_config = self._config["features"]["stocks"]
+            if not stocks_config.get("finnhub_api_key"):
+                stocks_config["finnhub_api_key"] = finnhub_api_key
+                logger.info("Applied FINNHUB_API_KEY from environment variable")
+                with self._file_lock:
+                    self._save_internal()
+    
     def reload(self) -> None:
         """Reload configuration from file."""
         self._load_or_create()
+        self._apply_env_overrides()
         logger.info("Configuration reloaded from file")
 
     def get_all(self) -> Dict[str, Any]:

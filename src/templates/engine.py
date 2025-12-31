@@ -81,6 +81,10 @@ AVAILABLE_VARIABLES = {
         "duration_minutes", "delay_minutes", "traffic_status", "traffic_color", "destination_name", "formatted",
         "route_count", "worst_delay", "routes"
     ],
+    "stocks": [
+        "symbol", "current_price", "previous_price", "change_percent", "change_direction", "formatted", "company_name",
+        "symbol_count", "stocks"
+    ],
 }
 
 # Maximum character lengths for each variable (for validation)
@@ -218,6 +222,34 @@ VARIABLE_MAX_LENGTHS = {
     "traffic.routes.3.duration_minutes": 3,
     "traffic.routes.3.destination_name": 10,
     "traffic.routes.3.formatted": 22,
+    "stocks.symbol": 5,
+    "stocks.current_price": 8,
+    "stocks.previous_price": 8,
+    "stocks.change_percent": 6,
+    "stocks.change_direction": 4,
+    "stocks.formatted": 22,
+    "stocks.company_name": 20,
+    "stocks.symbol_count": 1,
+    "stocks.stocks.0.symbol": 5,
+    "stocks.stocks.0.current_price": 8,
+    "stocks.stocks.0.change_percent": 6,
+    "stocks.stocks.0.formatted": 22,
+    "stocks.stocks.1.symbol": 5,
+    "stocks.stocks.1.current_price": 8,
+    "stocks.stocks.1.change_percent": 6,
+    "stocks.stocks.1.formatted": 22,
+    "stocks.stocks.2.symbol": 5,
+    "stocks.stocks.2.current_price": 8,
+    "stocks.stocks.2.change_percent": 6,
+    "stocks.stocks.2.formatted": 22,
+    "stocks.stocks.3.symbol": 5,
+    "stocks.stocks.3.current_price": 8,
+    "stocks.stocks.3.change_percent": 6,
+    "stocks.stocks.3.formatted": 22,
+    "stocks.stocks.4.symbol": 5,
+    "stocks.stocks.4.current_price": 8,
+    "stocks.stocks.4.change_percent": 6,
+    "stocks.stocks.4.formatted": 22,
 }
 
 # Regex patterns
@@ -585,7 +617,7 @@ class TemplateEngine:
         context = {}
         
         # Fetch from each source
-        sources = ["weather", "datetime", "home_assistant", "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels", "traffic"]
+        sources = ["weather", "datetime", "home_assistant", "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels", "traffic", "stocks"]
         
         for source in sources:
             try:
@@ -666,6 +698,7 @@ class TemplateEngine:
             "surf": "surf",
             "baywheels": "baywheels",
             "traffic": "traffic",
+            "stocks": "stocks",
         }
         
         feature_name = feature_map.get(source)
@@ -928,6 +961,7 @@ class TemplateEngine:
             "surf": "surf",
             "baywheels": "baywheels",
             "traffic": "traffic",
+            "stocks": "stocks",
         }
         
         feature_name = feature_map.get(source)
@@ -1167,7 +1201,7 @@ class TemplateEngine:
             List of source names that are configured
         """
         available = []
-        sources = ["weather", "datetime", "home_assistant", "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels", "traffic"]
+        sources = ["weather", "datetime", "home_assistant", "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels", "traffic", "stocks"]
         
         for source in sources:
             try:
@@ -1281,6 +1315,7 @@ class TemplateEngine:
                     "surf": "surf",
                     "baywheels": "baywheels",
                     "traffic": "traffic",
+                    "stocks": "stocks",
                 }
                 feature = feature_map.get(source)
                 if feature:

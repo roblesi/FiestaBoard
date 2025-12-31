@@ -395,6 +395,33 @@ export interface SilenceScheduleFeatureConfig {
   end_time: string;   // UTC ISO format (e.g., "15:00+00:00")
 }
 
+export interface StocksFeatureConfig {
+  enabled: boolean;
+  finnhub_api_key?: string;  // Optional - enables better symbol search
+  symbols: string[];  // List of stock symbols (max 5)
+  time_window: string;  // "1 Day", "5 Days", "1 Month", "3 Months", "6 Months", "1 Year", "2 Years", "5 Years", "ALL"
+  refresh_seconds: number;
+  color_rules?: {
+    change_percent?: Array<{
+      condition: string;
+      value: number;
+      color: string;
+    }>;
+  };
+}
+
+export interface StockSymbol {
+  symbol: string;
+  name: string;
+}
+
+export interface StockSymbolValidation {
+  valid: boolean;
+  symbol: string;
+  name?: string;
+  error?: string;
+}
+
 export interface FeaturesConfig {
   weather: WeatherFeatureConfig;
   datetime: DateTimeFeatureConfig;
@@ -407,6 +434,7 @@ export interface FeaturesConfig {
   baywheels: BayWheelsFeatureConfig;
   traffic: TrafficFeatureConfig;
   silence_schedule: SilenceScheduleFeatureConfig;
+  stocks: StocksFeatureConfig;
 }
 
 export interface GeneralConfig {
@@ -716,6 +744,24 @@ export const api = {
     }>("/traffic/routes/validate", {
       method: "POST",
       body: JSON.stringify({ origin, destination, destination_name, travel_mode }),
+    }),
+  
+  // Stocks endpoints
+  searchStockSymbols: (query: string, limit?: number) => {
+    const params = new URLSearchParams({
+      query,
+      ...(limit !== undefined && { limit: limit.toString() }),
+    });
+    return fetchApi<{
+      symbols: StockSymbol[];
+      count: number;
+      query: string;
+    }>(`/stocks/search?${params}`);
+  },
+  validateStockSymbol: (symbol: string) =>
+    fetchApi<StockSymbolValidation>("/stocks/validate", {
+      method: "POST",
+      body: JSON.stringify({ symbol }),
     }),
   
   // General configuration
