@@ -1,6 +1,6 @@
 # Vestaboard Display Service
 
-A Python service that runs in Docker to display dynamic information on your Vestaboard, including weather, date/time, house status, Star Trek quotes, Apple Music "Now Playing", and guest WiFi credentials.
+A Python service that runs in Docker to display dynamic information on your Vestaboard, including weather, date/time, house status, Star Trek quotes, Apple Music "Now Playing", stock prices, and guest WiFi credentials.
 
 ## 🚀 TLDR - Quick Start
 
@@ -50,6 +50,7 @@ docker-compose down
 - 🚴 **Bay Wheels**: Track bike availability at multiple stations with visual station finder
 - 🚇 **Muni Transit**: Real-time SF Muni arrival predictions with stop finder (search by address or location)
 - 🚗 **Traffic**: Travel time to destinations with live traffic conditions (multiple routes supported, compare different modes: drive, bike, transit, walk)
+- 📈 **Stocks**: Monitor stock prices and percentage changes for up to 5 symbols with color-coded indicators
 - 🌙 **Silence Schedule**: Configure a time window when the Vestaboard won't send updates (e.g., 8pm-7am)
 
 ### System Features
@@ -176,6 +177,14 @@ All configuration is done via environment variables in `.env`:
 - `GUEST_WIFI_ENABLED`: Display guest WiFi credentials (default: `false`)
 - `GUEST_WIFI_SSID`: Network name
 - `GUEST_WIFI_PASSWORD`: Network password
+
+#### Stocks
+- `STOCKS_ENABLED`: Enable stock monitoring (default: `false`)
+- `STOCKS_SYMBOLS`: Comma-separated list of stock symbols (max 5, e.g., "GOOG,AAPL,MSFT,TSLA,NVDA")
+- `STOCKS_TIME_WINDOW`: Time period for percentage change calculation (default: `1 Day`)
+  - Options: `1 Day`, `5 Days`, `1 Month`, `3 Months`, `6 Months`, `1 Year`, `2 Years`, `5 Years`, `ALL`
+- `STOCKS_REFRESH_SECONDS`: How often to fetch stock data (default: `300` = 5 minutes)
+- `FINNHUB_API_KEY`: Optional - enables better symbol search/autocomplete (get free key from [finnhub.io](https://finnhub.io/))
 
 #### Silence Schedule
 - `SILENCE_SCHEDULE_ENABLED`: Enable silence schedule (default: `false`)
@@ -511,6 +520,46 @@ Monitor drive times to multiple destinations with live traffic conditions.
 HOME→WORK: {{traffic.routes.0.duration_minutes}}m
 HOME→AIRPORT: {{traffic.routes.1.duration_minutes}}m
 ```
+
+### Stocks
+Monitor stock prices and percentage changes for up to 5 symbols with automatic color coding.
+
+**Features:**
+- **Multiple Symbols**: Track up to 5 stock symbols simultaneously
+- **Color-Coded Display**: Automatic green/red/white indicators based on price change
+- **Time Window Selection**: Choose percentage change period (1 Day, 5 Days, 1 Month, etc.)
+- **Column Alignment**: Prices and percentages are automatically aligned for clean display
+- **Symbol Search**: Autocomplete with popular stocks (optional Finnhub API for enhanced search)
+- **Indexed Template Access**: Use `{{stocks.stocks.0.symbol}}` to access specific stocks
+- **Formatted Display**: Pre-formatted strings with symbol, color, price, and percentage
+
+**Setup:**
+1. Enable Stocks in Settings
+2. (Optional) Add a Finnhub API key for enhanced symbol search (get free key from [finnhub.io](https://finnhub.io/))
+3. Add up to 5 stock symbols (e.g., GOOG, AAPL, MSFT, TSLA, NVDA)
+4. Select a time window for percentage change calculation
+5. Use indexed variables in your page templates
+
+**Template Variables:**
+- `{{stocks.stocks.0.symbol}}` - Stock symbol (e.g., "GOOG")
+- `{{stocks.stocks.0.current_price}}` - Current price (e.g., "150.25")
+- `{{stocks.stocks.0.change_percent}}` - Percentage change with sign (e.g., "+1.18%")
+- `{{stocks.stocks.0.formatted}}` - Pre-formatted string: `SYMBOL{COLOR} $PRICE PERCENTAGE`
+  - Example: `GOOG{green} $150.25 +1.18%`
+  - Color is green for positive, red for negative, white for zero change
+- Replace `0` with `1`, `2`, `3`, or `4` for additional stocks
+
+**Example Template:**
+```
+{center}STOCK PRICES
+{{stocks.stocks.0.formatted}}
+{{stocks.stocks.1.formatted}}
+{{stocks.stocks.2.formatted}}
+```
+
+**Data Source:**
+- Uses Yahoo Finance (yfinance) for stock data - no API key required
+- Optional Finnhub integration for enhanced symbol search and autocomplete
 
 ## Future Features
 
