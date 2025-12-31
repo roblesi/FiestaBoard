@@ -207,6 +207,12 @@ export interface PagePreviewResponse {
   raw: Record<string, unknown>;
 }
 
+export interface PagePreviewBatchResponse {
+  previews: Record<string, PagePreviewResponse | { error: string; available: false }>;
+  total: number;
+  successful: number;
+}
+
 export interface PageSendResponse {
   status: string;
   page_id: string;
@@ -574,6 +580,11 @@ export const api = {
     fetchApi<PageDeleteResponse>(`/pages/${pageId}`, { method: "DELETE" }),
   previewPage: (pageId: string) =>
     fetchApi<PagePreviewResponse>(`/pages/${pageId}/preview`, { method: "POST" }),
+  previewPagesBatch: (pageIds: string[]) =>
+    fetchApi<PagePreviewBatchResponse>("/pages/preview/batch", {
+      method: "POST",
+      body: JSON.stringify({ page_ids: pageIds }),
+    }),
   sendPage: (pageId: string, target?: "ui" | "board" | "both") => {
     const params = target ? `?target=${target}` : "";
     return fetchApi<PageSendResponse>(`/pages/${pageId}/send${params}`, { method: "POST" });

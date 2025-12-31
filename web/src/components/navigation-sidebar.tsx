@@ -99,8 +99,8 @@ export function NavigationSidebar() {
       {/* Mobile Menu */}
       <div 
         className={cn(
-          "lg:hidden fixed top-14 left-0 right-0 z-[95] bg-background border-b shadow-lg transform transition-transform duration-200 ease-in-out",
-          mobileMenuOpen ? "translate-y-0" : "-translate-y-full pointer-events-none"
+          "lg:hidden fixed top-14 left-0 right-0 z-[95] bg-background border-b shadow-lg",
+          mobileMenuOpen ? "" : "hidden"
         )}
       >
         <nav className="space-y-1 px-3 py-4">
@@ -114,7 +114,7 @@ export function NavigationSidebar() {
                 href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-4 py-3 text-base font-medium transition-colors min-h-[48px]",
+                  "flex items-center gap-3 rounded-lg px-4 py-3 text-base font-medium min-h-[48px]",
                   isActive
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground active:bg-accent"
@@ -161,7 +161,7 @@ export function NavigationSidebar() {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium",
                     isActive
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"

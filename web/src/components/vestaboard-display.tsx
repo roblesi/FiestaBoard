@@ -142,15 +142,15 @@ const GridRow = memo(function GridRow({
 // Individual character tile component - memoized to prevent unnecessary re-renders
 const CharTile = memo(function CharTile({ token, size = "md", boardType = "black" }: { token: Token; size?: "sm" | "md" | "lg"; boardType?: "black" | "white" }) {
   const sizeClasses = {
-    sm: "w-[14px] h-[18px]",
-    md: "w-[20px] h-[28px] sm:w-[24px] sm:h-[34px] md:w-[28px] md:h-[40px]",
-    lg: "w-[24px] h-[34px] sm:w-[28px] sm:h-[40px] md:w-[32px] md:h-[46px]",
+    sm: "w-[14px] h-[18px]", // Small previews stay fixed size
+    md: "w-[14px] h-[20px] sm:w-[20px] sm:h-[28px] md:w-[24px] md:h-[34px] lg:w-[28px] lg:h-[40px]", // Responsive
+    lg: "w-[18px] h-[26px] sm:w-[24px] sm:h-[34px] md:w-[28px] md:h-[40px] lg:w-[32px] lg:h-[46px]", // Responsive
   };
   
   const textSizeClasses = {
-    sm: "text-[7px]",
-    md: "text-[10px] sm:text-[13px] md:text-[16px]",
-    lg: "text-[13px] sm:text-[16px] md:text-[20px]",
+    sm: "text-[7px]", // Small previews stay fixed size
+    md: "text-[7px] sm:text-[10px] md:text-[13px] lg:text-[16px]", // Responsive
+    lg: "text-[10px] sm:text-[13px] md:text-[16px] lg:text-[20px]", // Responsive
   };
   
   // White board inverts character text colors
@@ -161,9 +161,9 @@ const CharTile = memo(function CharTile({ token, size = "md", boardType = "black
     
     // Size-responsive margins for color blocks
     const colorMargins = {
-      sm: { top: 3, bottom: 4, horizontal: 1 },
-      md: { top: 6, bottom: 8, horizontal: 2 },
-      lg: { top: 8, bottom: 10, horizontal: 3 },
+      sm: { top: 3, bottom: 4, horizontal: 1 }, // Small previews stay fixed
+      md: { top: 6, bottom: 8, horizontal: 2 }, // Standard size for responsive boards
+      lg: { top: 8, bottom: 10, horizontal: 3 }, // Larger boards
     };
     
     const margins = colorMargins[size];
@@ -272,15 +272,15 @@ function FlipTile({
   boardType?: "black" | "white";
 }) {
   const sizeClasses = {
-    sm: "w-[14px] h-[18px]",
-    md: "w-[20px] h-[28px] sm:w-[24px] sm:h-[34px] md:w-[28px] md:h-[40px]",
-    lg: "w-[24px] h-[34px] sm:w-[28px] sm:h-[40px] md:w-[32px] md:h-[46px]",
+    sm: "w-[14px] h-[18px]", // Small previews stay fixed size
+    md: "w-[14px] h-[20px] sm:w-[20px] sm:h-[28px] md:w-[24px] md:h-[34px] lg:w-[28px] lg:h-[40px]", // Responsive
+    lg: "w-[18px] h-[26px] sm:w-[24px] sm:h-[34px] md:w-[28px] md:h-[40px] lg:w-[32px] lg:h-[46px]", // Responsive
   };
   
   const textSizeClasses = {
-    sm: "text-[7px]",
-    md: "text-[10px] sm:text-[13px] md:text-[16px]",
-    lg: "text-[13px] sm:text-[16px] md:text-[20px]",
+    sm: "text-[7px]", // Small previews stay fixed size
+    md: "text-[7px] sm:text-[10px] md:text-[13px] lg:text-[16px]", // Responsive
+    lg: "text-[10px] sm:text-[13px] md:text-[16px] lg:text-[20px]", // Responsive
   };
   
   // Generate truly random values using a better hash function
@@ -636,16 +636,16 @@ export const VestaboardDisplay = memo(function VestaboardDisplay({ message, isLo
   
   // Increased padding for more pronounced bezel - more vertical space to match real board
   const paddingClasses = {
-    sm: "px-3 py-4",
-    md: "px-4 py-6 sm:px-5 sm:py-8 md:px-6 md:py-10",
-    lg: "px-5 py-7 sm:px-6 sm:py-9 md:px-8 md:py-12",
+    sm: "px-3 py-4", // Small previews stay fixed size
+    md: "px-2 py-3 sm:px-4 sm:py-6 md:px-5 md:py-8 lg:px-6 lg:py-10", // Responsive
+    lg: "px-3 py-4 sm:px-5 sm:py-7 md:px-6 md:py-9 lg:px-8 lg:py-12", // Responsive
   };
   
   // Increased gap for more visible borders between tiles
   const gapClasses = {
-    sm: "gap-[3px]",
-    md: "gap-[4px] sm:gap-[5px]",
-    lg: "gap-[5px] sm:gap-[6px] md:gap-[7px]",
+    sm: "gap-[3px]", // Small previews stay fixed size
+    md: "gap-[2px] sm:gap-[4px] md:gap-[5px]", // Responsive
+    lg: "gap-[3px] sm:gap-[5px] md:gap-[6px] lg:gap-[7px]", // Responsive
   };
 
   // White board has light bezel and border
@@ -668,66 +668,70 @@ export const VestaboardDisplay = memo(function VestaboardDisplay({ message, isLo
       inset 0 0 0 1px rgba(255,255,255,0.03)
     `;
 
-  // Calculate minimum width needed for tiles to not be squished
-  // Based on: 22 cols * tile width + 21 gaps + padding
-  const minWidths = {
-    sm: 380,  // 22*14 + 21*3 + padding
-    md: 520,  // 22*20 + 21*4 + padding  
-    lg: 620,  // 22*24 + 21*5 + padding
-  };
+  // Calculate minimum width needed - these are now just used for documentation
+  // Actual width is determined by responsive CSS classes on tiles
+  // Mobile (base): 22*14 + 21*2 + padding ≈ 360px
+  // Tablet (sm): 22*20 + 21*4 + padding ≈ 520px
+  // Desktop (md+): 22*24+ + 21*5+ + padding ≈ 620px+
+
+  // Adjust border and corner styles based on size
+  const borderClasses = size === "sm" 
+    ? "rounded-lg border-[3px]" // Small previews stay fixed
+    : "rounded-lg sm:rounded-xl border-[3px] sm:border-[4px] lg:border-[5px]"; // md/lg are responsive
 
   return (
-    <div 
-      className={`rounded-xl border-[5px] ${className}`}
-      style={{ 
-        backgroundColor: bezelBg,
-        borderColor,
-        boxShadow,
-        minWidth: `${minWidths[size]}px`,
-        width: 'fit-content'
-      }}
-    >
-      {/* Inner bezel border */}
+    <div className={`w-full flex justify-center`}>
       <div 
-        className={`${paddingClasses[size]} relative`}
-        style={{
-          background: isWhiteBoard
-            ? 'linear-gradient(135deg, #fafafa 0%, #f0f0f0 100%)'
-            : 'linear-gradient(135deg, #0a0a0a 0%, #000000 100%)'
+        className={`${borderClasses} ${className} max-w-full`}
+        style={{ 
+          backgroundColor: bezelBg,
+          borderColor,
+          boxShadow,
+          width: 'fit-content'
         }}
       >
+        {/* Inner bezel border */}
         <div 
-          className={`flex flex-col ${gapClasses[size]}`}
-          style={(isLoading || !grid) ? { perspective: '600px' } : undefined}
+          className={`${paddingClasses[size]} relative`}
+          style={{
+            background: isWhiteBoard
+              ? 'linear-gradient(135deg, #fafafa 0%, #f0f0f0 100%)'
+              : 'linear-gradient(135deg, #0a0a0a 0%, #000000 100%)'
+          }}
         >
-          {(isLoading || !grid) ? (
-            // Loading or no message - show flip animation grid
-            Array.from({ length: ROWS }).map((_, rowIdx) => (
-              <div key={rowIdx} className={`flex ${gapClasses[size]} justify-center`}>
-                {Array.from({ length: COLS }).map((_, colIdx) => (
-                  <FlipTile 
-                    key={colIdx} 
-                    rowIdx={rowIdx} 
-                    colIdx={colIdx} 
-                    size={size} 
-                    boardType={boardType}
-                  />
-                ))}
-              </div>
-            ))
-          ) : (
-            // Actual character grid - memoize rows to prevent row-level re-renders
-            grid.map((row, rowIdx) => (
-              <GridRow 
-                key={`row-${rowIdx}`} 
-                row={row} 
-                rowIdx={rowIdx} 
-                size={size} 
-                gapClass={gapClasses[size]} 
-                boardType={boardType}
-              />
-            ))
-          )}
+          <div 
+            className={`flex flex-col ${gapClasses[size]}`}
+            style={(isLoading || !grid) ? { perspective: '600px' } : undefined}
+          >
+            {(isLoading || !grid) ? (
+              // Loading or no message - show flip animation grid
+              Array.from({ length: ROWS }).map((_, rowIdx) => (
+                <div key={rowIdx} className={`flex ${gapClasses[size]} justify-center`}>
+                  {Array.from({ length: COLS }).map((_, colIdx) => (
+                    <FlipTile 
+                      key={colIdx} 
+                      rowIdx={rowIdx} 
+                      colIdx={colIdx} 
+                      size={size} 
+                      boardType={boardType}
+                    />
+                  ))}
+                </div>
+              ))
+            ) : (
+              // Actual character grid - memoize rows to prevent row-level re-renders
+              grid.map((row, rowIdx) => (
+                <GridRow 
+                  key={`row-${rowIdx}`} 
+                  row={row} 
+                  rowIdx={rowIdx} 
+                  size={size} 
+                  gapClass={gapClasses[size]} 
+                  boardType={boardType}
+                />
+              ))
+            )}
+          </div>
         </div>
       </div>
     </div>
