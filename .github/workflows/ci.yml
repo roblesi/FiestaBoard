@@ -81,7 +81,11 @@ jobs:
     
     - name: Install UI dependencies
       working-directory: web
-      run: npm ci
+      run: |
+        npm ci
+        # Ensure optional dependencies (like platform-specific rollup binaries) are installed
+        # npm ci sometimes skips optional dependencies on CI, so we install them explicitly
+        npm install --no-save
     
     - name: Run UI tests
       working-directory: web
