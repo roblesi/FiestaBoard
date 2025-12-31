@@ -469,6 +469,35 @@ class MessageFormatter:
         return "\n".join(lines[:self.MAX_ROWS])
 
 
+    def format_stocks(self, stocks_data: Dict) -> str:
+        """
+        Format stocks data for display.
+        
+        Args:
+            stocks_data: Dictionary with stocks information
+            
+        Returns:
+            Formatted string (max 6 lines)
+        """
+        if not stocks_data:
+            return "Stocks: Unavailable"
+        
+        stocks = stocks_data.get("stocks", [])
+        if not stocks:
+            return "Stocks: No data available"
+        
+        lines = []
+        
+        # Display up to 4 stocks (one per line, or combine if space allows)
+        for stock in stocks[:4]:
+            formatted = stock.get("formatted", "")
+            if formatted:
+                lines.append(formatted)
+        
+        # Ensure we don't exceed 6 rows
+        return "\n".join(lines[:self.MAX_ROWS])
+
+
 def get_message_formatter() -> MessageFormatter:
     """Get message formatter instance."""
     return MessageFormatter()
