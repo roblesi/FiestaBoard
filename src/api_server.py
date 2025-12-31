@@ -13,9 +13,13 @@ from collections import deque
 from datetime import datetime
 from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
+# Load environment variables from .env file
+load_dotenv()
 
 from . import __version__
 from .main import VestaboardDisplayService
@@ -1498,6 +1502,84 @@ async def get_transit_cache_status():
         return status
     except Exception as e:
         logger.error(f"Error getting transit cache status: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# Stocks Endpoints
+# =============================================================================
+
+@app.get("/stocks/search")
+async def search_stock_symbols(
+    query: str = Query(..., description="Search query (symbol or company name)"),
+    limit: int = Query(10, ge=1, le=50, description="Maximum number of results")
+):
+    """
+    Search for stock symbols by symbol or company name.
+    
+    Uses Finnhub API if configured, otherwise searches curated list of popular stocks.
+    
+    Args:
+        query: Search query (symbol or company name)
+        limit: Maximum number of results (default 10, max 50)
+    
+    Returns:
+        List of matching symbols with company names:
+        [{"symbol": "GOOG", "name": "Alphabet Inc."}, ...]
+    """
+    try:
+        from src.data_sources.stocks import StocksSource
+        from src.config import Config
+        
+        # Get Finnhub API key if configured
+        finnhub_api_key = Config.FINNHUB_API_KEY if Config.FINNHUB_API_KEY else None
+        
+        results = StocksSource.search_symbols(
+            query=query,
+            limit=limit,
+            finnhub_api_key=finnhub_api_key
+        )
+        
+        return {
+            "symbols": results,
+            "count": len(results),
+            "query": query
+        }
+    except Exception as e:
+        logger.error(f"Error searching stock symbols: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/stocks/validate")
+async def validate_stock_symbol(request: dict):
+    """
+    Validate if a stock symbol is valid.
+    
+    Uses yfinance to check if the symbol exists and has price data.
+    
+    Body:
+        symbol: Stock symbol to validate (e.g., "GOOG")
+    
+    Returns:
+        Validation result:
+        {
+            "valid": bool,
+            "symbol": str,
+            "name": str (if valid),
+            "error": str (if invalid)
+        }
+    """
+    symbol = request.get("symbol")
+    if not symbol:
+        raise HTTPException(status_code=400, detail="symbol parameter required")
+    
+    try:
+        from src.data_sources.stocks import StocksSource
+        
+        result = StocksSource.validate_symbol(symbol)
+        return result
+    except Exception as e:
+        logger.error(f"Error validating stock symbol: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

@@ -84,4 +84,9 @@ When adding a new feature to the project:
 - Document any configuration requirements or setup steps
 - Update relevant sections (Features, Configuration, Usage, etc.) as appropriate
 - Ensure the documentation is clear and accessible to users
+- **MUST document all feature variables (API keys, configuration values, etc.) in `env.example`**
+  - Add environment variable entries with clear descriptions
+  - Include example values where appropriate
+  - Mark optional vs required variables
+  - Follow the existing format and style in `env.example`
 

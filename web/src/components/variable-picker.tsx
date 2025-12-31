@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { api } from "@/lib/api";
-import { ChevronDown, Bike, TrainFront, Car, Home } from "lucide-react";
+import { ChevronDown, Bike, TrainFront, Car, Home, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { VESTABOARD_COLORS } from "@/lib/vestaboard-colors";
@@ -211,6 +211,21 @@ export function VariablePicker({
     },
     refetchInterval: 30000,
     enabled: templateVars?.variables?.weather !== undefined,
+  });
+
+  // Fetch live Stocks data
+  const { data: stocksData } = useQuery({
+    queryKey: ["stocks-live-data"],
+    queryFn: async () => {
+      try {
+        const display = await api.getDisplayRaw("stocks");
+        return display.data as { stocks?: any[] };
+      } catch {
+        return null;
+      }
+    },
+    refetchInterval: 30000,
+    enabled: templateVars?.variables?.stocks !== undefined,
   });
 
   const handleCopy = (text: string) => {
@@ -675,6 +690,91 @@ export function VariablePicker({
                             <p className="mb-2">Configure locations in Settings to see indexed variables here.</p>
                             <p className="font-mono text-[10px]">
                               Example: <code className="bg-background px-1 rounded">locations.0.temperature</code>, <code className="bg-background px-1 rounded">locations.1.condition</code>
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CollapsibleSection>
+                );
+              }
+
+              // Special handling for Stocks with live stock data OR when enabled but no stocks yet
+              if (category === "stocks") {
+                return (
+                  <CollapsibleSection key={category} title={category} defaultOpen={false}>
+                    <div className="space-y-3">
+                      {/* Aggregate/General Variables */}
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1.5">General</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {vars.filter(v => !v.startsWith("stocks.")).map((variable) => {
+                            const varValue = `{{${category}.${variable}}}`;
+                            return (
+                              <VariablePill
+                                key={variable}
+                                label={variable}
+                                value={varValue}
+                                onInsert={() => handleInsert(varValue)}
+                                onDragStart={(e) => handleDragStart(e, varValue)}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Individual Stocks Accordion */}
+                      <div className="space-y-1.5">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <TrendingUp className="h-3 w-3" />
+                          Stocks {stocksData?.stocks ? `(${stocksData.stocks.length})` : "(None configured)"}
+                        </p>
+                        {stocksData?.stocks && stocksData.stocks.length > 0 ? (
+                          <div className="max-h-[400px] overflow-y-auto pr-1">
+                            <Accordion type="single" collapsible className="w-full">
+                              {stocksData.stocks.map((stock: any, index: number) => (
+                              <AccordionItem key={stock.symbol || index} value={`stock-${index}`} className="border-b-0">
+                                <AccordionTrigger className="py-2 hover:no-underline">
+                                  <div className="flex items-center gap-2 text-xs">
+                                    <TrendingUp className="h-4 w-4" />
+                                    <div className="text-left">
+                                      <div className="font-medium">{stock.symbol || `Stock ${index}`}</div>
+                                      <div className="text-muted-foreground text-xs">
+                                        ${stock.current_price?.toFixed(2) || "N/A"} • {stock.change_percent ? `${stock.change_percent >= 0 ? '+' : ''}${stock.change_percent.toFixed(2)}%` : "N/A"} • Index: {index}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                  <div className="space-y-2 pt-2 pl-2">
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {["symbol", "current_price", "previous_price", "change_percent", "change_direction", "formatted", "company_name"].map((field) => {
+                                        const varValue = `{{${category}.stocks.${index}.${field}}}`;
+                                        return (
+                                          <VariablePill
+                                            key={field}
+                                            label={field}
+                                            value={varValue}
+                                            onInsert={() => handleInsert(varValue)}
+                                            onDragStart={(e) => handleDragStart(e, varValue)}
+                                          />
+                                        );
+                                      })}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                                      <code className="text-xs">stocks.{index}.*</code>
+                                    </div>
+                                  </div>
+                                </AccordionContent>
+                              </AccordionItem>
+                            ))}
+                            </Accordion>
+                          </div>
+                        ) : (
+                          <div className="p-3 bg-muted/30 rounded-lg text-xs text-muted-foreground">
+                            <p className="mb-2">Configure stock symbols in Settings to see indexed variables here.</p>
+                            <p className="font-mono text-[10px]">
+                              Example: <code className="bg-background px-1 rounded">stocks.0.symbol</code>, <code className="bg-background px-1 rounded">stocks.1.current_price</code>, <code className="bg-background px-1 rounded">stocks.2.formatted</code>
                             </p>
                           </div>
                         )}

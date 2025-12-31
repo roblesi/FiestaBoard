@@ -591,6 +591,45 @@ class Config:
             logger.warning(f"Invalid silence schedule time format: {e}")
             return False
     
+    # ==================== Stocks Configuration ====================
+    
+    @classmethod
+    @property
+    def STOCKS_ENABLED(cls) -> bool:
+        """Whether stocks monitoring is enabled."""
+        return cls._get_feature("stocks").get("enabled", False)
+    
+    @classmethod
+    @property
+    def FINNHUB_API_KEY(cls) -> str:
+        """Finnhub API key for stock symbol search (optional)."""
+        return cls._get_feature("stocks").get("finnhub_api_key", "")
+    
+    @classmethod
+    @property
+    def STOCKS_SYMBOLS(cls) -> List[str]:
+        """List of stock symbols to monitor (max 5)."""
+        feature_config = cls._get_feature("stocks")
+        symbols = feature_config.get("symbols", [])
+        if isinstance(symbols, list):
+            # Limit to 5 symbols max
+            return symbols[:5]
+        elif isinstance(symbols, str):
+            return [symbols] if symbols else []
+        return []
+    
+    @classmethod
+    @property
+    def STOCKS_TIME_WINDOW(cls) -> str:
+        """Time window for price comparison (human-readable format)."""
+        return cls._get_feature("stocks").get("time_window", "1 Day")
+    
+    @classmethod
+    @property
+    def STOCKS_REFRESH_SECONDS(cls) -> int:
+        """Stocks data refresh interval in seconds."""
+        return cls._get_feature("stocks").get("refresh_seconds", 300)
+    
     # ==================== Legacy/Unused Configuration ====================
     
     # These are kept for backward compatibility but not actively used
@@ -657,6 +696,7 @@ class Config:
             "surf_enabled": cls.SURF_ENABLED,
             "baywheels_enabled": cls.BAYWHEELS_ENABLED,
             "traffic_enabled": cls.TRAFFIC_ENABLED,
+            "stocks_enabled": cls.STOCKS_ENABLED,
             # Vestaboard config
             "vb_api_mode": cls.VB_API_MODE,
             "vb_host": cls.VB_HOST if cls.VB_API_MODE.lower() == "local" else "cloud",

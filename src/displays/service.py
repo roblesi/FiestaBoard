@@ -18,6 +18,7 @@ from ..data_sources.muni import get_muni_source
 from ..data_sources.surf import get_surf_source
 from ..data_sources.baywheels import get_baywheels_source
 from ..data_sources.traffic import get_traffic_source
+from ..data_sources.stocks import get_stocks_source
 from ..formatters.message_formatter import get_message_formatter
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,7 @@ DISPLAY_TYPES = [
     "surf",
     "baywheels",
     "traffic",
+    "stocks",
 ]
 
 
@@ -71,6 +73,7 @@ class DisplayService:
         self.surf_source = get_surf_source()
         self.baywheels_source = get_baywheels_source()
         self.traffic_source = get_traffic_source()
+        self.stocks_source = get_stocks_source()
         
         logger.info("DisplayService initialized")
     
@@ -139,6 +142,11 @@ class DisplayService:
                 "available": self.traffic_source is not None and Config.TRAFFIC_ENABLED,
                 "description": "Traffic conditions to destination",
             },
+            {
+                "type": "stocks",
+                "available": self.stocks_source is not None and Config.STOCKS_ENABLED,
+                "description": "US stock market prices and percentage changes",
+            },
         ]
         return displays
     
@@ -183,6 +191,8 @@ class DisplayService:
                 return self._get_baywheels()
             elif display_type == "traffic":
                 return self._get_traffic()
+            elif display_type == "stocks":
+                return self._get_stocks()
             else:
                 return DisplayResult(
                     display_type=display_type,
@@ -737,6 +747,69 @@ class DisplayService:
         
         return DisplayResult(
             display_type="traffic",
+            formatted=formatted,
+            raw=raw_data,
+            available=True
+        )
+    
+    def _get_stocks(self) -> DisplayResult:
+        """Get stocks display."""
+        # If Stocks is enabled but not configured (no symbols), mark as unavailable
+        if not Config.STOCKS_ENABLED:
+            return DisplayResult(
+                display_type="stocks",
+                formatted="",
+                raw={},
+                available=False,
+                error="Stocks disabled"
+            )
+        
+        # If enabled but no source (no symbols configured), mark as unavailable
+        if not self.stocks_source:
+            return DisplayResult(
+                display_type="stocks",
+                formatted="",
+                raw={},
+                available=False,
+                error="No stock symbols configured"
+            )
+        
+        # Feature is enabled and has symbols - mark as available even if no data yet
+        # This allows template variables to show in the UI before data is fetched
+        
+        # Get data for all configured symbols
+        stocks = self.stocks_source.fetch_stocks_data()
+        
+        if not stocks:
+            # No stocks configured yet or failed to fetch - still mark as available
+            return DisplayResult(
+                display_type="stocks",
+                formatted="Stocks: No data available",
+                raw={"stocks": []},
+                available=True,
+                error="No stock data available"
+            )
+        
+        # Build raw data with all template variables
+        raw_data = {
+            "stocks": stocks,
+            "symbol_count": len(stocks),
+        }
+        
+        # For backward compatibility, also include first stock data at top level
+        if stocks:
+            first_stock = stocks[0]
+            raw_data["symbol"] = first_stock.get("symbol", "")
+            raw_data["current_price"] = first_stock.get("current_price", 0.0)
+            raw_data["previous_price"] = first_stock.get("previous_price", 0.0)
+            raw_data["change_percent"] = first_stock.get("change_percent", 0.0)
+            raw_data["change_direction"] = first_stock.get("change_direction", "up")
+            raw_data["formatted"] = first_stock.get("formatted", "")
+            raw_data["company_name"] = first_stock.get("company_name", "")
+        
+        formatted = self.formatter.format_stocks(raw_data)
+        return DisplayResult(
+            display_type="stocks",
             formatted=formatted,
             raw=raw_data,
             available=True

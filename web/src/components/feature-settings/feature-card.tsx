@@ -19,12 +19,13 @@ import { BayWheelsStationFinder } from "./baywheels-station-finder";
 import { MuniStopFinder } from "./muni-stop-finder";
 import { TrafficRoutePlanner } from "./traffic-route-planner";
 import { WeatherLocationManager } from "./weather-location-manager";
+import { StockSymbolInput } from "./stock-symbol-input";
 import { utcToLocalTime, localTimeToUTC } from "@/lib/timezone-utils";
 
 export interface FeatureField {
   key: string;
   label: string;
-  type: "text" | "password" | "select" | "number" | "location" | "time";
+  type: "text" | "password" | "select" | "number" | "location" | "time" | "stocks";
   placeholder?: string;
   options?: { value: string; label: string }[];
   required?: boolean;
@@ -1124,6 +1125,12 @@ export function FeatureCard({
                       onChange={(value) => handleChange(field.key, value)}
                       placeholder={field.placeholder}
                     />
+                  ) : field.type === "stocks" ? (
+                    <StockSymbolInput
+                      selectedSymbols={(formData[field.key] as string[]) ?? []}
+                      onSymbolsChange={(symbols) => handleChange(field.key, symbols)}
+                      maxSymbols={5}
+                    />
                   ) : (
                     <input
                       type="text"
@@ -1227,6 +1234,10 @@ export function FeatureCard({
             // For password fields, "***" indicates a value is set
             if (f.type === "password") {
               return !hasSecretValue(f.key);
+            }
+            // For array fields (like stocks symbols), check if array is empty
+            if (f.type === "stocks" || Array.isArray(value)) {
+              return !value || (Array.isArray(value) && value.length === 0);
             }
             // For other fields, check if value is empty
             return !value || (typeof value === "string" && value.trim() === "");
