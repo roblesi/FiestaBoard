@@ -5,52 +5,48 @@ import { usePages, useBoardSettings } from "@/hooks/use-vestaboard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LayoutTemplate } from "lucide-react";
 import { VestaboardDisplay } from "@/components/vestaboard-display";
-import type { Page, PagePreviewResponse } from "@/lib/api";
+import type { Page, PagePreviewResponse, PagePreviewBatchResponse } from "@/lib/api";
 import { api } from "@/lib/api";
 
-// Cache key prefix for localStorage
-const PREVIEW_CACHE_PREFIX = "vestaboard_preview_";
+// Cache key for batch previews in localStorage
+const BATCH_CACHE_KEY = "vestaboard_previews_batch";
 
-// Get cached preview from localStorage
-function getCachedPreview(pageId: string, pageUpdatedAt: string): PagePreviewResponse | null {
-  if (typeof window === "undefined") return null;
+// Type for cached preview data
+interface CachedPreviewData {
+  preview: PagePreviewResponse;
+  pageUpdatedAt: string;
+  cachedAt: string;
+}
+
+// Get all cached previews from localStorage
+function getCachedPreviews(): Record<string, CachedPreviewData> {
+  if (typeof window === "undefined") return {};
   
   try {
-    const cacheKey = `${PREVIEW_CACHE_PREFIX}${pageId}`;
-    const cached = localStorage.getItem(cacheKey);
-    
-    if (!cached) return null;
-    
-    const { preview, pageUpdatedAt: cachedUpdatedAt } = JSON.parse(cached);
-    
-    // Check if page has been updated since we cached the preview
-    if (cachedUpdatedAt !== pageUpdatedAt) {
-      // Page changed, cache is stale
-      return null;
-    }
-    
-    return preview;
+    const cached = localStorage.getItem(BATCH_CACHE_KEY);
+    if (!cached) return {};
+    return JSON.parse(cached);
   } catch (error) {
     console.error("Error reading preview cache:", error);
-    return null;
+    return {};
   }
 }
 
-// Save preview to localStorage
-function setCachedPreview(pageId: string, pageUpdatedAt: string, preview: PagePreviewResponse): void {
+// Save all previews to localStorage
+function setCachedPreviews(previews: Record<string, CachedPreviewData>): void {
   if (typeof window === "undefined") return;
   
   try {
-    const cacheKey = `${PREVIEW_CACHE_PREFIX}${pageId}`;
-    const cacheData = {
-      preview,
-      pageUpdatedAt,
-      cachedAt: new Date().toISOString(),
-    };
-    localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+    localStorage.setItem(BATCH_CACHE_KEY, JSON.stringify(previews));
   } catch (error) {
     console.error("Error writing preview cache:", error);
   }
+}
+
+// Check if a cached preview is still valid for a page
+function isCacheValid(cached: CachedPreviewData | undefined, pageUpdatedAt: string): boolean {
+  if (!cached) return false;
+  return cached.pageUpdatedAt === pageUpdatedAt;
 }
 
 // Mini preview component for each page button - uses localStorage caching
@@ -245,7 +241,7 @@ export function PageGridSelector({
             {label}
           </label>
         )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-32 w-full" />
@@ -275,7 +271,7 @@ export function PageGridSelector({
           {label}
         </label>
       )}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {pages.map((page) => (
           <PageButton
             key={page.id}

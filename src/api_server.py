@@ -1983,6 +1983,63 @@ async def preview_page(page_id: str):
     }
 
 
+@app.post("/pages/preview/batch")
+async def preview_pages_batch(request: dict):
+    """
+    Preview multiple pages in a single request.
+    
+    Request body:
+        {
+            "page_ids": ["page1", "page2", ...]
+        }
+    
+    Returns a dict mapping page_id to preview data (or error).
+    """
+    page_ids = request.get("page_ids", [])
+    
+    if not isinstance(page_ids, list):
+        raise HTTPException(status_code=400, detail="page_ids must be a list")
+    
+    page_service = get_page_service()
+    results = {}
+    
+    for page_id in page_ids:
+        try:
+            result = page_service.preview_page(page_id)
+            
+            if result is None:
+                results[page_id] = {
+                    "error": "Page not found",
+                    "available": False
+                }
+            elif not result.available:
+                results[page_id] = {
+                    "error": result.error or "Page rendering failed",
+                    "available": False
+                }
+            else:
+                results[page_id] = {
+                    "page_id": page_id,
+                    "message": result.formatted,
+                    "lines": result.formatted.split('\n'),
+                    "display_type": result.display_type,
+                    "raw": result.raw,
+                    "available": True
+                }
+        except Exception as e:
+            logger.error(f"Error previewing page {page_id}: {str(e)}")
+            results[page_id] = {
+                "error": str(e),
+                "available": False
+            }
+    
+    return {
+        "previews": results,
+        "total": len(page_ids),
+        "successful": sum(1 for r in results.values() if r.get("available", False))
+    }
+
+
 @app.post("/pages/{page_id}/send")
 async def send_page(page_id: str, target: Optional[str] = None):
     """
