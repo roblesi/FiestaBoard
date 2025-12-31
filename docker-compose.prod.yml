@@ -4,6 +4,9 @@ services:
   # API Service - REST API for controlling the Vestaboard display
   vestaboard-api:
     image: vestaboard-api
+    build:
+      context: .
+      dockerfile: Dockerfile.api
     container_name: vestaboard-api
     env_file:
       - .env
@@ -30,6 +33,9 @@ services:
   # Web UI - Monitoring and control interface
   vestaboard-ui:
     image: vestaboard-ui
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
     container_name: vestaboard-ui
     restart: unless-stopped
     ports:

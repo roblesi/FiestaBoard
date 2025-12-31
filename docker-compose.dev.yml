@@ -23,20 +23,22 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Web UI - Development mode with HMR
+  # Web UI - Development mode with HMR and HTTP/2
   vestaboard-ui-dev:
     image: node:20-alpine
     container_name: vestaboard-ui-dev
     working_dir: /app
     volumes:
       - ./web:/app
+      - ./nginx-dev.conf:/etc/nginx/nginx.conf:ro
+      - ./start-dev-ui.sh:/start-dev-ui.sh:ro
       - /app/node_modules  # Anonymous volume to preserve node_modules
     ports:
       - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:6969
       - WATCHPACK_POLLING=true  # Enable polling for file changes in Docker
-    command: sh -c "npm install && npm run dev -- -H 0.0.0.0"
+    command: sh /start-dev-ui.sh
     depends_on:
       - vestaboard-api
     logging:

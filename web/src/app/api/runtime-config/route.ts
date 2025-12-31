@@ -6,16 +6,20 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 export async function GET(request: NextRequest) {
   try {
-    // In production, try to reach the API on common ports on the same host
+    // Try to reach the API - check multiple possible locations
     const hostname = request.headers.get('host')?.split(':')[0] || 'localhost';
     
-    // Try common API ports
-    const apiPorts = [6969, 8000];
+    // In Docker, try service name first, then localhost
+    const apiEndpoints = [
+      'http://vestaboard-api:8000/api/runtime-config',  // Docker service name
+      `http://${hostname}:6969/api/runtime-config`,      // External access
+      'http://localhost:6969/api/runtime-config',        // Local dev
+      'http://localhost:8000/api/runtime-config',        // Alternative port
+    ];
     
-    for (const port of apiPorts) {
+    for (const endpoint of apiEndpoints) {
       try {
-        const apiUrl = `http://${hostname}:${port}`;
-        const response = await fetch(`${apiUrl}/api/runtime-config`, {
+        const response = await fetch(endpoint, {
           signal: AbortSignal.timeout(2000), // 2 second timeout
         });
         
@@ -24,7 +28,7 @@ export async function GET(request: NextRequest) {
           return NextResponse.json(data);
         }
       } catch (err) {
-        // Try next port
+        // Try next endpoint
         continue;
       }
     }
