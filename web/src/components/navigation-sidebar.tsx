@@ -88,20 +88,28 @@ export function NavigationSidebar() {
       </header>
 
       {/* Mobile Menu Backdrop */}
-      {mobileMenuOpen && (
-        <div 
-          className="lg:hidden fixed inset-0 z-[90] bg-background/80 backdrop-blur-sm"
-          onClick={() => setMobileMenuOpen(false)}
-          aria-hidden="true"
-        />
-      )}
+      <div 
+        className={cn(
+          "lg:hidden fixed inset-0 z-[90] bg-background/80 backdrop-blur-sm transition-opacity duration-200 pointer-events-none",
+          mobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0"
+        )}
+        onClick={() => setMobileMenuOpen(false)}
+        aria-hidden="true"
+      />
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu - Always rendered but transformed off-screen */}
       <div 
         className={cn(
           "lg:hidden fixed top-14 left-0 right-0 z-[95] bg-background border-b shadow-lg",
-          mobileMenuOpen ? "" : "hidden"
+          "transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
+          mobileMenuOpen ? "translate-y-0" : "-translate-y-full"
         )}
+        style={{
+          // Force GPU acceleration and prevent flash
+          willChange: 'transform',
+          backfaceVisibility: 'hidden',
+          transform: mobileMenuOpen ? 'translate3d(0, 0, 0)' : 'translate3d(0, -100%, 0)',
+        }}
       >
         <nav className="space-y-1 px-3 py-4">
           {navigation.map((item) => {

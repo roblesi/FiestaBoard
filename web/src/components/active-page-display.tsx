@@ -5,6 +5,7 @@ import { useActivePage, useSetActivePage, usePagePreview, usePages, useBoardSett
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Moon, ArrowLeftRight } from "lucide-react";
 import { VestaboardDisplay } from "@/components/vestaboard-display";
@@ -95,6 +96,8 @@ export function ActivePageDisplay() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   // Pre-render state - start rendering grid in background after initial mount
   const [shouldPreRender, setShouldPreRender] = useState(false);
+  // Show content after animation completes
+  const [showSheetContent, setShowSheetContent] = useState(false);
   
   // Start pre-rendering grid in background after component mounts
   useEffect(() => {
@@ -107,6 +110,20 @@ export function ActivePageDisplay() {
     
     return () => clearTimeout(timer);
   }, []);
+  
+  // Handle showing content after animation completes
+  useEffect(() => {
+    if (isSheetOpen) {
+      // Wait for slide animation to complete (300ms) before revealing content
+      const timer = setTimeout(() => {
+        setShowSheetContent(true);
+      }, 320); // Slightly after animation (300ms + buffer)
+      return () => clearTimeout(timer);
+    } else {
+      // Hide immediately when closing
+      setShowSheetContent(false);
+    }
+  }, [isSheetOpen]);
   
   // Fetch active page setting
   const { 
@@ -291,7 +308,15 @@ export function ActivePageDisplay() {
           </SheetHeader>
           
           <div className="mt-6">
-            {shouldPreRender ? (
+            {!showSheetContent ? (
+              // Show lightweight skeleton during animation for smooth 60fps
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Skeleton className="h-32 w-full" />
+                <Skeleton className="h-32 w-full" />
+                <Skeleton className="h-32 w-full" />
+                <Skeleton className="h-32 w-full" />
+              </div>
+            ) : shouldPreRender ? (
               <PageGridSelector
                 activePageId={deferredActivePageId}
                 onSelectPage={handleSelectPage}

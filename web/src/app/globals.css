@@ -161,6 +161,167 @@
   animation: accordion-up 0.2s ease-out;
 }
 
+/* Tailwind animate utilities for Radix UI */
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes exit {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes slide-in-from-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-out-to-right {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes slide-in-from-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-out-to-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes slide-in-from-top {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-out-to-top {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-100%);
+  }
+}
+
+@keyframes slide-in-from-bottom {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-out-to-bottom {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+.animate-in {
+  animation: enter 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-out {
+  animation: exit 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fade-in-0 {
+  animation: fade-in 200ms ease-out;
+}
+
+.fade-out-0 {
+  animation: fade-out 200ms ease-out;
+}
+
+.slide-in-from-right {
+  animation: slide-in-from-right 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.slide-out-to-right {
+  animation: slide-out-to-right 250ms cubic-bezier(0.4, 0, 1, 1);
+}
+
+.slide-in-from-left {
+  animation: slide-in-from-left 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.slide-out-to-left {
+  animation: slide-out-to-left 250ms cubic-bezier(0.4, 0, 1, 1);
+}
+
+.slide-in-from-top {
+  animation: slide-in-from-top 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.slide-out-to-top {
+  animation: slide-out-to-top 250ms cubic-bezier(0.4, 0, 1, 1);
+}
+
+.slide-in-from-bottom {
+  animation: slide-in-from-bottom 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.slide-out-to-bottom {
+  animation: slide-out-to-bottom 250ms cubic-bezier(0.4, 0, 1, 1);
+}
+
 /* Page Transitions - CSS-based (works in all browsers) */
 @layer base {
   /* Animate page content on route changes */
@@ -236,14 +397,6 @@
   }
 }
 
-/* Sheet/Drawer smooth animations */
-[data-radix-dialog-overlay] {
-  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1) !important;
-}
-
-[data-radix-dialog-content] {
-  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1) !important;
-}
 
 /* Performance optimizations for interactive elements */
 @layer utilities {
@@ -293,5 +446,135 @@
     transition: opacity 100ms cubic-bezier(0.4, 0, 0.2, 1),
                 transform 100ms cubic-bezier(0.4, 0, 0.2, 1);
     will-change: opacity, transform;
+  }
+}
+
+/* ===== 60FPS MOBILE MENU ANIMATIONS ===== */
+/* Use GPU-accelerated transforms for smooth performance */
+
+/* Mobile menu panel - slide down from top */
+@keyframes mobile-menu-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -100%, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes mobile-menu-exit {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(0, -100%, 0);
+  }
+}
+
+/* Mobile menu classes */
+.mobile-menu-enter {
+  animation: mobile-menu-enter 250ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  /* Pre-load transform to avoid jank */
+  transform: translate3d(0, 0, 0);
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.mobile-menu-exit {
+  animation: mobile-menu-exit 200ms cubic-bezier(0.4, 0, 1, 1) forwards;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+/* Backdrop fade animations */
+@keyframes backdrop-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes backdrop-exit {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.backdrop-enter {
+  animation: backdrop-enter 200ms ease-out forwards;
+  will-change: opacity;
+}
+
+.backdrop-exit {
+  animation: backdrop-exit 150ms ease-in forwards;
+  will-change: opacity;
+}
+
+/* ===== 60FPS SHEET/DRAWER ANIMATIONS ===== */
+/* Direct keyframe animations for smooth sheet transitions */
+
+@keyframes sheet-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sheet-slide-in-right {
+  from {
+    transform: translate3d(100%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes sheet-slide-in-left {
+  from {
+    transform: translate3d(-100%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes sheet-slide-in-top {
+  from {
+    transform: translate3d(0, -100%, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes sheet-slide-in-bottom {
+  from {
+    transform: translate3d(0, 100%, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

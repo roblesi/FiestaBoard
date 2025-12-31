@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import * as SheetPrimitive from "@radix-ui/react-dialog"
-import { cva } from "class-variance-authority"
+import { cva, type VariantProps } from "class-variance-authority"
 import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -24,6 +24,9 @@ const SheetOverlay = React.forwardRef<
       "fixed inset-0 z-50 bg-black/80",
       className
     )}
+    style={{
+      animation: "sheet-overlay-in 200ms ease-out",
+    }}
     {...props}
     ref={ref}
   />
@@ -47,26 +50,46 @@ const sheetVariants = cva(
   }
 )
 
-type SheetContentProps = {
-  side?: "top" | "bottom" | "left" | "right";
-  className?: string;
-  children?: React.ReactNode;
-} & Omit<React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>, "children">;
+interface SheetContentProps
+  extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>,
+    VariantProps<typeof sheetVariants> {}
 
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(function SheetContentInner({ side = "right", className, children, ...props }, ref) {
+>(({ side = "right", className, children, ...props }, ref) => {
+  const getAnimation = (side: string) => {
+    switch (side) {
+      case "right":
+        return "sheet-slide-in-right 300ms cubic-bezier(0.16, 1, 0.3, 1)";
+      case "left":
+        return "sheet-slide-in-left 300ms cubic-bezier(0.16, 1, 0.3, 1)";
+      case "top":
+        return "sheet-slide-in-top 300ms cubic-bezier(0.16, 1, 0.3, 1)";
+      case "bottom":
+        return "sheet-slide-in-bottom 300ms cubic-bezier(0.16, 1, 0.3, 1)";
+      default:
+        return "sheet-slide-in-right 300ms cubic-bezier(0.16, 1, 0.3, 1)";
+    }
+  };
+
   return (
     <SheetPortal>
       <SheetOverlay />
       <SheetPrimitive.Content
         ref={ref}
         className={cn(sheetVariants({ side }), className)}
+        style={{
+          animation: getAnimation(side || "right"),
+          willChange: "transform",
+          backfaceVisibility: "hidden",
+          // CSS containment for better perf - isolate this from rest of page
+          contain: "layout style paint",
+        }}
         {...props}
       >
         {children}
-        <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
+        <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
         </SheetPrimitive.Close>
