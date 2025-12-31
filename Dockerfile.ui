@@ -1,5 +1,5 @@
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
 # Version argument (injected at build time)
 ARG VERSION=dev
@@ -20,7 +20,7 @@ COPY web/ ./
 RUN npm run build
 
 # Production stage - Run nginx + Next.js server
-FROM node:20-alpine AS runner
+FROM node:20-slim AS runner
 
 # Version argument (passed from builder stage)
 ARG VERSION=dev
@@ -33,11 +33,14 @@ ENV PORT=3001
 ENV HOSTNAME="0.0.0.0"
 
 # Install nginx and supervisor for running multiple processes
-RUN apk add --no-cache nginx supervisor
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends nginx supervisor wget && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Create non-root user for security
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs
+RUN groupadd --system --gid 1001 nodejs && \
+    useradd --system --uid 1001 --gid nodejs --shell /bin/bash nextjs
 
 # Copy standalone build output from builder stage
 # The standalone output includes only production dependencies and necessary files
