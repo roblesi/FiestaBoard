@@ -43,6 +43,29 @@ function setCachedPreviews(previews: Record<string, CachedPreviewData>): void {
   }
 }
 
+// Get a single cached preview for a page
+function getCachedPreview(pageId: string, pageUpdatedAt: string): PagePreviewResponse | null {
+  const allPreviews = getCachedPreviews();
+  const cached = allPreviews[pageId];
+  
+  if (!cached || cached.pageUpdatedAt !== pageUpdatedAt) {
+    return null;
+  }
+  
+  return cached.preview;
+}
+
+// Save a single preview to localStorage
+function setCachedPreview(pageId: string, pageUpdatedAt: string, preview: PagePreviewResponse): void {
+  const allPreviews = getCachedPreviews();
+  allPreviews[pageId] = {
+    preview,
+    pageUpdatedAt,
+    cachedAt: new Date().toISOString(),
+  };
+  setCachedPreviews(allPreviews);
+}
+
 // Check if a cached preview is still valid for a page
 function isCacheValid(cached: CachedPreviewData | undefined, pageUpdatedAt: string): boolean {
   if (!cached) return false;
