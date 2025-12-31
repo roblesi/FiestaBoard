@@ -76,16 +76,20 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20'
+        # Disable cache to avoid issues with optional dependencies
         cache: 'npm'
         cache-dependency-path: web/package-lock.json
     
     - name: Install UI dependencies
       working-directory: web
       run: |
-        npm ci
-        # Ensure optional dependencies (like platform-specific rollup binaries) are installed
-        # npm ci sometimes skips optional dependencies on CI, so we install them explicitly
-        npm install --no-save
+        # Fix npm bug with optional dependencies (https://github.com/npm/cli/issues/4828)
+        # Error message recommends: "npm i again after removing both package-lock.json and node_modules directory"
+        rm -rf node_modules package-lock.json
+        # Regenerate package-lock.json and install all dependencies including optional ones
+        npm install
+        # Verify rollup Linux binary is installed
+        test -d node_modules/@rollup/rollup-linux-x64-gnu || (echo "❌ Rollup Linux binary not installed" && exit 1)
     
     - name: Run UI tests
       working-directory: web
