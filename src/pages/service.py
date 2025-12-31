@@ -4,7 +4,8 @@ Provides high-level operations on pages including preview and send.
 """
 
 import logging
-from typing import List, Optional, Tuple
+import time
+from typing import List, Optional, Tuple, Dict
 from datetime import datetime
 from dataclasses import dataclass
 
@@ -15,6 +16,10 @@ from ..templates.engine import get_template_engine
 from ..settings.service import get_settings_service
 
 logger = logging.getLogger(__name__)
+
+
+# Cache TTL in seconds - previews are cached for 5 minutes
+PREVIEW_CACHE_TTL = 300
 
 
 # Default welcome page template (6 lines for Vestaboard)
@@ -38,13 +43,43 @@ class DeleteResult:
     new_active_page_id: Optional[str] = None
 
 
+@dataclass
+class CachedPreview:
+    """Cached preview result for a page."""
+    result: DisplayResult
+    page_updated_at: Optional[datetime]  # Timestamp when page was last updated
+    cached_at: float  # Unix timestamp when this was cached
+    
+    def is_valid(self, page: Page, ttl_seconds: int = PREVIEW_CACHE_TTL) -> bool:
+        """Check if this cache entry is still valid.
+        
+        Args:
+            page: The page to check against
+            ttl_seconds: Time-to-live in seconds
+            
+        Returns:
+            True if cache is still valid, False otherwise
+        """
+        # Check if page was updated after cache was created
+        if page.updated_at and self.page_updated_at:
+            if page.updated_at > self.page_updated_at:
+                return False
+        elif page.updated_at != self.page_updated_at:
+            # One is None and the other isn't
+            return False
+        
+        # Check TTL
+        age = time.time() - self.cached_at
+        return age < ttl_seconds
+
+
 class PageService:
     """Service for page operations.
     
     Handles:
     - CRUD operations on pages
     - Rendering pages to formatted text
-    - Previewing pages
+    - Previewing pages with caching
     """
     
     def __init__(self, storage: Optional[PageStorage] = None):
@@ -54,6 +89,7 @@ class PageService:
             storage: Page storage instance. Created if not provided.
         """
         self.storage = storage or PageStorage()
+        self._preview_cache: Dict[str, CachedPreview] = {}
         logger.info("PageService initialized")
     
     # CRUD operations
@@ -101,7 +137,14 @@ class PageService:
             Updated page or None if not found
         """
         updates = data.model_dump(exclude_unset=True)
-        return self.storage.update(page_id, updates)
+        updated_page = self.storage.update(page_id, updates)
+        
+        # Invalidate preview cache for this page
+        if updated_page:
+            self._invalidate_cache(page_id)
+            logger.debug(f"Invalidated preview cache for page {page_id}")
+        
+        return updated_page
     
     def delete_page(self, page_id: str) -> DeleteResult:
         """Delete a page.
@@ -150,6 +193,9 @@ class PageService:
         
         # Normal deletion
         self.storage.delete(page_id)
+        
+        # Invalidate cache for deleted page
+        self._invalidate_cache(page_id)
         
         # If deleted page was active, set another page as active
         new_active_id = None
@@ -321,11 +367,16 @@ class PageService:
                 error=f"Template rendering failed: {str(e)}"
             )
     
-    def preview_page(self, page_id: str) -> Optional[DisplayResult]:
+    def preview_page(self, page_id: str, force_refresh: bool = False) -> Optional[DisplayResult]:
         """Preview a page by ID.
+        
+        Uses cached preview if available and valid, unless force_refresh is True.
+        The cache speeds up preview requests for page grids while ensuring
+        active pages and edits always get fresh data.
         
         Args:
             page_id: The page ID
+            force_refresh: If True, bypass cache and always render fresh
             
         Returns:
             DisplayResult or None if page not found
@@ -333,7 +384,49 @@ class PageService:
         page = self.get_page(page_id)
         if not page:
             return None
-        return self.render_page(page)
+        
+        # Check cache first if not forcing refresh
+        if not force_refresh:
+            cached = self._preview_cache.get(page_id)
+            if cached and cached.is_valid(page):
+                logger.debug(f"Using cached preview for page {page_id}")
+                return cached.result
+        
+        # Render fresh
+        logger.debug(f"Rendering fresh preview for page {page_id} (force_refresh={force_refresh})")
+        result = self.render_page(page)
+        
+        # Cache the result
+        self._preview_cache[page_id] = CachedPreview(
+            result=result,
+            page_updated_at=page.updated_at,
+            cached_at=time.time()
+        )
+        
+        return result
+    
+    def _invalidate_cache(self, page_id: Optional[str] = None) -> None:
+        """Invalidate preview cache.
+        
+        Args:
+            page_id: Specific page ID to invalidate, or None to clear all
+        """
+        if page_id:
+            self._preview_cache.pop(page_id, None)
+        else:
+            self._preview_cache.clear()
+    
+    def get_cache_stats(self) -> Dict[str, any]:
+        """Get cache statistics for monitoring.
+        
+        Returns:
+            Dict with cache size and entry info
+        """
+        return {
+            "cache_size": len(self._preview_cache),
+            "cached_pages": list(self._preview_cache.keys()),
+            "ttl_seconds": PREVIEW_CACHE_TTL
+        }
 
 
 # Singleton instance

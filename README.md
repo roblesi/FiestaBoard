@@ -56,6 +56,7 @@ docker-compose down
 ### System Features
 - 📄 **Page-Based Display**: Create and select pages via the web UI
 - 🔄 **Configurable Update Interval**: Adjust how often the board checks for new content (10-3600 seconds)
+- ⚡ **Smart Preview Caching**: Page previews are cached (5 min TTL) for fast UI rendering, while active displays always get fresh data
 - 🐳 **Docker Ready**: Containerized for easy deployment on any system
 - ⚙️ **Highly Configurable**: Environment-based configuration for all features
 - 🔒 **Secure**: API token support for all integrations

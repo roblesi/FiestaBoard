@@ -352,6 +352,118 @@ class TestPageService:
         
         assert result.available is True
         assert "Hello World" in result.formatted
+    
+    @patch('src.pages.service.get_display_service')
+    def test_preview_page_uses_cache(self, mock_get_display, service):
+        """Test that preview_page uses cache on subsequent calls."""
+        mock_display_service = Mock()
+        mock_display_service.get_display.return_value = DisplayResult(
+            display_type="weather",
+            formatted="Sunny, 72F",
+            raw={"temp": 72},
+            available=True
+        )
+        mock_get_display.return_value = mock_display_service
+        
+        page = service.create_page(PageCreate(name="Weather", type="single", display_type="weather"))
+        
+        # First call should render
+        result1 = service.preview_page(page.id)
+        assert result1.available is True
+        assert mock_display_service.get_display.call_count == 1
+        
+        # Second call should use cache (no additional render)
+        result2 = service.preview_page(page.id)
+        assert result2.available is True
+        assert result2.formatted == result1.formatted
+        assert mock_display_service.get_display.call_count == 1  # Still 1!
+    
+    @patch('src.pages.service.get_display_service')
+    def test_preview_page_force_refresh(self, mock_get_display, service):
+        """Test that force_refresh bypasses cache."""
+        mock_display_service = Mock()
+        mock_display_service.get_display.return_value = DisplayResult(
+            display_type="weather",
+            formatted="Sunny, 72F",
+            raw={"temp": 72},
+            available=True
+        )
+        mock_get_display.return_value = mock_display_service
+        
+        page = service.create_page(PageCreate(name="Weather", type="single", display_type="weather"))
+        
+        # First call
+        result1 = service.preview_page(page.id)
+        assert result1.available is True
+        assert mock_display_service.get_display.call_count == 1
+        
+        # Second call with force_refresh=True should render again
+        result2 = service.preview_page(page.id, force_refresh=True)
+        assert result2.available is True
+        assert mock_display_service.get_display.call_count == 2  # Rendered again!
+    
+    @patch('src.pages.service.get_display_service')
+    def test_update_page_invalidates_cache(self, mock_get_display, service):
+        """Test that updating a page invalidates its cache."""
+        mock_display_service = Mock()
+        mock_display_service.get_display.return_value = DisplayResult(
+            display_type="weather",
+            formatted="Sunny, 72F",
+            raw={"temp": 72},
+            available=True
+        )
+        mock_get_display.return_value = mock_display_service
+        
+        page = service.create_page(PageCreate(name="Weather", type="single", display_type="weather"))
+        
+        # First preview - should cache
+        result1 = service.preview_page(page.id)
+        assert mock_display_service.get_display.call_count == 1
+        
+        # Second preview - should use cache
+        result2 = service.preview_page(page.id)
+        assert mock_display_service.get_display.call_count == 1
+        
+        # Update the page
+        service.update_page(page.id, PageUpdate(name="Updated Weather"))
+        
+        # Third preview - should re-render (cache was invalidated)
+        result3 = service.preview_page(page.id)
+        assert mock_display_service.get_display.call_count == 2
+    
+    def test_get_cache_stats(self, service):
+        """Test getting cache statistics."""
+        stats = service.get_cache_stats()
+        
+        assert "cache_size" in stats
+        assert "cached_pages" in stats
+        assert "ttl_seconds" in stats
+        assert stats["cache_size"] == 0
+        assert stats["cached_pages"] == []
+    
+    @patch('src.pages.service.get_display_service')
+    def test_cache_stats_after_preview(self, mock_get_display, service):
+        """Test cache statistics after previewing pages."""
+        mock_display_service = Mock()
+        mock_display_service.get_display.return_value = DisplayResult(
+            display_type="weather",
+            formatted="Sunny, 72F",
+            raw={"temp": 72},
+            available=True
+        )
+        mock_get_display.return_value = mock_display_service
+        
+        page1 = service.create_page(PageCreate(name="Weather", type="single", display_type="weather"))
+        page2 = service.create_page(PageCreate(name="Datetime", type="single", display_type="datetime"))
+        
+        # Preview both pages
+        service.preview_page(page1.id)
+        service.preview_page(page2.id)
+        
+        stats = service.get_cache_stats()
+        assert stats["cache_size"] == 2
+        assert page1.id in stats["cached_pages"]
+        assert page2.id in stats["cached_pages"]
 
 
 class TestPagesAPIEndpoints:

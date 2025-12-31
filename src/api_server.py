@@ -1840,7 +1840,8 @@ async def set_active_page(request: dict):
     # Immediately send to board if a page is set
     sent_to_board = False
     if page_id and page and service and service.vb_client and not _dev_mode:
-        result = page_service.preview_page(page_id)
+        # Force fresh render when setting active page
+        result = page_service.preview_page(page_id, force_refresh=True)
         if result and result.available:
             # Use page-level transitions if set, otherwise fall back to system defaults
             system_transition = settings_service.get_transition_settings()
@@ -2041,14 +2042,32 @@ async def delete_page(page_id: str):
 
 
 @app.post("/pages/{page_id}/preview")
-async def preview_page(page_id: str):
+async def preview_page(
+    page_id: str,
+    force_refresh: bool = Query(default=False, description="Force fresh render, bypass cache")
+):
     """
     Preview a page's rendered output.
     
-    Returns the formatted text that would be displayed.
+    Uses cached preview by default for fast responses. Set force_refresh=true
+    to always render fresh (useful when editing or displaying active page).
+    
+    Args:
+        page_id: The page ID to preview
+        force_refresh: If true, bypass cache and always render fresh
+    
+    Returns:
+        The formatted text that would be displayed.
     """
     page_service = get_page_service()
-    result = page_service.preview_page(page_id)
+    settings_service = get_settings_service()
+    
+    # Always force refresh for the active page to ensure it's up-to-date
+    active_page_id = settings_service.get_active_page_id()
+    if page_id == active_page_id:
+        force_refresh = True
+    
+    result = page_service.preview_page(page_id, force_refresh=force_refresh)
     
     if result is None:
         raise HTTPException(status_code=404, detail=f"Page not found: {page_id}")
@@ -2072,22 +2091,30 @@ async def preview_pages_batch(request: dict):
     
     Request body:
         {
-            "page_ids": ["page1", "page2", ...]
+            "page_ids": ["page1", "page2", ...],
+            "force_refresh": false  // Optional, defaults to false
         }
     
     Returns a dict mapping page_id to preview data (or error).
+    Uses cached previews by default for fast responses.
+    Active page is always rendered fresh regardless of force_refresh setting.
     """
     page_ids = request.get("page_ids", [])
+    force_refresh = request.get("force_refresh", False)
     
     if not isinstance(page_ids, list):
         raise HTTPException(status_code=400, detail="page_ids must be a list")
     
     page_service = get_page_service()
+    settings_service = get_settings_service()
+    active_page_id = settings_service.get_active_page_id()
     results = {}
     
     for page_id in page_ids:
         try:
-            result = page_service.preview_page(page_id)
+            # Always force refresh for the active page
+            should_force = force_refresh or (page_id == active_page_id)
+            result = page_service.preview_page(page_id, force_refresh=should_force)
             
             if result is None:
                 results[page_id] = {
@@ -2122,6 +2149,51 @@ async def preview_pages_batch(request: dict):
     }
 
 
+@app.get("/pages/cache/stats")
+async def get_page_cache_stats():
+    """
+    Get preview cache statistics.
+    
+    Returns information about the preview cache including size,
+    cached page IDs, and TTL configuration.
+    """
+    page_service = get_page_service()
+    return page_service.get_cache_stats()
+
+
+@app.post("/pages/cache/clear")
+async def clear_page_cache(request: dict = None):
+    """
+    Clear preview cache.
+    
+    Request body (optional):
+        {
+            "page_id": "page123"  // Clear specific page, omit to clear all
+        }
+    
+    Clears the preview cache, forcing fresh renders on next preview.
+    Useful for testing or when data sources have been updated.
+    """
+    page_service = get_page_service()
+    
+    page_id = None
+    if request:
+        page_id = request.get("page_id")
+    
+    page_service._invalidate_cache(page_id)
+    
+    if page_id:
+        return {
+            "status": "success",
+            "message": f"Cache cleared for page {page_id}"
+        }
+    else:
+        return {
+            "status": "success",
+            "message": "All preview caches cleared"
+        }
+
+
 @app.post("/pages/{page_id}/send")
 async def send_page(page_id: str, target: Optional[str] = None):
     """
@@ -2151,8 +2223,8 @@ async def send_page(page_id: str, target: Optional[str] = None):
     if not page:
         raise HTTPException(status_code=404, detail=f"Page not found: {page_id}")
     
-    # Render the page
-    result = page_service.preview_page(page_id)
+    # Render the page - always force fresh render when sending to board
+    result = page_service.preview_page(page_id, force_refresh=True)
     
     if result is None:
         raise HTTPException(status_code=404, detail=f"Page not found: {page_id}")
