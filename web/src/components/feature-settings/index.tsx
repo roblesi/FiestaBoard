@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api, FeaturesConfig, FeatureName } from "@/lib/api";
 import { FeatureCard, FeatureField } from "./feature-card";
@@ -16,8 +16,27 @@ import {
   Bike,
   Car,
   Moon,
+  GripVertical,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { toast } from "sonner";
 
 // Vulcan salute component - uses emoji with CSS filter to match icon theme
 // Converts emoji to grayscale so it matches the monochrome icon style
@@ -451,12 +470,125 @@ const FEATURE_DEFINITIONS: Record<
   },
 };
 
+// Sortable feature item wrapper
+function SortableFeatureItem({
+  featureName,
+  definition,
+  featureConfig,
+  isLoading,
+}: {
+  featureName: FeatureName;
+  definition: typeof FEATURE_DEFINITIONS[string];
+  featureConfig?: Record<string, unknown>;
+  isLoading: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: featureName });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="relative">
+      <div className="pr-8">
+        <FeatureCard
+          featureName={featureName}
+          title={definition.title}
+          description={definition.description}
+          icon={definition.icon}
+          fields={definition.fields}
+          outputs={definition.outputs}
+          initialConfig={featureConfig}
+          isLoading={isLoading}
+        />
+      </div>
+      <div className="absolute right-0 top-0 bottom-0 flex items-center justify-center w-8 cursor-grab active:cursor-grabbing touch-none">
+        <GripVertical className="h-5 w-5 text-muted-foreground" {...attributes} {...listeners} />
+      </div>
+    </div>
+  );
+}
+
 export function FeatureSettings() {
+  const queryClient = useQueryClient();
+
   // Fetch all features config
-  const { data: featuresData, isLoading } = useQuery({
+  const { data: featuresData, isLoading: isLoadingFeatures } = useQuery({
     queryKey: ["features-config"],
     queryFn: api.getFeaturesConfig,
   });
+
+  // Fetch feature order
+  const { data: orderData, isLoading: isLoadingOrder } = useQuery({
+    queryKey: ["feature-order"],
+    queryFn: api.getFeatureOrder,
+  });
+
+  // Mutation to update feature order
+  const updateOrderMutation = useMutation({
+    mutationFn: api.updateFeatureOrder,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["feature-order"] });
+      toast.success("Feature order updated");
+    },
+    onError: (error) => {
+      toast.error(`Failed to update feature order: ${error.message}`);
+    },
+  });
+
+  // Set up drag sensors - MUST be called before any conditional returns
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const isLoading = isLoadingFeatures || isLoadingOrder;
+
+  // Get ordered feature list (calculate even when loading to maintain hook order)
+  const features = featuresData?.features as FeaturesConfig | undefined;
+  const availableFeatures = featuresData?.available_features || [];
+  
+  // Default order from FEATURE_DEFINITIONS (maintains insertion order)
+  const defaultOrder = Object.keys(FEATURE_DEFINITIONS) as FeatureName[];
+  
+  let orderedFeatures: FeatureName[] = [];
+  if (orderData?.feature_order && orderData.feature_order.length > 0) {
+    // Use stored order, but ensure all features are included
+    const storedOrder = orderData.feature_order;
+    const missingFeatures = availableFeatures.filter(
+      (f) => !storedOrder.includes(f)
+    );
+    // Add missing features in default order (not alphabetical)
+    const missingInOrder = defaultOrder.filter(f => missingFeatures.includes(f));
+    orderedFeatures = [...storedOrder, ...missingInOrder];
+  } else {
+    // Use default order from FEATURE_DEFINITIONS (not alphabetical)
+    orderedFeatures = defaultOrder;
+  }
+
+  // Handle drag end
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = orderedFeatures.indexOf(active.id as FeatureName);
+      const newIndex = orderedFeatures.indexOf(over.id as FeatureName);
+
+      const newOrder = arrayMove(orderedFeatures, oldIndex, newIndex);
+      updateOrderMutation.mutate(newOrder);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -468,28 +600,36 @@ export function FeatureSettings() {
     );
   }
 
-  const features = featuresData?.features as FeaturesConfig | undefined;
-
   return (
-    <div className="space-y-4">
-      {Object.entries(FEATURE_DEFINITIONS).map(([featureName, definition]) => {
-        const featureConfig = features?.[featureName as keyof FeaturesConfig];
-        
-        return (
-          <FeatureCard
-            key={featureName}
-            featureName={featureName as FeatureName}
-            title={definition.title}
-            description={definition.description}
-            icon={definition.icon}
-            fields={definition.fields}
-            outputs={definition.outputs}
-            initialConfig={featureConfig as Record<string, unknown> | undefined}
-            isLoading={isLoading}
-          />
-        );
-      })}
-    </div>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      <SortableContext
+        items={orderedFeatures}
+        strategy={verticalListSortingStrategy}
+      >
+        <div className="space-y-4">
+          {orderedFeatures.map((featureName) => {
+            const definition = FEATURE_DEFINITIONS[featureName];
+            if (!definition) return null;
+
+            const featureConfig = features?.[featureName as keyof FeaturesConfig];
+
+            return (
+              <SortableFeatureItem
+                key={featureName}
+                featureName={featureName}
+                definition={definition}
+                featureConfig={featureConfig as Record<string, unknown> | undefined}
+                isLoading={isLoading}
+              />
+            );
+          })}
+        </div>
+      </SortableContext>
+    </DndContext>
   );
 }
 

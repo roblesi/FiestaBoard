@@ -175,6 +175,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "timezone": "America/Los_Angeles",  # User's timezone for display purposes
         "refresh_interval_seconds": 300,
         "output_target": "board",
+        "feature_order": [],  # Ordered list of feature names for UI display
     },
 }
 

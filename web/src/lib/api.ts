@@ -407,6 +407,7 @@ export interface GeneralConfig {
   timezone: string; // IANA timezone (e.g., "America/Los_Angeles")
   refresh_interval_seconds: number;
   output_target: "ui" | "board" | "both";
+  feature_order?: FeatureName[]; // Ordered list of feature names for UI display
 }
 
 export interface SilenceStatus {
@@ -497,7 +498,10 @@ async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
     await loadRuntimeConfig();
   }
   
-  const res = await fetch(`${API_BASE}${path}`, {
+  const url = `${API_BASE}${path}`;
+  console.log(`[API] ${options?.method || 'GET'} ${url}`, options?.body ? { body: options.body } : '');
+  
+  const res = await fetch(url, {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -505,6 +509,8 @@ async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
     },
   });
   if (!res.ok) {
+    const errorText = await res.text().catch(() => res.statusText);
+    console.error(`[API] Error ${res.status}: ${errorText}`);
     throw new Error(`API error: ${res.status} ${res.statusText}`);
   }
   return res.json();
@@ -617,6 +623,13 @@ export const api = {
         body: JSON.stringify(config),
       }
     ),
+  getFeatureOrder: () =>
+    fetchApi<{ feature_order: FeatureName[]; available_features: FeatureName[] }>("/config/features/order"),
+  updateFeatureOrder: (featureOrder: FeatureName[]) =>
+    fetchApi<{ status: string; feature_order: FeatureName[] }>("/config/features/order", {
+      method: "PUT",
+      body: JSON.stringify({ feature_order: featureOrder }),
+    }),
   getVestaboardConfig: () =>
     fetchApi<{ config: VestaboardConfig; api_modes: string[] }>("/config/vestaboard"),
   updateVestaboardConfig: (config: Partial<VestaboardConfig>) =>

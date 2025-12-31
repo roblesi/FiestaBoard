@@ -571,6 +571,87 @@ async def get_features_config():
     }
 
 
+@app.get("/config/features/order")
+async def get_feature_order():
+    """Get the current feature display order."""
+    config_manager = get_config_manager()
+    general_config = config_manager.get_general()
+    feature_order = general_config.get("feature_order", [])
+    
+    # Get available features in the order they're defined in DEFAULT_CONFIG
+    # This maintains insertion order (Python 3.7+)
+    available_features = config_manager.get_feature_list()
+    
+    # If no order is set, return default order (maintains insertion order from DEFAULT_CONFIG)
+    if not feature_order:
+        feature_order = available_features
+    
+    return {
+        "feature_order": feature_order,
+        "available_features": available_features
+    }
+
+
+@app.put("/config/features/order")
+async def update_feature_order(request: dict):
+    """
+    Update the feature display order.
+    
+    Body should include:
+    - feature_order: List of feature names in desired order
+    
+    Example:
+    {
+        "feature_order": ["weather", "datetime", "home_assistant", "muni", ...]
+    }
+    """
+    logger.info(f"Received feature order update request: {request}")
+    config_manager = get_config_manager()
+    
+    if "feature_order" not in request:
+        raise HTTPException(status_code=400, detail="feature_order parameter required")
+    
+    feature_order = request["feature_order"]
+    
+    # Validate it's a list
+    if not isinstance(feature_order, list):
+        raise HTTPException(status_code=400, detail="feature_order must be a list")
+    
+    # Validate all items are valid feature names
+    valid_features = set(config_manager.get_feature_list())
+    provided_features = set(feature_order)
+    
+    if not provided_features.issubset(valid_features):
+        invalid = provided_features - valid_features
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid feature names: {list(invalid)}. Available: {config_manager.get_feature_list()}"
+        )
+    
+    # Ensure all features are included (add missing ones at the end)
+    missing_features = valid_features - provided_features
+    if missing_features:
+        # Add missing features in their default order
+        default_order = config_manager.get_feature_list()
+        for feature in default_order:
+            if feature in missing_features:
+                feature_order.append(feature)
+    
+    # Update general config
+    general_config = config_manager.get_general()
+    general_config["feature_order"] = feature_order
+    
+    success = config_manager.set_general(general_config)
+    
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to update feature order")
+    
+    return {
+        "status": "success",
+        "feature_order": feature_order
+    }
+
+
 @app.get("/config/features/{feature_name}")
 async def get_feature_config(feature_name: str):
     """
@@ -580,6 +661,13 @@ async def get_feature_config(feature_name: str):
         feature_name: One of: weather, datetime, home_assistant,
                       guest_wifi, star_trek_quotes, rotation
     """
+    # Explicitly reject "order" as a feature name - this should be handled by /config/features/order
+    if feature_name == "order":
+        raise HTTPException(
+            status_code=404,
+            detail="Use /config/features/order endpoint for feature order operations"
+        )
+    
     config_manager = get_config_manager()
     feature = config_manager.get_feature(feature_name)
     
@@ -615,6 +703,13 @@ async def update_feature_config(feature_name: str, request: dict):
         "location": "New York, NY"
     }
     """
+    # Explicitly reject "order" as a feature name - this should be handled by /config/features/order
+    if feature_name == "order":
+        raise HTTPException(
+            status_code=404,
+            detail="Use /config/features/order endpoint for feature order operations"
+        )
+    
     config_manager = get_config_manager()
     
     if feature_name not in config_manager.get_feature_list():
@@ -728,6 +823,7 @@ async def update_general_config(request: dict):
     - timezone: IANA timezone name (e.g., "America/Los_Angeles")
     - refresh_interval_seconds: Refresh interval in seconds
     - output_target: Output target ("ui", "board", or "both")
+    - feature_order: Ordered list of feature names for UI display
     """
     config_manager = get_config_manager()
     
@@ -741,6 +837,20 @@ async def update_general_config(request: dict):
         general_config["refresh_interval_seconds"] = request["refresh_interval_seconds"]
     if "output_target" in request:
         general_config["output_target"] = request["output_target"]
+    if "feature_order" in request:
+        # Validate feature_order is a list
+        if not isinstance(request["feature_order"], list):
+            raise HTTPException(status_code=400, detail="feature_order must be a list")
+        # Validate all items in list are valid feature names
+        valid_features = set(config_manager.get_feature_list())
+        provided_features = set(request["feature_order"])
+        if not provided_features.issubset(valid_features):
+            invalid = provided_features - valid_features
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid feature names in feature_order: {invalid}"
+            )
+        general_config["feature_order"] = request["feature_order"]
     
     # Save back
     success = config_manager.set_general(general_config)

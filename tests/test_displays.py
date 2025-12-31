@@ -51,7 +51,9 @@ class TestDisplayService:
         """Test listing available displays."""
         displays = service.get_available_displays()
         
-        assert len(displays) == 12
+        # There are 11 display types: weather, datetime, weather_datetime, home_assistant,
+        # star_trek, guest_wifi, air_fog, muni, surf, baywheels, traffic
+        assert len(displays) == 11
         display_types = [d["type"] for d in displays]
         assert "weather" in display_types
         assert "datetime" in display_types

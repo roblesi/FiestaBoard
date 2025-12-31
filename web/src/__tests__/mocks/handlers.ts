@@ -22,6 +22,8 @@ import type {
   GeneralConfig,
   SilenceStatus,
   FeatureConfigResponse,
+  FeaturesConfig,
+  FeatureName,
 } from "@/lib/api";
 
 const API_BASE = "http://localhost:8000";
@@ -293,7 +295,45 @@ export const requestStore: {
   lastPageCreate?: PageCreate;
   lastTransitionUpdate?: Partial<TransitionSettings>;
   lastOutputUpdate?: { target: string };
+  lastFeatureOrderUpdate?: string[];
 } = {};
+
+// Mock feature order state (starts with default order)
+export let mockFeatureOrder: string[] | null = null;
+const defaultFeatureOrder = [
+  "weather",
+  "datetime",
+  "home_assistant",
+  "guest_wifi",
+  "star_trek_quotes",
+  "air_fog",
+  "muni",
+  "surf",
+  "baywheels",
+  "traffic",
+];
+
+// Reset function for tests
+export function resetMockFeatureOrder() {
+  mockFeatureOrder = null;
+}
+
+// Mock features config
+export const mockFeaturesConfig: FeaturesConfig = {
+  features: {
+    weather: { enabled: false },
+    datetime: { enabled: true },
+    home_assistant: { enabled: false },
+    guest_wifi: { enabled: false },
+    star_trek_quotes: { enabled: false },
+    air_fog: { enabled: false },
+    muni: { enabled: false },
+    surf: { enabled: false },
+    baywheels: { enabled: false },
+    traffic: { enabled: false },
+  },
+  available_features: defaultFeatureOrder,
+};
 
 // Handlers with request validation
 export const handlers = [
@@ -681,9 +721,40 @@ export const handlers = [
     });
   }),
 
-  // Feature config endpoints
+  // Features config endpoint (must come before parameterized routes)
+  http.get(`${API_BASE}/config/features`, () => {
+    return HttpResponse.json(mockFeaturesConfig);
+  }),
+
+  // Feature order endpoints (must come before parameterized routes)
+  http.get(`${API_BASE}/config/features/order`, () => {
+    const order = {
+      feature_order: (mockFeatureOrder || defaultFeatureOrder) as FeatureName[],
+      available_features: defaultFeatureOrder as FeatureName[],
+    };
+    return HttpResponse.json(order);
+  }),
+
+  http.put(`${API_BASE}/config/features/order`, async ({ request }) => {
+    const body = await request.json() as { feature_order: string[] };
+    requestStore.lastFeatureOrderUpdate = body.feature_order;
+    mockFeatureOrder = body.feature_order;
+    return HttpResponse.json({
+      status: "success",
+      feature_order: body.feature_order,
+    });
+  }),
+
+  // Feature config endpoints (parameterized - must come after specific routes)
   http.get(`${API_BASE}/config/features/:featureName`, ({ params }) => {
     const { featureName } = params;
+    // Explicitly reject "order" as a feature name
+    if (featureName === "order") {
+      return HttpResponse.json(
+        { error: "Use /config/features/order endpoint" },
+        { status: 404 }
+      );
+    }
     if (featureName === "silence_schedule") {
       return HttpResponse.json(mockSilenceScheduleConfig);
     }
@@ -696,6 +767,13 @@ export const handlers = [
 
   http.put(`${API_BASE}/config/features/:featureName`, async ({ request, params }) => {
     const { featureName } = params;
+    // Explicitly reject "order" as a feature name
+    if (featureName === "order") {
+      return HttpResponse.json(
+        { error: "Use /config/features/order endpoint" },
+        { status: 404 }
+      );
+    }
     const body = await request.json() as Record<string, unknown>;
     return HttpResponse.json({
       status: "success",
@@ -707,6 +785,13 @@ export const handlers = [
   // Silence status endpoint
   http.get(`${API_BASE}/silence-status`, () => {
     return HttpResponse.json(mockSilenceStatus);
+  }),
+
+  // Runtime config endpoint (Next.js API route)
+  http.get("/api/runtime-config", () => {
+    return HttpResponse.json({
+      apiUrl: API_BASE,
+    });
   }),
 ];
 
