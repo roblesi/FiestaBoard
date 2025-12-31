@@ -25,18 +25,31 @@ export async function loadRuntimeConfig(): Promise<void> {
       // Set API_BASE from config, or fall back to sensible defaults
       if (config.apiUrl) {
         API_BASE = config.apiUrl;
-      } else if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-        API_BASE = "http://localhost:8000";
+      } else if (typeof window !== "undefined") {
+        // Dynamically construct API URL based on current hostname
+        const hostname = window.location.hostname;
+        if (hostname === "localhost") {
+          API_BASE = "http://localhost:8000";
+        } else {
+          // In production, API runs on port 6969
+          API_BASE = `http://${hostname}:6969`;
+        }
       } else {
-        API_BASE = "";  // Same origin
+        API_BASE = "";  // Same origin fallback
       }
       
       configLoaded = true;
     } catch (error) {
       console.error("Failed to load runtime config, using defaults:", error);
-      // Fall back to localhost in development, same origin otherwise
-      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-        API_BASE = "http://localhost:8000";
+      // Fall back to dynamic hostname-based URL
+      if (typeof window !== "undefined") {
+        const hostname = window.location.hostname;
+        if (hostname === "localhost") {
+          API_BASE = "http://localhost:8000";
+        } else {
+          // In production, API runs on port 6969
+          API_BASE = `http://${hostname}:6969`;
+        }
       } else {
         API_BASE = "";
       }
