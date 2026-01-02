@@ -213,26 +213,30 @@ class StocksSource:
             return []
         
         # First pass: fetch all stock data
-        raw_results = []
+        # Use a list with None placeholders to maintain index alignment
+        raw_results = [None] * len(self.symbols)
         yfinance_period = self._map_time_window_to_yfinance(self.time_window)
         
-        for symbol in self.symbols:
+        for index, symbol in enumerate(self.symbols):
             try:
                 stock_data = self._fetch_single_stock(symbol, yfinance_period)
                 if stock_data:
-                    raw_results.append(stock_data)
+                    raw_results[index] = stock_data
             except Exception as e:
                 logger.error(f"Error fetching stock data for {symbol}: {e}")
-                continue
+                # Keep None placeholder to maintain index alignment
         
-        if not raw_results:
+        # Filter out None entries for alignment calculation, but keep track of indices
+        valid_stocks = [s for s in raw_results if s is not None]
+        
+        if not valid_stocks:
             return []
         
-        # Calculate max widths for alignment
+        # Calculate max widths for alignment (only from valid stocks)
         max_price_width = 0
         max_percent_width = 0
         
-        for stock in raw_results:
+        for stock in valid_stocks:
             current_price_str = self._format_price(stock["current_price"])
             change_percent_str = self._format_percentage(stock["change_percent"])
             
@@ -244,24 +248,40 @@ class StocksSource:
             percent_width = len(change_percent_str)
             max_percent_width = max(max_percent_width, percent_width)
         
-        # Second pass: apply aligned formatting
+        # Second pass: apply aligned formatting and maintain index alignment
+        # Ensure we process ALL indices, even if some stocks failed
         results = []
-        for stock in raw_results:
-            current_price_str = self._format_price(stock["current_price"])
-            change_percent_str = self._format_percentage(stock["change_percent"])
-            
-            # Right-align price and percentage
-            price_aligned = f"${current_price_str}".rjust(max_price_width)
-            percent_aligned = change_percent_str.rjust(max_percent_width)
-            
-            # Rebuild formatted string with aligned values
-            color_tile = stock.get("color_tile", "{white}")
-            symbol = stock["symbol"]
-            formatted = f"{symbol}{color_tile} {price_aligned} {percent_aligned}"
-            
-            # Update stock data with aligned formatted string
-            stock["formatted"] = formatted
-            results.append(stock)
+        for index in range(len(self.symbols)):
+            if index < len(raw_results) and raw_results[index] is not None:
+                stock = raw_results[index]
+                current_price_str = self._format_price(stock["current_price"])
+                change_percent_str = self._format_percentage(stock["change_percent"])
+                
+                # Right-align price and percentage
+                price_aligned = f"${current_price_str}".rjust(max_price_width)
+                percent_aligned = change_percent_str.rjust(max_percent_width)
+                
+                # Rebuild formatted string with aligned values
+                color_tile = stock.get("color_tile", "{white}")
+                symbol = stock["symbol"]
+                formatted = f"{symbol}{color_tile} {price_aligned} {percent_aligned}"
+                
+                # Update stock data with aligned formatted string
+                stock["formatted"] = formatted
+                results.append(stock)
+            else:
+                # Create placeholder entry for failed stock to maintain index alignment
+                symbol = self.symbols[index] if index < len(self.symbols) else f"UNKNOWN_{index}"
+                results.append({
+                    "symbol": symbol,
+                    "current_price": 0.0,
+                    "previous_price": 0.0,
+                    "change_percent": 0.0,
+                    "change_direction": "none",
+                    "formatted": f"{symbol}{{white}} $0.00 +0.00%",
+                    "color_tile": "{white}",
+                    "company_name": f"Failed to fetch: {symbol}",
+                })
         
         return results
     
