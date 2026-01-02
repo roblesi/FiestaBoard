@@ -514,6 +514,77 @@ const FEATURE_DEFINITIONS: Record<
       { name: "stocks.3.symbol", description: "Symbol of fourth stock", example: "TSLA", maxChars: 5, typical: "1-5 chars" },
     ],
   },
+  property: {
+    title: "Property Values",
+    description: "Track real estate property values over time",
+    icon: Home,
+    hasRefreshInterval: true,
+    defaultRefreshSeconds: 86400, // 24 hours
+    fields: [
+      {
+        key: "api_provider",
+        label: "Data Provider",
+        type: "select",
+        options: [
+          { value: "redfin", label: "Redfin (Free)" },
+          { value: "realty_mole", label: "Realty Mole (Paid)" },
+          { value: "manual", label: "Manual/Testing" },
+        ],
+        description: "Redfin is free and doesn't require an API key",
+      },
+      {
+        key: "api_key",
+        label: "API Key (if required)",
+        type: "password",
+        placeholder: "Enter API key for paid providers",
+        required: false,
+        description: "Only needed for Realty Mole provider",
+      },
+      {
+        key: "addresses",
+        label: "Property Addresses",
+        type: "properties",
+        placeholder: "",
+        required: true,
+        description: "Manage up to 3 properties to track their estimated values",
+      },
+      {
+        key: "time_window",
+        label: "Time Window",
+        type: "select",
+        options: [
+          { value: "1 Week", label: "1 Week" },
+          { value: "1 Month", label: "1 Month" },
+          { value: "3 Months", label: "3 Months" },
+          { value: "6 Months", label: "6 Months" },
+          { value: "1 Year", label: "1 Year" },
+        ],
+        description: "Compare current value to value from this time period",
+      },
+      {
+        key: "refresh_seconds",
+        label: "Refresh Interval (seconds)",
+        type: "number",
+        placeholder: "86400",
+        description: "How often to check property values (default: daily = 86400)",
+      },
+    ],
+    outputs: [
+      { name: "display_name", description: "Property name (first property)", example: "HOME", maxChars: 10, typical: "3-10 chars" },
+      { name: "current_value", description: "Current estimated value (first property)", example: "$1.25M", maxChars: 8, typical: "6-8 chars" },
+      { name: "change_percent", description: "Percentage change (first property)", example: "+2.5%", maxChars: 6, typical: "4-6 chars" },
+      { name: "formatted", description: "Pre-formatted display (first property)", example: "HOME{green} $1.25M +2.5%", maxChars: 22, typical: "15-22 chars" },
+      { name: "color_tile", description: "Color tile for change (first property)", example: "{green}", maxChars: 7, typical: "Color tile" },
+      { name: "property_count", description: "Number of tracked properties", example: "2", maxChars: 1, typical: "1 digit" },
+      { name: "properties.0.display_name", description: "Name of first property", example: "HOME", maxChars: 10, typical: "3-10 chars" },
+      { name: "properties.0.current_value", description: "Current value of first property", example: "$1.25M", maxChars: 8, typical: "6-8 chars" },
+      { name: "properties.0.change_percent", description: "Percentage change of first property", example: "+2.5%", maxChars: 6, typical: "4-6 chars" },
+      { name: "properties.0.formatted", description: "Formatted display of first property", example: "HOME{green} $1.25M +2.5%", maxChars: 22, typical: "15-22 chars" },
+      { name: "properties.1.display_name", description: "Name of second property", example: "RENTAL", maxChars: 10, typical: "3-10 chars" },
+      { name: "properties.1.current_value", description: "Current value of second property", example: "$850K", maxChars: 8, typical: "6-8 chars" },
+      { name: "properties.2.display_name", description: "Name of third property", example: "CABIN", maxChars: 10, typical: "3-10 chars" },
+    ],
+  },
 };
 
 export function FeatureSettings() {

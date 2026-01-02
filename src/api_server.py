@@ -1584,6 +1584,87 @@ async def validate_stock_symbol(request: dict):
 
 
 # =============================================================================
+# Property Value Tracking Endpoints
+# =============================================================================
+
+@app.get("/property/search")
+async def search_property_address(
+    address: str = Query(..., description="Property address to search")
+):
+    """
+    Search and validate a property address using Redfin.
+    
+    Returns property details and estimated value if found.
+    Helps users verify addresses before adding to tracking.
+    
+    Args:
+        address: Property address (e.g., "123 Main St, San Francisco, CA 94102")
+    
+    Returns:
+        Search result:
+        {
+            "found": bool,
+            "address": str,
+            "formatted_address": str (if found),
+            "current_value": float (if found),
+            "error": str (if not found)
+        }
+    """
+    try:
+        from src.data_sources.property import PropertySource
+        
+        result = PropertySource.search_property(address)
+        return result
+    except Exception as e:
+        logger.error(f"Error searching property: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/property/validate")
+async def validate_property(request: dict):
+    """
+    Validate a property can be tracked.
+    
+    Body:
+        address: Property address
+    
+    Returns:
+        Validation result:
+        {
+            "valid": bool,
+            "address": str,
+            "formatted_address": str (if valid),
+            "current_value": float (if valid),
+            "error": str (if invalid)
+        }
+    """
+    address = request.get("address")
+    if not address:
+        raise HTTPException(status_code=400, detail="address parameter required")
+    
+    try:
+        from src.data_sources.property import PropertySource
+        
+        result = PropertySource.search_property(address)
+        
+        # Convert "found" to "valid" for consistency with other validate endpoints
+        return {
+            "valid": result.get("found", False),
+            "address": address,
+            "formatted_address": result.get("formatted_address"),
+            "current_value": result.get("current_value"),
+            "error": result.get("error")
+        }
+    except Exception as e:
+        logger.error(f"Error validating property: {e}", exc_info=True)
+        return {
+            "valid": False,
+            "address": address,
+            "error": str(e)
+        }
+
+
+# =============================================================================
 # Traffic Endpoints
 # =============================================================================
 

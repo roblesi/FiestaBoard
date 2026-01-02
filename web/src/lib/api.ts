@@ -435,6 +435,27 @@ export interface StockSymbolValidation {
   error?: string;
 }
 
+export interface PropertyAddress {
+  address: string;
+  display_name: string;
+}
+
+export interface PropertyFeatureConfig {
+  enabled: boolean;
+  api_provider: string;  // "redfin", "realty_mole", "manual"
+  api_key?: string;  // Optional - only needed for paid providers
+  addresses: PropertyAddress[];  // List of property addresses (max 3)
+  time_window: string;  // "1 Week", "1 Month", "3 Months", "6 Months", "1 Year"
+  refresh_seconds: number;
+  color_rules?: {
+    change_percent?: Array<{
+      condition: string;
+      value: number;
+      color: string;
+    }>;
+  };
+}
+
 export interface FeaturesConfig {
   weather: WeatherFeatureConfig;
   datetime: DateTimeFeatureConfig;
@@ -448,6 +469,7 @@ export interface FeaturesConfig {
   traffic: TrafficFeatureConfig;
   silence_schedule: SilenceScheduleFeatureConfig;
   stocks: StocksFeatureConfig;
+  property: PropertyFeatureConfig;
 }
 
 export interface GeneralConfig {
@@ -529,7 +551,9 @@ export type FeatureName =
   | "surf"
   | "traffic"
   | "air_fog"
-  | "silence_schedule";
+  | "silence_schedule"
+  | "stocks"
+  | "property";
 
 export interface VersionResponse {
   package_version: string;
@@ -775,6 +799,29 @@ export const api = {
     fetchApi<StockSymbolValidation>("/stocks/validate", {
       method: "POST",
       body: JSON.stringify({ symbol }),
+    }),
+  
+  // Property endpoints
+  searchPropertyAddress: (address: string) => {
+    const params = new URLSearchParams({ address });
+    return fetchApi<{
+      valid: boolean;
+      address: string;
+      current_value?: number;
+      formatted_value?: string;
+      error?: string;
+    }>(`/property/search?${params}`);
+  },
+  validatePropertyAddress: (address: string) =>
+    fetchApi<{
+      valid: boolean;
+      address: string;
+      current_value?: number;
+      formatted_value?: string;
+      error?: string;
+    }>("/property/validate", {
+      method: "POST",
+      body: JSON.stringify({ address }),
     }),
   
   // General configuration

@@ -496,6 +496,55 @@ class MessageFormatter:
         
         # Ensure we don't exceed 6 rows
         return "\n".join(lines[:self.MAX_ROWS])
+    
+    def format_property(self, property_data: Dict) -> str:
+        """
+        Format property value tracking data for display.
+        
+        Args:
+            property_data: Dictionary with property information
+            
+        Returns:
+            Formatted string (max 6 lines)
+        """
+        if not property_data:
+            return "Property: Unavailable"
+        
+        properties = property_data.get("properties", [])
+        if not properties:
+            return "Property: No data available"
+        
+        lines = []
+        
+        # Display up to 3 properties (one per line)
+        for prop in properties[:3]:
+            formatted = prop.get("formatted", "")
+            if formatted:
+                lines.append(formatted)
+        
+        # Optionally add total if multiple properties
+        if len(properties) > 1:
+            total_value = property_data.get("total_value", 0)
+            total_change_percent = property_data.get("total_change_percent", 0.0)
+            
+            # Format total value
+            if total_value >= 1_000_000:
+                total_str = f"${total_value / 1_000_000:.2f}M"
+            elif total_value >= 1_000:
+                total_str = f"${total_value / 1_000:.0f}K"
+            else:
+                total_str = f"${total_value:,.0f}"
+            
+            # Format percentage
+            sign = "+" if total_change_percent >= 0 else ""
+            percent_str = f"{sign}{total_change_percent:.1f}%"
+            
+            # Add total line if we have room
+            if len(lines) < self.MAX_ROWS:
+                lines.append(f"Total: {total_str} {percent_str}")
+        
+        # Ensure we don't exceed 6 rows
+        return "\n".join(lines[:self.MAX_ROWS])
 
 
 def get_message_formatter() -> MessageFormatter:

@@ -19,6 +19,7 @@ from ..data_sources.surf import get_surf_source
 from ..data_sources.baywheels import get_baywheels_source
 from ..data_sources.traffic import get_traffic_source
 from ..data_sources.stocks import get_stocks_source
+from ..data_sources.property import get_property_source
 from ..formatters.message_formatter import get_message_formatter
 
 logger = logging.getLogger(__name__)
@@ -37,6 +38,7 @@ DISPLAY_TYPES = [
     "baywheels",
     "traffic",
     "stocks",
+    "property",
 ]
 
 
@@ -74,6 +76,7 @@ class DisplayService:
         self.baywheels_source = get_baywheels_source()
         self.traffic_source = get_traffic_source()
         self.stocks_source = get_stocks_source()
+        self.property_source = get_property_source()
         
         logger.info("DisplayService initialized")
     
@@ -147,6 +150,11 @@ class DisplayService:
                 "available": self.stocks_source is not None and Config.STOCKS_ENABLED,
                 "description": "US stock market prices and percentage changes",
             },
+            {
+                "type": "property",
+                "available": self.property_source is not None and Config.PROPERTY_ENABLED,
+                "description": "Real estate property value tracking",
+            },
         ]
         return displays
     
@@ -193,6 +201,8 @@ class DisplayService:
                 return self._get_traffic()
             elif display_type == "stocks":
                 return self._get_stocks()
+            elif display_type == "property":
+                return self._get_property()
             else:
                 return DisplayResult(
                     display_type=display_type,
@@ -810,6 +820,78 @@ class DisplayService:
         formatted = self.formatter.format_stocks(raw_data)
         return DisplayResult(
             display_type="stocks",
+            formatted=formatted,
+            raw=raw_data,
+            available=True
+        )
+    
+    def _get_property(self) -> DisplayResult:
+        """Get property value tracking display."""
+        if not Config.PROPERTY_ENABLED:
+            return DisplayResult(
+                display_type="property",
+                formatted="",
+                raw={},
+                available=False,
+                error="Property tracking disabled"
+            )
+        
+        if not self.property_source:
+            return DisplayResult(
+                display_type="property",
+                formatted="",
+                raw={},
+                available=False,
+                error="Property source not configured"
+            )
+        
+        # Fetch property data
+        try:
+            property_data = self.property_source.fetch_property_data()
+        except Exception as e:
+            logger.error(f"Error fetching property data: {e}", exc_info=True)
+            return DisplayResult(
+                display_type="property",
+                formatted=f"Property tracking error: {str(e)}",
+                raw={},
+                available=True,
+                error=str(e)
+            )
+        
+        if not property_data or not property_data.get("properties"):
+            return DisplayResult(
+                display_type="property",
+                formatted="Properties: No data available",
+                raw={"properties": []},
+                available=True,
+                error="No property data available"
+            )
+        
+        properties = property_data.get("properties", [])
+        
+        # Build raw data dictionary
+        raw_data = {
+            "properties": properties,
+            "property_count": len(properties),
+            "total_value": property_data.get("total_value", 0),
+            "total_change": property_data.get("total_change", 0),
+            "total_change_percent": property_data.get("total_change_percent", 0.0),
+            "time_window": property_data.get("time_window", "1 Month"),
+        }
+        
+        # For backward compatibility, also include first property data at top level
+        if properties:
+            first_property = properties[0]
+            raw_data["display_name"] = first_property.get("display_name", "PROPERTY")
+            raw_data["current_value"] = first_property.get("current_value", 0)
+            raw_data["change_percent"] = first_property.get("change_percent", 0.0)
+            raw_data["formatted"] = first_property.get("formatted", "")
+            raw_data["value_str"] = first_property.get("value_str", "")
+            raw_data["change_str"] = first_property.get("change_str", "")
+        
+        formatted = self.formatter.format_property(raw_data)
+        return DisplayResult(
+            display_type="property",
             formatted=formatted,
             raw=raw_data,
             available=True

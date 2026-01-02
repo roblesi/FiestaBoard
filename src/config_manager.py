@@ -183,6 +183,20 @@ DEFAULT_CONFIG: Dict[str, Any] = {
                 ],
             },
         },
+        "property": {
+            "enabled": False,
+            "api_provider": "redfin",  # Options: "redfin", "realty_mole", "manual"
+            "api_key": "",  # Optional - only required for paid providers like realty_mole
+            "addresses": [],  # List of property addresses to track (max 3)
+            "time_window": "1 Month",  # Options: "1 Week", "1 Month", "3 Months", "6 Months", "1 Year"
+            "refresh_seconds": 86400,  # 24 hours default (property values don't change frequently)
+            "color_rules": {
+                "change_percent": [
+                    {"condition": ">", "value": 0, "color": "green"},  # Positive = green
+                    {"condition": "<", "value": 0, "color": "red"},   # Negative = red
+                ],
+            },
+        },
     },
     "general": {
         "timezone": "America/Los_Angeles",  # User's timezone for display purposes
@@ -312,13 +326,42 @@ class ConfigManager:
         
         Only sets values if they're empty in config (allows env vars to provide defaults).
         """
+        # Ensure vestaboard structure exists
+        if "vestaboard" not in self._config:
+            self._config["vestaboard"] = {}
+        
         # Ensure features structure exists
         if "features" not in self._config:
             self._config["features"] = {}
         if "stocks" not in self._config["features"]:
             self._config["features"]["stocks"] = {}
+        if "property" not in self._config["features"]:
+            self._config["features"]["property"] = {}
         
-        # Load environment variables
+        # Load Vestaboard environment variables
+        vb_api_mode = os.getenv("VB_API_MODE", "").strip()
+        vb_local_api_key = os.getenv("VB_LOCAL_API_KEY", "").strip()
+        vb_read_write_key = os.getenv("VB_READ_WRITE_KEY", "").strip()
+        vb_host = os.getenv("VB_LOCAL_API_HOST", "").strip()  # Note: env var is VB_LOCAL_API_HOST
+        if not vb_host:
+            vb_host = os.getenv("VB_HOST", "").strip()  # Also check VB_HOST for backwards compatibility
+        
+        # Apply Vestaboard config if not already set
+        vb_config = self._config["vestaboard"]
+        if vb_api_mode and not vb_config.get("api_mode"):
+            vb_config["api_mode"] = vb_api_mode
+            logger.info("Applied VB_API_MODE from environment variable")
+        if vb_local_api_key and not vb_config.get("local_api_key"):
+            vb_config["local_api_key"] = vb_local_api_key
+            logger.info("Applied VB_LOCAL_API_KEY from environment variable")
+        if vb_read_write_key and not vb_config.get("cloud_key"):
+            vb_config["cloud_key"] = vb_read_write_key
+            logger.info("Applied VB_READ_WRITE_KEY from environment variable")
+        if vb_host and not vb_config.get("host"):
+            vb_config["host"] = vb_host
+            logger.info("Applied VB_HOST from environment variable")
+        
+        # Load stocks environment variables
         finnhub_api_key = os.getenv("FINNHUB_API_KEY", "").strip()
         
         # Apply to stocks config if not already set
@@ -327,8 +370,51 @@ class ConfigManager:
             if not stocks_config.get("finnhub_api_key"):
                 stocks_config["finnhub_api_key"] = finnhub_api_key
                 logger.info("Applied FINNHUB_API_KEY from environment variable")
-                with self._file_lock:
-                    self._save_internal()
+        
+        # Load property environment variables
+        property_enabled = os.getenv("PROPERTY_ENABLED", "").strip().lower()
+        property_api_provider = os.getenv("PROPERTY_API_PROVIDER", "").strip()
+        property_api_key = os.getenv("PROPERTY_API_KEY", "").strip()
+        property_addresses = os.getenv("PROPERTY_ADDRESSES", "").strip()
+        property_time_window = os.getenv("PROPERTY_TIME_WINDOW", "").strip()
+        property_refresh_seconds = os.getenv("PROPERTY_REFRESH_SECONDS", "").strip()
+        
+        # Apply to property config if not already set
+        property_config = self._config["features"]["property"]
+        if property_enabled and property_config.get("enabled") is False:
+            property_config["enabled"] = property_enabled in ["true", "1", "yes"]
+            logger.info(f"Applied PROPERTY_ENABLED={property_enabled} from environment variable")
+        if property_api_provider and not property_config.get("api_provider"):
+            property_config["api_provider"] = property_api_provider
+            logger.info("Applied PROPERTY_API_PROVIDER from environment variable")
+        if property_api_key and not property_config.get("api_key"):
+            property_config["api_key"] = property_api_key
+            logger.info("Applied PROPERTY_API_KEY from environment variable")
+        if property_addresses and not property_config.get("addresses"):
+            # Parse JSON array of addresses
+            try:
+                import json as json_module
+                addresses = json_module.loads(property_addresses)
+                property_config["addresses"] = addresses
+                logger.info("Applied PROPERTY_ADDRESSES from environment variable")
+            except Exception as e:
+                logger.error(f"Failed to parse PROPERTY_ADDRESSES: {e}")
+        if property_time_window and not property_config.get("time_window"):
+            property_config["time_window"] = property_time_window
+            logger.info("Applied PROPERTY_TIME_WINDOW from environment variable")
+        if property_refresh_seconds and not property_config.get("refresh_seconds"):
+            try:
+                property_config["refresh_seconds"] = int(property_refresh_seconds)
+                logger.info("Applied PROPERTY_REFRESH_SECONDS from environment variable")
+            except ValueError:
+                logger.error(f"Invalid PROPERTY_REFRESH_SECONDS value: {property_refresh_seconds}")
+        
+        # Save if any overrides were applied
+        if (vb_api_mode or vb_local_api_key or vb_read_write_key or vb_host or finnhub_api_key or 
+            property_enabled or property_api_provider or property_api_key or property_addresses or 
+            property_time_window or property_refresh_seconds):
+            with self._file_lock:
+                self._save_internal()
     
     def reload(self) -> None:
         """Reload configuration from file."""

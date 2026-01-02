@@ -20,12 +20,13 @@ import { MuniStopFinder } from "./muni-stop-finder";
 import { TrafficRoutePlanner } from "./traffic-route-planner";
 import { WeatherLocationManager } from "./weather-location-manager";
 import { StockSymbolInput } from "./stock-symbol-input";
+import { PropertyAddressManager } from "./property-address-manager";
 import { utcToLocalTime, localTimeToUTC } from "@/lib/timezone-utils";
 
 export interface FeatureField {
   key: string;
   label: string;
-  type: "text" | "password" | "select" | "number" | "location" | "time" | "stocks";
+  type: "text" | "password" | "select" | "number" | "location" | "time" | "stocks" | "properties";
   placeholder?: string;
   options?: { value: string; label: string }[];
   required?: boolean;
@@ -1130,6 +1131,11 @@ export function FeatureCard({
                       selectedSymbols={(formData[field.key] as string[]) ?? []}
                       onSymbolsChange={(symbols) => handleChange(field.key, symbols)}
                       maxSymbols={5}
+                    />
+                  ) : field.type === "properties" ? (
+                    <PropertyAddressManager
+                      value={(formData[field.key] as Array<{address: string; display_name: string}>) ?? []}
+                      onChange={(addresses) => handleChange(field.key, addresses)}
                     />
                   ) : (
                     <input

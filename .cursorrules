@@ -90,3 +90,56 @@ When adding a new feature to the project:
   - Mark optional vs required variables
   - Follow the existing format and style in `env.example`
 
+## Development Artifacts Cleanup
+
+### Temporary Files Created During Development
+
+**MUST be deleted before completing a feature or task:**
+
+Development artifacts include (but are not limited to):
+- `*_PLAN.md` - Implementation plans
+- `*_SUMMARY.md` - Implementation summaries
+- `*_IMPLEMENTATION.md` - Implementation details
+- `*_GUIDE.md` (in root, not docs/) - Temporary guides
+- `*_TEST.md` - Testing notes
+- `*_FIX.md` - Bug fix notes
+- `*_UPDATE.md` - Update notes
+- Any other temporary markdown files created during feature development
+
+### Where Documentation SHOULD Live
+
+**Permanent documentation locations:**
+- `README.md` - Project overview, features, quick start
+- `docs/features/*.md` - Feature-specific setup guides
+- `docs/deployment/*.md` - Deployment guides
+- `docs/reference/*.md` - Reference documentation
+- `docs/setup/*.md` - Setup and configuration guides
+- `env.example` - Environment variable documentation
+
+### Process
+
+1. **During Development**: Feel free to create temporary markdown files for planning and tracking
+2. **Before Completion**: 
+   - Review all markdown files in project root
+   - Delete any temporary/development artifacts
+   - Ensure critical information is moved to proper documentation locations
+   - Clean up any test files or temporary code
+3. **Never Commit**: Development artifacts should never be committed to the repository
+
+### Examples
+
+❌ **DO NOT KEEP:**
+```
+PROPERTY_FEATURE_IMPLEMENTATION_SUMMARY.md
+MUNI_TRAFFIC_ENHANCEMENT_SUMMARY.md
+SILENCE_MODE_EDGE_CASES.md
+HOME_ASSISTANT_ENTITY_PICKER_IMPLEMENTATION.md
+```
+
+✅ **PROPER LOCATIONS:**
+```
+docs/features/PROPERTY_SETUP.md
+docs/features/MUNI_SETUP.md
+README.md (feature overview)
+```
+

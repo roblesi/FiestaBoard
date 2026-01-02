@@ -51,6 +51,7 @@ docker-compose down
 - 🚇 **Muni Transit**: Real-time SF Muni arrival predictions with stop finder (search by address or location)
 - 🚗 **Traffic**: Travel time to destinations with live traffic conditions (multiple routes supported, compare different modes: drive, bike, transit, walk)
 - 📈 **Stocks**: Monitor stock prices and percentage changes for up to 5 symbols with color-coded indicators
+- 🏠 **Property Values**: Track real estate property values over time (1-3 properties) with historical tracking and percentage changes
 - 🌊 **Surf Conditions**: Live surf reports with wave height, swell period, wind conditions, and quality ratings
 - 💨 **Air Quality & Fog**: Monitor air quality (AQI) and fog conditions with intelligent alerts for SF fog and wildfire smoke
 - 🌙 **Silence Schedule**: Configure a time window when the Vestaboard won't send updates (e.g., 8pm-7am)
@@ -188,6 +189,16 @@ All configuration is done via environment variables in `.env`:
   - Options: `1 Day`, `5 Days`, `1 Month`, `3 Months`, `6 Months`, `1 Year`, `2 Years`, `5 Years`, `ALL`
 - `STOCKS_REFRESH_SECONDS`: How often to fetch stock data (default: `300` = 5 minutes)
 - `FINNHUB_API_KEY`: Optional - enables better symbol search/autocomplete (get free key from [finnhub.io](https://finnhub.io/))
+
+#### Property Values
+- `PROPERTY_ENABLED`: Enable property value tracking (default: `false`)
+- `PROPERTY_API_PROVIDER`: API provider - `redfin` (free, no key), `realty_mole` (paid), or `manual` (testing)
+- `PROPERTY_API_KEY`: API key (only needed for realty_mole provider)
+- `PROPERTY_ADDRESSES`: JSON array of properties to track (max 3)
+  - Format: `[{"address": "123 Main St, San Francisco, CA 94102", "display_name": "HOME"}]`
+- `PROPERTY_TIME_WINDOW`: Comparison window (default: `1 Month`)
+  - Options: `1 Week`, `1 Month`, `3 Months`, `6 Months`, `1 Year`
+- `PROPERTY_REFRESH_SECONDS`: How often to check values (default: `86400` = daily)
 
 #### Silence Schedule
 - `SILENCE_SCHEDULE_ENABLED`: Enable silence schedule (default: `false`)
@@ -562,6 +573,46 @@ Monitor stock prices and percentage changes for up to 5 symbols with automatic c
 **Data Source:**
 - Uses Yahoo Finance (yfinance) for stock data - no API key required
 - Optional Finnhub integration for enhanced symbol search and autocomplete
+
+### Property Values
+Track real estate property values over time, displaying them similar to stocks with value changes and color-coded trends.
+
+**Features:**
+- **Track 1-3 Properties**: Monitor multiple properties simultaneously
+- **Historical Tracking**: Build your own value history dataset over time
+- **Color-Coded Display**: Green for value increases, red for decreases
+- **Flexible Time Windows**: Compare values across 1 week to 1 year
+- **Free API**: Uses unofficial Redfin API (no API key required)
+- **Local Persistence**: Historical data stored locally
+
+**Setup:**
+1. Enable Property Tracking in Settings
+2. Add properties (full address + short display name)
+3. Values are checked daily (configurable)
+4. History builds over time for accurate comparisons
+
+**Template Variables:**
+- `{{property.properties.0.formatted}}` - Pre-formatted string: `NAME{COLOR} $VALUE CHANGE%`
+  - Example: `HOME{green} $1.25M +4.2%`
+- `{{property.properties.0.display_name}}` - Property name (e.g., "HOME")
+- `{{property.properties.0.value_str}}` - Formatted value (e.g., "$1.25M")
+- `{{property.properties.0.change_str}}` - Change percentage (e.g., "+4.2%")
+- Replace `0` with `1` or `2` for additional properties
+
+**Example Template:**
+```
+{center}PROPERTY VALUES
+{{property.properties.0.formatted}}
+{{property.properties.1.formatted}}
+Total: ${{property.total_value}}
+```
+
+**Data Source:**
+- Uses unofficial Redfin Python library (free, no API key)
+- Alternative: RapidAPI / Realty Mole (paid, more reliable)
+- Fallback: Manual entry mode for testing
+
+**See:** [Property Setup Guide](./docs/features/PROPERTY_SETUP.md) for detailed instructions
 
 ### Surf Conditions
 Monitor surf conditions with real-time wave height, swell period, wind data, and quality ratings.

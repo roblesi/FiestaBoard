@@ -630,6 +630,50 @@ class Config:
         """Stocks data refresh interval in seconds."""
         return cls._get_feature("stocks").get("refresh_seconds", 300)
     
+    # ==================== Property Value Tracking Configuration ====================
+    
+    @classmethod
+    @property
+    def PROPERTY_ENABLED(cls) -> bool:
+        """Whether property value tracking is enabled."""
+        return cls._get_feature("property").get("enabled", False)
+    
+    @classmethod
+    @property
+    def PROPERTY_API_PROVIDER(cls) -> str:
+        """Property API provider: 'redfin', 'realty_mole', or 'manual'."""
+        return cls._get_feature("property").get("api_provider", "redfin")
+    
+    @classmethod
+    @property
+    def PROPERTY_API_KEY(cls) -> str:
+        """Property API key (if required by provider)."""
+        return cls._get_feature("property").get("api_key", "")
+    
+    @classmethod
+    @property
+    def PROPERTY_ADDRESSES(cls) -> List[Dict[str, str]]:
+        """List of property addresses to monitor (max 3).
+        Each property should have 'address' and 'display_name' keys."""
+        feature_config = cls._get_feature("property")
+        addresses = feature_config.get("addresses", [])
+        if isinstance(addresses, list):
+            # Limit to 3 properties max
+            return addresses[:3]
+        return []
+    
+    @classmethod
+    @property
+    def PROPERTY_TIME_WINDOW(cls) -> str:
+        """Time window for value comparison (human-readable format)."""
+        return cls._get_feature("property").get("time_window", "1 Month")
+    
+    @classmethod
+    @property
+    def PROPERTY_REFRESH_SECONDS(cls) -> int:
+        """Property data refresh interval in seconds."""
+        return cls._get_feature("property").get("refresh_seconds", 86400)  # Default: daily
+    
     # ==================== Legacy/Unused Configuration ====================
     
     # These are kept for backward compatibility but not actively used
@@ -697,6 +741,7 @@ class Config:
             "baywheels_enabled": cls.BAYWHEELS_ENABLED,
             "traffic_enabled": cls.TRAFFIC_ENABLED,
             "stocks_enabled": cls.STOCKS_ENABLED,
+            "property_enabled": cls.PROPERTY_ENABLED,
             # Vestaboard config
             "vb_api_mode": cls.VB_API_MODE,
             "vb_host": cls.VB_HOST if cls.VB_API_MODE.lower() == "local" else "cloud",

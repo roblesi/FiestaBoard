@@ -85,6 +85,10 @@ AVAILABLE_VARIABLES = {
         "symbol", "current_price", "previous_price", "change_percent", "change_direction", "formatted", "company_name",
         "symbol_count", "stocks"
     ],
+    "property": [
+        "display_name", "current_value", "change_percent", "formatted", "value_str", "change_str",
+        "property_count", "total_value", "total_change", "total_change_percent", "time_window", "properties"
+    ],
 }
 
 # Maximum character lengths for each variable (for validation)
@@ -250,6 +254,36 @@ VARIABLE_MAX_LENGTHS = {
     "stocks.stocks.4.current_price": 8,
     "stocks.stocks.4.change_percent": 6,
     "stocks.stocks.4.formatted": 22,
+    # Property value tracking
+    "property.display_name": 10,
+    "property.current_value": 10,
+    "property.change_percent": 6,
+    "property.formatted": 22,
+    "property.value_str": 8,
+    "property.change_str": 6,
+    "property.property_count": 1,
+    "property.total_value": 10,
+    "property.total_change_percent": 6,
+    "property.time_window": 10,
+    # Indexed property access (up to 3 properties)
+    "property.properties.0.display_name": 10,
+    "property.properties.0.current_value": 10,
+    "property.properties.0.change_percent": 6,
+    "property.properties.0.formatted": 22,
+    "property.properties.0.value_str": 8,
+    "property.properties.0.change_str": 6,
+    "property.properties.1.display_name": 10,
+    "property.properties.1.current_value": 10,
+    "property.properties.1.change_percent": 6,
+    "property.properties.1.formatted": 22,
+    "property.properties.1.value_str": 8,
+    "property.properties.1.change_str": 6,
+    "property.properties.2.display_name": 10,
+    "property.properties.2.current_value": 10,
+    "property.properties.2.change_percent": 6,
+    "property.properties.2.formatted": 22,
+    "property.properties.2.value_str": 8,
+    "property.properties.2.change_str": 6,
 }
 
 # Regex patterns
@@ -617,7 +651,7 @@ class TemplateEngine:
         context = {}
         
         # Fetch from each source
-        sources = ["weather", "datetime", "home_assistant", "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels", "traffic", "stocks"]
+        sources = ["weather", "datetime", "home_assistant", "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels", "traffic", "stocks", "property"]
         
         for source in sources:
             try:
@@ -699,6 +733,7 @@ class TemplateEngine:
             "baywheels": "baywheels",
             "traffic": "traffic",
             "stocks": "stocks",
+            "property": "property",
         }
         
         feature_name = feature_map.get(source)
@@ -962,6 +997,7 @@ class TemplateEngine:
             "baywheels": "baywheels",
             "traffic": "traffic",
             "stocks": "stocks",
+            "property": "property",
         }
         
         feature_name = feature_map.get(source)
@@ -1201,7 +1237,7 @@ class TemplateEngine:
             List of source names that are configured
         """
         available = []
-        sources = ["weather", "datetime", "home_assistant", "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels", "traffic", "stocks"]
+        sources = ["weather", "datetime", "home_assistant", "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels", "traffic", "stocks", "property"]
         
         for source in sources:
             try:
@@ -1316,6 +1352,7 @@ class TemplateEngine:
                     "baywheels": "baywheels",
                     "traffic": "traffic",
                     "stocks": "stocks",
+            "property": "property",
                 }
                 feature = feature_map.get(source)
                 if feature:
