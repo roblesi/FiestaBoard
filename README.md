@@ -25,6 +25,8 @@ That's it! 🎉
 - **API**: http://localhost:8000 (REST API endpoints)
 - **API Docs**: http://localhost:8000/docs (interactive API documentation)
 
+![Web UI Home](./images/web-ui-home.png)
+
 **To start the display service:**
 1. Open http://localhost:8080 in your browser
 2. Click "▶ Start Service" button
@@ -54,6 +56,7 @@ docker-compose down
 - 🌊 **Surf Conditions**: Live surf reports with wave height, swell period, wind conditions, and quality ratings
 - 💨 **Air Quality & Fog**: Monitor air quality (AQI) and fog conditions with intelligent alerts for SF fog and wildfire smoke
 - 🌙 **Silence Schedule**: Configure a time window when the Vestaboard won't send updates (e.g., 8pm-7am)
+
 
 ### System Features
 - 📄 **Page-Based Display**: Create and select pages via the web UI
@@ -681,6 +684,9 @@ The Vestaboard can display various screens:
 - **Home Assistant**: House status with green ([G]) and red ([R]) indicators
 - **Star Trek Quotes**: Inspiring quotes from TNG, Voyager, and DS9
 - **Guest WiFi**: SSID and password for guests
+- **Stocks**: Monitor stock prices and percentage changes with color-coded indicators
+
+![Stocks Display](./images/stocks-display.png)
 
 **System Features:**
 - **Silence Schedule**: Configure quiet hours when the board won't update (e.g., 8pm-7am)

@@ -89,6 +89,11 @@ When adding a new feature to the project:
   - Include example values where appropriate
   - Mark optional vs required variables
   - Follow the existing format and style in `env.example`
+- **MUST include a screenshot showing the feature in action**
+  - Add screenshot to the `images/` directory with a descriptive filename (e.g., `feature-name-display.png`)
+  - Include the screenshot in the feature's documentation file (`docs/features/FEATURE_NAME_SETUP.md`)
+  - Use relative path format: `![Feature Description](../images/feature-name-display.png)`
+  - Screenshot should clearly demonstrate what the feature does and how it appears on the Vestaboard
 
 ## Development Artifacts
 
