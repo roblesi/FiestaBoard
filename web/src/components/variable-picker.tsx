@@ -228,6 +228,21 @@ export function VariablePicker({
     enabled: templateVars?.variables?.stocks !== undefined,
   });
 
+  // Fetch live Property data
+  const { data: propertyData } = useQuery({
+    queryKey: ["property-live-data"],
+    queryFn: async () => {
+      try {
+        const display = await api.getDisplayRaw("property");
+        return display.data as { properties?: any[] };
+      } catch {
+        return null;
+      }
+    },
+    refetchInterval: 30000,
+    enabled: templateVars?.variables?.property !== undefined,
+  });
+
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success("Copied to clipboard");
@@ -775,6 +790,91 @@ export function VariablePicker({
                             <p className="mb-2">Configure stock symbols in Settings to see indexed variables here.</p>
                             <p className="font-mono text-[10px]">
                               Example: <code className="bg-background px-1 rounded">stocks.0.symbol</code>, <code className="bg-background px-1 rounded">stocks.1.current_price</code>, <code className="bg-background px-1 rounded">stocks.2.formatted</code>
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CollapsibleSection>
+                );
+              }
+
+              // Special handling for Property with live property data OR when enabled but no properties yet
+              if (category === "property") {
+                return (
+                  <CollapsibleSection key={category} title={category} defaultOpen={false}>
+                    <div className="space-y-3">
+                      {/* Aggregate/General Variables */}
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1.5">General</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {vars.filter(v => !v.startsWith("properties.")).map((variable) => {
+                            const varValue = `{{${category}.${variable}}}`;
+                            return (
+                              <VariablePill
+                                key={variable}
+                                label={variable}
+                                value={varValue}
+                                onInsert={() => handleInsert(varValue)}
+                                onDragStart={(e) => handleDragStart(e, varValue)}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Individual Properties Accordion */}
+                      <div className="space-y-1.5">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Home className="h-3 w-3" />
+                          Properties {propertyData?.properties ? `(${propertyData.properties.length})` : "(None configured)"}
+                        </p>
+                        {propertyData?.properties && propertyData.properties.length > 0 ? (
+                          <div className="max-h-[400px] overflow-y-auto pr-1">
+                            <Accordion type="single" collapsible className="w-full">
+                              {propertyData.properties.map((property: any, index: number) => (
+                              <AccordionItem key={property.address || index} value={`property-${index}`} className="border-b-0">
+                                <AccordionTrigger className="py-2 hover:no-underline">
+                                  <div className="flex items-center gap-2 text-xs">
+                                    <Home className="h-4 w-4" />
+                                    <div className="text-left">
+                                      <div className="font-medium">{property.display_name || `Property ${index}`}</div>
+                                      <div className="text-muted-foreground text-xs">
+                                        ${property.current_value?.toLocaleString() || "N/A"} • {property.change_percent ? `${property.change_percent >= 0 ? '+' : ''}${property.change_percent.toFixed(1)}%` : "N/A"} • Index: {index}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                  <div className="space-y-2 pt-2 pl-2">
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {["display_name", "current_value", "value_str", "change_percent", "change_str", "formatted", "color_tile"].map((field) => {
+                                        const varValue = `{{${category}.properties.${index}.${field}}}`;
+                                        return (
+                                          <VariablePill
+                                            key={field}
+                                            label={field}
+                                            value={varValue}
+                                            onInsert={() => handleInsert(varValue)}
+                                            onDragStart={(e) => handleDragStart(e, varValue)}
+                                          />
+                                        );
+                                      })}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                                      <code className="text-xs">properties.{index}.*</code>
+                                    </div>
+                                  </div>
+                                </AccordionContent>
+                              </AccordionItem>
+                            ))}
+                            </Accordion>
+                          </div>
+                        ) : (
+                          <div className="p-3 bg-muted/30 rounded-lg text-xs text-muted-foreground">
+                            <p className="mb-2">Configure property addresses in Settings to see indexed variables here.</p>
+                            <p className="font-mono text-[10px]">
+                              Example: <code className="bg-background px-1 rounded">properties.0.display_name</code>, <code className="bg-background px-1 rounded">properties.1.current_value</code>, <code className="bg-background px-1 rounded">properties.2.formatted</code>
                             </p>
                           </div>
                         )}
