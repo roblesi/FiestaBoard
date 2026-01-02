@@ -17,6 +17,8 @@ COPY web/ ./
 
 # Build the Next.js app with standalone output
 # No NEXT_PUBLIC_API_URL needed - API URL is fetched at runtime
+# Increase Node.js memory limit for build (helps in CI environments)
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npm run build
 
 # Production stage - Run nginx + Next.js server
