@@ -90,3 +90,43 @@ When adding a new feature to the project:
   - Mark optional vs required variables
   - Follow the existing format and style in `env.example`
 
+## Development Artifacts
+
+### No Temporary Markdown Files
+
+**NEVER leave temporary markdown files in the repository root after completing a feature or task.**
+
+Examples of files that should NOT be committed or left behind:
+- ❌ Implementation notes (e.g., `FEATURE_IMPLEMENTATION.md`, `BAYWHEELS_UI_UPDATE.md`)
+- ❌ Testing notes (e.g., `MANUAL_TESTING_*.md`, `TESTING_*.md`)
+- ❌ Review summaries (e.g., `REVIEW_SUMMARY.md`, `IMPLEMENTATION_SUMMARY.md`)
+- ❌ Edge case documentation (e.g., `EDGE_CASES.md`, `STATE_TRACKING.md`)
+- ❌ Performance test notes (e.g., `PERFORMANCE_TEST.md`)
+- ❌ Fix documentation (e.g., `DOCKER_PUBLISHING_FIX.md`)
+
+### Proper Documentation Locations
+
+Instead, put documentation in the appropriate place:
+
+**For permanent documentation:**
+- **Features**: `docs/features/FEATURE_NAME_SETUP.md` - User-facing setup guides
+- **Deployment**: `docs/deployment/*.md` - Deployment and infrastructure docs
+- **Reference**: `docs/reference/*.md` - Technical reference material
+- **Setup**: `docs/setup/*.md` - Development environment setup
+- **Architecture**: Add to `README.md` or create `docs/reference/ARCHITECTURE.md`
+- **Web UI features**: `web/src/components/README.md` or component-specific docs in `web/`
+
+**For temporary notes during development:**
+- Keep notes in your local environment (not in git)
+- Use comments in code for implementation details
+- Use PR descriptions for change summaries
+- Delete any temporary `.md` files before committing
+
+### Cleanup Rule
+
+Before completing any feature or task:
+1. Review the repository root for any `*.md` files that aren't `README.md`
+2. Move any valuable information to the proper location in `docs/`
+3. Delete all temporary implementation/testing markdown files
+4. Ensure all critical information is preserved in proper documentation
+
