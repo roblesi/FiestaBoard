@@ -53,41 +53,46 @@ export function PropertyAddressManager({ value, onChange }: PropertyAddressManag
       return;
     }
 
-    // Validate address with backend
+    // Validate address with backend (optional - allow adding even if validation fails)
     setIsValidating(true);
+    let validationSuccess = false;
+    let valueInfo = "";
+    
     try {
       const validation = await api.validatePropertyAddress(newAddress.trim());
       
-      if (!validation.valid) {
-        toast.error(validation.error || "Could not validate property address. Please check the address format.");
-        setIsValidating(false);
-        return;
+      if (validation.valid) {
+        validationSuccess = true;
+        valueInfo = validation.formatted_value ? ` (${validation.formatted_value})` : "";
+      } else {
+        // Show warning but don't block adding
+        console.warn("Validation failed:", validation.error);
+        toast.warning("Could not validate address, but you can still add it. Values will be fetched when displayed.");
       }
-
-      // Add the new property
-      const updatedAddresses = [
-        ...addresses,
-        {
-          address: newAddress.trim(),
-          display_name: newDisplayName.trim().toUpperCase(),
-        },
-      ];
-
-      setAddresses(updatedAddresses);
-      onChange(updatedAddresses);
-      
-      // Clear inputs
-      setNewAddress("");
-      setNewDisplayName("");
-      
-      const valueInfo = validation.formatted_value ? ` (${validation.formatted_value})` : "";
-      toast.success(`Added property: ${newDisplayName.trim().toUpperCase()}${valueInfo}`);
     } catch (error) {
       console.error("Property validation error:", error);
-      toast.error("Failed to validate property address. Please try again.");
-    } finally {
-      setIsValidating(false);
+      // Show warning but don't block adding
+      toast.warning("Validation unavailable (Redfin may be blocking requests). Property will be added anyway.");
     }
+
+    // Add the property regardless of validation result
+    const updatedAddresses = [
+      ...addresses,
+      {
+        address: newAddress.trim(),
+        display_name: newDisplayName.trim().toUpperCase(),
+      },
+    ];
+
+    setAddresses(updatedAddresses);
+    onChange(updatedAddresses);
+    
+    // Clear inputs
+    setNewAddress("");
+    setNewDisplayName("");
+    setIsValidating(false);
+    
+    toast.success(`Added property: ${newDisplayName.trim().toUpperCase()}${valueInfo}`);
   };
 
   const handleRemoveProperty = (index: number) => {
@@ -187,7 +192,7 @@ export function PropertyAddressManager({ value, onChange }: PropertyAddressManag
             {isValidating ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Validating address...
+                Checking address...
               </>
             ) : (
               <>
@@ -196,6 +201,9 @@ export function PropertyAddressManager({ value, onChange }: PropertyAddressManag
               </>
             )}
           </Button>
+          <p className="text-xs text-muted-foreground text-center">
+            Property values will be fetched when the feature is active
+          </p>
         </Card>
       )}
 
