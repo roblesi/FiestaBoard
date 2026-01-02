@@ -146,22 +146,35 @@ print_info "Transferring .env file..."
 scp_exec ".env" "$SYNOLOGY_DEPLOY_DIR/"
 print_success ".env file transferred"
 
-# Transfer config files if they exist
-if [ -f data/config.json ]; then
-    print_info "Transferring config.json..."
-    scp_exec "data/config.json" "$SYNOLOGY_DEPLOY_DIR/data/"
-    print_success "config.json transferred"
+# Check if user data already exists on NAS
+print_info "Checking for existing user data on NAS..."
+REMOTE_PAGES_EXISTS=$(ssh_exec "[ -f $SYNOLOGY_DEPLOY_DIR/data/pages.json ] && echo 'yes' || echo 'no'")
+REMOTE_CONFIG_EXISTS=$(ssh_exec "[ -f $SYNOLOGY_DEPLOY_DIR/data/config.json ] && echo 'yes' || echo 'no'")
+REMOTE_SETTINGS_EXISTS=$(ssh_exec "[ -f $SYNOLOGY_DEPLOY_DIR/data/settings.json ] && echo 'yes' || echo 'no'")
+
+# Transfer config.json only if it doesn't exist on NAS (first-time setup)
+if [ "$REMOTE_CONFIG_EXISTS" = "no" ]; then
+    if [ -f data/config.json ]; then
+        print_info "Transferring initial config.json..."
+        scp_exec "data/config.json" "$SYNOLOGY_DEPLOY_DIR/data/"
+        print_success "Initial config.json transferred"
+    fi
+else
+    print_info "Preserving existing config.json on NAS"
 fi
 
-if [ -f data/pages.json ]; then
-    print_info "Transferring pages.json..."
-    scp_exec "data/pages.json" "$SYNOLOGY_DEPLOY_DIR/data/"
-    print_success "pages.json transferred"
+# NEVER transfer pages.json from local - it contains dev data
+# Production pages are managed through the Web UI on NAS
+if [ "$REMOTE_PAGES_EXISTS" = "no" ]; then
+    print_info "No pages.json found on NAS - will be created automatically on first run"
+else
+    print_info "Preserving existing pages.json on NAS (your custom pages)"
 fi
 
-# Create production settings.json if it doesn't exist
-print_info "Ensuring production settings.json..."
-ssh_exec "cat > $SYNOLOGY_DEPLOY_DIR/data/settings.json << 'EOF'
+# Create production settings.json ONLY if it doesn't exist (first-time setup)
+if [ "$REMOTE_SETTINGS_EXISTS" = "no" ]; then
+    print_info "Creating initial production settings.json..."
+    ssh_exec "cat > $SYNOLOGY_DEPLOY_DIR/data/settings.json << 'EOF'
 {
   \"transitions\": {
     \"strategy\": null,
@@ -173,10 +186,19 @@ ssh_exec "cat > $SYNOLOGY_DEPLOY_DIR/data/settings.json << 'EOF'
   },
   \"active_page\": {
     \"page_id\": null
+  },
+  \"polling\": {
+    \"interval_seconds\": 60
+  },
+  \"board\": {
+    \"board_type\": \"black\"
   }
 }
 EOF"
-print_success "Production settings.json ready"
+    print_success "Initial production settings.json created"
+else
+    print_info "Preserving existing settings.json on NAS (your active page selection)"
+fi
 
 # Step 4: Login to GitHub Container Registry
 print_header "Step 4: Authenticating with GitHub Container Registry"
@@ -225,3 +247,5 @@ echo "Or run this script again to pull and restart with latest images."
 echo ""
 echo -e "${YELLOW}Note: The output target is set to 'board' (production mode).${NC}"
 echo -e "${YELLOW}Your Vestaboard should start receiving updates automatically.${NC}"
+echo ""
+echo -e "${GREEN}✓ User data preserved:${NC} Your custom pages and settings were not modified."
