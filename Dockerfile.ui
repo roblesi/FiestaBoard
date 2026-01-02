@@ -9,12 +9,13 @@ WORKDIR /app
 # Install build dependencies for native modules (lightningcss, swc)
 RUN apk add --no-cache python3 make g++
 
-# Copy package files
-COPY web/package*.json ./
+# Copy only package.json (not lockfile) to let npm resolve correct native deps for Alpine
+COPY web/package.json ./
 
 # Install ALL dependencies (needed for build)
-# Clean install to ensure native modules are built correctly
-RUN npm ci --legacy-peer-deps
+# Use npm install (not ci) to properly install native modules for Alpine's musl libc
+# lightningcss and @next/swc need musl-specific binaries
+RUN npm install --legacy-peer-deps --no-audit
 
 # Copy source files
 COPY web/ ./
