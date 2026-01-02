@@ -159,9 +159,8 @@ The system automatically maps states:
 Display priority order:
 
 1. **Guest WiFi** (highest) - When enabled
-2. **Apple Music** - When music is playing
-3. **Home Assistant** - Can be set as active page
-4. **Weather + DateTime** - Can be set as active page
+2. **Home Assistant** - Can be set as active page
+3. **Weather + DateTime** - Can be set as active page
 
 You can select which page is active from the Pages UI.
 

@@ -61,8 +61,7 @@ Password: YourPassword
 The display priority is:
 
 1. **Guest WiFi** - Can be set as active page
-2. **Apple Music** - Can be set as active page
-3. **Weather + DateTime** - Can be set as active page
+2. **Weather + DateTime** - Can be set as active page
 
 ## Use Cases
 

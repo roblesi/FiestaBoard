@@ -222,13 +222,13 @@ series_info = {
 ### Adding New Color Uses
 
 ```python
-# Example: Add color to Apple Music
-def format_apple_music(self, music_data: Dict) -> str:
-    artist = music_data.get("artist", "Unknown")
-    song = music_data.get("song", "Unknown")
+# Example: Add color to weather conditions
+def format_weather(self, weather_data: Dict) -> str:
+    temp = weather_data.get("temperature", "??")
+    condition = weather_data.get("condition", "Unknown")
     
-    # Add blue color to "Now Playing"
-    lines = ["{67}Now Playing", ""]
+    # Add blue color to "Weather"
+    lines = ["{67}Weather", ""]
     # ... rest of formatting
 ```
 
@@ -299,7 +299,6 @@ The color codes display as solid color tiles on the physical Vestaboard. Test by
 Potential color improvements:
 
 - **Weather conditions**: Color-code weather symbols
-- **Apple Music**: Color by genre or mood
 - **Time of day**: Different colors for morning/afternoon/evening
 - **Custom themes**: User-configurable color schemes
 - **Animations**: Rotating colors for emphasis

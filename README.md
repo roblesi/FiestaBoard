@@ -1,6 +1,6 @@
 # Vestaboard Display Service
 
-A Python service that runs in Docker to display dynamic information on your Vestaboard, including weather, date/time, house status, Star Trek quotes, Apple Music "Now Playing", stock prices, and guest WiFi credentials.
+A Python service that runs in Docker to display dynamic information on your Vestaboard, including weather, date/time, house status, Star Trek quotes, stock prices, surf conditions, air quality monitoring, transit arrivals, traffic conditions, and guest WiFi credentials.
 
 ## 🚀 TLDR - Quick Start
 
@@ -51,6 +51,8 @@ docker-compose down
 - 🚇 **Muni Transit**: Real-time SF Muni arrival predictions with stop finder (search by address or location)
 - 🚗 **Traffic**: Travel time to destinations with live traffic conditions (multiple routes supported, compare different modes: drive, bike, transit, walk)
 - 📈 **Stocks**: Monitor stock prices and percentage changes for up to 5 symbols with color-coded indicators
+- 🌊 **Surf Conditions**: Live surf reports with wave height, swell period, wind conditions, and quality ratings
+- 💨 **Air Quality & Fog**: Monitor air quality (AQI) and fog conditions with intelligent alerts for SF fog and wildfire smoke
 - 🌙 **Silence Schedule**: Configure a time window when the Vestaboard won't send updates (e.g., 8pm-7am)
 
 ### System Features
@@ -69,7 +71,6 @@ docker-compose down
 - Vestaboard Read/Write API key
 - Weather API key (WeatherAPI.com recommended)
 - (Optional) Home Assistant server with access token
-- (Optional) Mac with Apple Music for "Now Playing" feature
 
 ### GitHub Codespaces (Recommended for Development)
 
@@ -110,8 +111,9 @@ See [CODESPACES_SETUP.md](./docs/setup/CODESPACES_SETUP.md) for detailed instruc
    # Optional features (see setup guides)
    STAR_TREK_QUOTES_ENABLED=true
    HOME_ASSISTANT_ENABLED=false
-   APPLE_MUSIC_ENABLED=false
    GUEST_WIFI_ENABLED=false
+   SURF_ENABLED=false
+   AIR_FOG_ENABLED=false
    SILENCE_SCHEDULE_ENABLED=false
    ```
 
@@ -236,7 +238,6 @@ Vesta/
 │   └── reference/                  # API research and reference
 ├── scripts/                        # Utility scripts
 ├── tests/                          # Test suite
-├── macos_helper/                   # macOS Apple Music helper
 ├── Dockerfile.api                  # API service Dockerfile
 ├── Dockerfile.ui                   # Web UI Dockerfile
 ├── docker-compose.yml              # Production compose
@@ -562,13 +563,111 @@ Monitor stock prices and percentage changes for up to 5 symbols with automatic c
 - Uses Yahoo Finance (yfinance) for stock data - no API key required
 - Optional Finnhub integration for enhanced symbol search and autocomplete
 
+### Surf Conditions
+Monitor surf conditions with real-time wave height, swell period, wind data, and quality ratings.
+
+**Features:**
+- **Wave Data**: Real-time wave height (in feet) and swell period (in seconds)
+- **Wind Conditions**: Wind speed and direction (cardinal directions)
+- **Quality Ratings**: Automatic surf quality assessment based on swell period and wind
+  - 🟢 EXCELLENT: Long period swell (>12s) with light winds (<12mph)
+  - 🟡 GOOD: Decent period swell (>10s) with moderate winds (<15mph)
+  - 🟠 FAIR: Reasonable conditions (>8s period or <20mph winds)
+  - 🔴 POOR: Short period swell with strong winds
+- **Location Configurable**: Set custom coordinates (default: Ocean Beach, SF)
+- **No API Key Required**: Uses free Open-Meteo Marine API
+
+**Setup:**
+1. Enable Surf in Settings
+2. Configure location (latitude/longitude) - defaults to Ocean Beach, SF
+3. Adjust refresh interval (default: 10 minutes)
+4. Use template variables in your pages:
+   - `{{surf.wave_height}}` - Wave height in feet (e.g., "4.5")
+   - `{{surf.swell_period}}` - Swell period in seconds (e.g., "12.0")
+   - `{{surf.quality}}` - Quality rating (EXCELLENT, GOOD, FAIR, POOR)
+   - `{{surf.wind_speed}}` - Wind speed in mph
+   - `{{surf.wind_direction_cardinal}}` - Wind direction (N, NE, E, etc.)
+   - `{{surf.formatted_message}}` - Pre-formatted: "OB SURF: 4.5ft @ 12s"
+
+**Example Template:**
+```
+{center}SURF REPORT
+{{surf.formatted_message}}
+Quality: {{surf.quality}}
+Wind: {{surf.wind_speed}}mph {{surf.wind_direction_cardinal}}
+```
+
+**Data Source:**
+- Uses Open-Meteo Marine API (free, no API key required)
+- Wave height and swell period from marine forecast
+- Wind data from weather forecast
+
+### Air Quality & Fog Monitoring
+Monitor air quality (AQI from PM2.5) and fog conditions with intelligent alert system for Bay Area fog and wildfire smoke.
+
+**Features:**
+- **Air Quality Index (AQI)**: Real-time AQI calculated from PM2.5 concentrations
+  - 🟢 GOOD (0-50): Air quality is satisfactory
+  - 🟡 MODERATE (51-100): Acceptable for most people
+  - 🟠 UNHEALTHY FOR SENSITIVE (101-150): Sensitive groups may experience effects
+  - 🔴 UNHEALTHY (151-200): Everyone may experience effects
+  - 🟣 VERY UNHEALTHY (201-300): Health alert
+  - 🟤 HAZARDOUS (301+): Emergency conditions
+- **Fog Detection**: Intelligent fog detection based on visibility and weather conditions
+  - Triggers on visibility <1600m or high humidity (>95%) with cool temps (<60°F)
+  - 🟠 HEAVY FOG: Visibility significantly reduced
+  - 🟡 LIGHT FOG: Some reduction in visibility
+  - 🟢 CLEAR: Good visibility
+- **Wildfire Alerts**: Automatically alerts when AQI >100 (unhealthy air quality)
+- **Dual Data Sources**: Combines PurpleAir (air quality) and OpenWeatherMap (visibility/fog)
+- **Location Configurable**: Set custom coordinates (default: San Francisco)
+
+**Setup:**
+1. Get API keys:
+   - **PurpleAir** (optional): Sign up at [purpleair.com](https://www2.purpleair.com/) for air quality data
+   - **OpenWeatherMap** (optional): Sign up at [openweathermap.org](https://openweathermap.org/) for visibility/fog data
+   - *Note: At least one API key is required*
+2. Enable Air Quality/Fog in Settings
+3. Configure API keys and location (latitude/longitude)
+4. Optionally specify a PurpleAir sensor ID for precise air quality monitoring
+5. Use template variables in your pages:
+   - `{{air_fog.pm2_5_aqi}}` - Air Quality Index value (e.g., "42")
+   - `{{air_fog.pm2_5}}` - PM2.5 concentration in µg/m³
+   - `{{air_fog.air_status}}` - Air status (e.g., "AIR: GOOD", "AIR: UNHEALTHY")
+   - `{{air_fog.air_color}}` - Color code for air quality
+   - `{{air_fog.fog_status}}` - Fog status (e.g., "FOG: HEAVY", "CLEAR")
+   - `{{air_fog.fog_color}}` - Color code for fog conditions
+   - `{{air_fog.is_foggy}}` - Boolean fog indicator
+   - `{{air_fog.visibility_m}}` - Visibility in meters
+   - `{{air_fog.humidity}}` - Relative humidity percentage
+   - `{{air_fog.dew_point_f}}` - Dew point in Fahrenheit
+   - `{{air_fog.alert_message}}` - Combined alert (e.g., "FOG: HEAVY | AIR: UNHEALTHY")
+   - `{{air_fog.formatted_message}}` - Pre-formatted: "AQI:42 VIS:2.5mi HUM:85%"
+
+**Example Template:**
+```
+{center}AIR & FOG
+{{air_fog.alert_message}}
+{{air_fog.formatted_message}}
+Dew Point: {{air_fog.dew_point_f}}°F
+```
+
+**Data Sources:**
+- **PurpleAir API**: Real-time PM2.5 air quality data from community sensors
+- **OpenWeatherMap API**: Visibility, humidity, and temperature data for fog detection
+- AQI calculated using US EPA standard formula
+
+**Use Cases:**
+- **SF Fog Monitoring**: Know when Karl the Fog is rolling in
+- **Wildfire Season**: Monitor smoke and air quality during fire season
+- **Commute Planning**: Check visibility before heading out
+- **Health Alerts**: Track air quality for sensitive individuals
+
 ## Future Features
 
 - 🌐 Webhook support for manual messages
 - 📸 Custom image display
 - 📊 Analytics and usage stats
-- 🌊 Surf conditions
-- 💨 Air quality and fog conditions
 
 ## License
 

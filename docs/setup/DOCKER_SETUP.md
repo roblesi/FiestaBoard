@@ -191,8 +191,6 @@ Both services use the same `.env` file. Key variables:
 - `VB_READ_WRITE_KEY` - Vestaboard API key (required)
 - `WEATHER_API_KEY` - Weather API key (required)
 - `WEATHER_PROVIDER` - "weatherapi" or "openweathermap"
-- `APPLE_MUSIC_ENABLED` - Enable Apple Music integration
-- `APPLE_MUSIC_SERVICE_URL` - URL to Mac Studio helper service
 - And more... (see `env.example`)
 
 ## Production Deployment

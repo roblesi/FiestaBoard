@@ -11,7 +11,6 @@ Both services can be deployed to your Synology NAS using Docker Container Manage
 ## Prerequisites
 
 ✅ All tests passed locally
-✅ Apple Music helper service running on Mac Studio (192.168.0.116:8080)
 ✅ Configuration ready in `.env`
 ✅ Docker and Docker Compose installed on Synology
 
@@ -58,10 +57,6 @@ WEATHER_API_KEY=your_weather_api_key_here
 WEATHER_PROVIDER=weatherapi
 WEATHER_LOCATION=San Francisco, CA
 TIMEZONE=America/Los_Angeles
-APPLE_MUSIC_ENABLED=true
-APPLE_MUSIC_SERVICE_URL=http://your_mac_ip:8080
-APPLE_MUSIC_TIMEOUT=5
-APPLE_MUSIC_REFRESH_SECONDS=10
 ```
 
 ### 3. Test Network Connectivity
@@ -160,7 +155,6 @@ Once started, you should see logs indicating the service is running and updating
 Check your Vestaboard - it should be showing:
 - Weather information
 - Date and time
-- Apple Music (when playing)
 - Home Assistant status (if enabled)
 - Star Trek quotes (if enabled)
 
@@ -217,7 +211,7 @@ curl -X POST http://<synology-ip>:8000/send-message \
 
 2. **Verify .env file:**
    ```bash
-   cat .env | grep -E "(VB_|WEATHER_|APPLE_MUSIC)"
+   cat .env | grep -E "(VB_|WEATHER_)"
    ```
 
 3. **Check Docker is running:**
@@ -238,21 +232,9 @@ curl -X POST http://<synology-ip>:8000/send-message \
    docker-compose up -d --build
    ```
 
-### Apple Music not showing
+### Logs showing errors
 
-1. **Check helper service is running on Mac Studio:**
-   ```bash
-   # On Mac Studio
-   curl http://localhost:8080/health
-   ```
-
-2. **Check Docker can reach Mac Studio:**
-   ```bash
-   # From Synology Docker container
-   docker exec vestaboard-display curl http://192.168.0.116:8080/now-playing
-   ```
-
-3. **Check logs for errors:**
+**Check logs for errors:**
    ```bash
    docker logs vestaboard-display | grep -i "apple\|music"
    ```
@@ -344,7 +326,4 @@ Once deployed and working:
 - ✅ Start the display service via Web UI or API
 - ✅ Monitor logs for a few days
 - ✅ Adjust refresh intervals if needed
-- ✅ Set up Apple Music helper service permanently (launchd)
-- ✅ Consider Phase 3: Baywheels integration
-- ✅ Consider Phase 4: Waymo pricing
 

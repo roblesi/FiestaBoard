@@ -47,9 +47,6 @@ You can also add these optional secrets for additional features:
 - `GUEST_WIFI_SSID`: Your guest WiFi network name
 - `GUEST_WIFI_PASSWORD`: Your guest WiFi password
 
-### Apple Music
-- `APPLE_MUSIC_SERVICE_URL`: URL to your macOS helper service
-
 ## Step 3: Launch Codespace
 
 1. **Open your repository on GitHub**
