@@ -1,6 +1,6 @@
 {
   "name": "vesta",
-  "version": "1.6.6",
+  "version": "1.6.7",
   "private": true,
   "scripts": {
     "dev": "npm-run-all --parallel dev:api dev:web",
