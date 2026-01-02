@@ -40,7 +40,10 @@ const VulcanSalute = ({ className }: { className?: string }) => {
         width: '1rem', 
         height: '1rem',
         filter: filter,
-        color: 'currentColor'
+        color: 'currentColor',
+        textShadow: 'none',
+        WebkitFontSmoothing: 'antialiased',
+        MozOsxFontSmoothing: 'grayscale'
       }}
     >
       🖖
