@@ -307,15 +307,31 @@ class StocksSource:
                 logger.warning(f"No current price available for {symbol}")
                 return None
             
-            # Get historical data for comparison
-            hist = ticker.history(period=period)
+            # For "1d" period, we want yesterday's close, not today's open
+            # For other periods, use the first close in the historical data
+            if period == "1d":
+                # Get 5 days of data to ensure we have yesterday's close
+                hist = ticker.history(period="5d")
+            else:
+                # Get historical data for comparison
+                hist = ticker.history(period=period)
             
             if hist.empty:
                 logger.warning(f"No historical data available for {symbol} with period {period}")
                 return None
             
-            # Get previous price (first price in the period)
-            previous_price = float(hist.iloc[0]["Close"])
+            # Get previous price
+            if period == "1d":
+                # For daily changes, use yesterday's close (second-to-last day)
+                if len(hist) >= 2:
+                    previous_price = float(hist.iloc[-2]["Close"])
+                else:
+                    # Fallback to first price if not enough history
+                    previous_price = float(hist.iloc[0]["Close"])
+            else:
+                # For other periods, use first price in the period
+                previous_price = float(hist.iloc[0]["Close"])
+            
             current_price = float(current_price)
             
             # Calculate percentage change

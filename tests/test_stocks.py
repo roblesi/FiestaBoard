@@ -76,9 +76,10 @@ class TestStocksSource:
         }
         
         # Mock historical data
+        # For "1d" period, we fetch 5d of history and use second-to-last close as previous
         import pandas as pd
         mock_hist = pd.DataFrame({
-            "Close": [148.07, 149.50, 150.25]
+            "Close": [145.00, 148.07, 149.50, 150.00, 150.25]
         })
         mock_ticker.history.return_value = mock_hist
         
@@ -90,8 +91,9 @@ class TestStocksSource:
         assert result is not None
         assert result["symbol"] == "GOOG"
         assert result["current_price"] == 150.25
-        assert result["previous_price"] == 148.07
-        assert result["change_percent"] == pytest.approx(1.47, abs=0.01)  # (150.25 - 148.07) / 148.07 * 100
+        # Previous price should be second-to-last (yesterday's close): 150.00
+        assert result["previous_price"] == 150.00
+        assert result["change_percent"] == pytest.approx(0.17, abs=0.01)  # (150.25 - 150.00) / 150.00 * 100
         assert result["change_direction"] == "up"
         assert result["company_name"] == "Alphabet Inc."
         assert "{green}" in result["formatted"]  # Positive change = green
@@ -108,8 +110,9 @@ class TestStocksSource:
         }
         
         import pandas as pd
+        # For "1d" period, mock 5 days of data, second-to-last is yesterday's close
         mock_hist = pd.DataFrame({
-            "Close": [110.0, 105.0, 100.0]
+            "Close": [115.0, 112.0, 110.0, 105.0, 100.0]
         })
         mock_ticker.history.return_value = mock_hist
         mock_ticker_class.return_value = mock_ticker
@@ -118,6 +121,8 @@ class TestStocksSource:
         result = source._fetch_single_stock("TEST", "1d")
         
         assert result is not None
+        # Current: 100.0, Previous (second-to-last): 105.0
+        assert result["previous_price"] == 105.0
         assert result["change_percent"] < 0
         assert result["change_direction"] == "down"
         assert "{red}" in result["formatted"]
@@ -132,8 +137,9 @@ class TestStocksSource:
         }
         
         import pandas as pd
+        # For "1d" period, mock 5 days with second-to-last = 100.0
         mock_hist = pd.DataFrame({
-            "Close": [100.0, 100.0, 100.0]
+            "Close": [100.0, 100.0, 100.0, 100.0, 100.0]
         })
         mock_ticker.history.return_value = mock_hist
         mock_ticker_class.return_value = mock_ticker
@@ -142,6 +148,7 @@ class TestStocksSource:
         result = source._fetch_single_stock("TEST", "1d")
         
         assert result is not None
+        assert result["previous_price"] == 100.0
         assert result["change_percent"] == pytest.approx(0.0, abs=0.01)
         assert result["change_direction"] == "up"  # 0 is considered "up"
         assert "{white}" in result["formatted"]
@@ -185,8 +192,9 @@ class TestStocksSource:
             }
             
             import pandas as pd
+            # For "1d" period, create 5 days with second-to-last as previous_price
             mock_hist = pd.DataFrame({
-                "Close": [previous_price, current_price * 0.99, current_price]
+                "Close": [previous_price * 0.95, previous_price * 0.97, previous_price * 0.99, previous_price, current_price]
             })
             mock_ticker.history.return_value = mock_hist
             return mock_ticker
@@ -294,8 +302,9 @@ class TestStocksSource:
             
             import pandas as pd
             if has_history:
+                # For "1d" period, create 5 days with second-to-last as previous_price
                 mock_hist = pd.DataFrame({
-                    "Close": [previous_price, current_price * 0.99, current_price]
+                    "Close": [previous_price * 0.95, previous_price * 0.97, previous_price * 0.99, previous_price, current_price]
                 })
             else:
                 mock_hist = pd.DataFrame()
@@ -315,10 +324,12 @@ class TestStocksSource:
         
         results = source.fetch_stocks_data()
         
-        # Should return 2 successful results, skipping the invalid one
-        assert len(results) == 2
+        # Should return 3 results (including placeholder for failed stock to maintain index alignment)
+        assert len(results) == 3
         assert results[0]["symbol"] == "GOOG"
-        assert results[1]["symbol"] == "AAPL"
+        assert results[1]["symbol"] == "INVALID"  # Placeholder for failed stock
+        assert results[1]["current_price"] == 0.0  # Placeholder has 0.0 price
+        assert results[2]["symbol"] == "AAPL"
     
     def test_validate_symbol_success(self):
         """Test symbol validation with valid symbol."""
