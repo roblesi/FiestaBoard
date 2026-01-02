@@ -88,10 +88,27 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     exit 0
 fi
 
+# Load Synology password for sudo commands
+SYNOLOGY_PASSWORD=$(load_env_var "SYNOLOGY_PASSWORD" "")
+
+# Docker paths on Synology
+DOCKER_BIN="/usr/local/bin/docker"
+DOCKER_COMPOSE_BIN="/usr/local/bin/docker-compose"
+
 # Helper function to run SSH commands
 ssh_exec() {
     local cmd="$1"
     ssh -o StrictHostKeyChecking=no -p "$SYNOLOGY_SSH_PORT" "$SYNOLOGY_USER@$SYNOLOGY_HOST" "$cmd"
+}
+
+# Helper function to run SSH commands with sudo
+ssh_sudo_exec() {
+    local cmd="$1"
+    if [ -n "$SYNOLOGY_PASSWORD" ]; then
+        ssh -o StrictHostKeyChecking=no -p "$SYNOLOGY_SSH_PORT" "$SYNOLOGY_USER@$SYNOLOGY_HOST" "echo '$SYNOLOGY_PASSWORD' | sudo -S sh -c '$cmd' 2>&1"
+    else
+        ssh -o StrictHostKeyChecking=no -p "$SYNOLOGY_SSH_PORT" "$SYNOLOGY_USER@$SYNOLOGY_HOST" "sudo sh -c '$cmd' 2>&1"
+    fi
 }
 
 # Helper function to run SCP
@@ -164,22 +181,22 @@ print_success "Production settings.json ready"
 # Step 4: Login to GitHub Container Registry
 print_header "Step 4: Authenticating with GitHub Container Registry"
 
-ssh_exec "echo '$GITHUB_TOKEN' | sudo docker login ghcr.io -u '$GITHUB_USER' --password-stdin"
+ssh_sudo_exec "echo '$GITHUB_TOKEN' | $DOCKER_BIN login ghcr.io -u '$GITHUB_USER' --password-stdin"
 print_success "Authenticated with GHCR"
 
 # Step 5: Deploy containers
 print_header "Step 5: Deploying Containers"
 
 print_info "Pulling latest images from GHCR..."
-ssh_exec "cd $SYNOLOGY_DEPLOY_DIR && sudo docker-compose pull"
+ssh_sudo_exec "cd $SYNOLOGY_DEPLOY_DIR && $DOCKER_COMPOSE_BIN pull"
 print_success "Images pulled"
 
 print_info "Stopping existing containers..."
-ssh_exec "cd $SYNOLOGY_DEPLOY_DIR && sudo docker-compose down 2>/dev/null || true"
+ssh_sudo_exec "cd $SYNOLOGY_DEPLOY_DIR && $DOCKER_COMPOSE_BIN down 2>/dev/null || true"
 print_success "Existing containers stopped"
 
 print_info "Starting containers..."
-ssh_exec "cd $SYNOLOGY_DEPLOY_DIR && sudo docker-compose up -d"
+ssh_sudo_exec "cd $SYNOLOGY_DEPLOY_DIR && $DOCKER_COMPOSE_BIN up -d"
 print_success "Containers started"
 
 # Step 6: Verify deployment
@@ -188,7 +205,7 @@ print_header "Step 6: Verifying Deployment"
 sleep 5  # Give containers time to start
 
 print_info "Checking container status..."
-ssh_exec "cd $SYNOLOGY_DEPLOY_DIR && sudo docker-compose ps"
+ssh_sudo_exec "cd $SYNOLOGY_DEPLOY_DIR && $DOCKER_COMPOSE_BIN ps"
 
 # Final summary
 print_header "Deployment Complete!"
