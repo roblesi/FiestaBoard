@@ -1,16 +1,20 @@
 # Build stage
-FROM node:20-slim AS builder
+FROM node:20-alpine AS builder
 
 # Version argument (injected at build time)
 ARG VERSION=dev
 
 WORKDIR /app
 
+# Install build dependencies for native modules (lightningcss, swc)
+RUN apk add --no-cache python3 make g++
+
 # Copy package files
 COPY web/package*.json ./
 
 # Install ALL dependencies (needed for build)
-RUN npm ci
+# Clean install to ensure native modules are built correctly
+RUN npm ci --legacy-peer-deps
 
 # Copy source files
 COPY web/ ./
@@ -22,7 +26,7 @@ ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npm run build
 
 # Production stage - Run nginx + Next.js server
-FROM node:20-slim AS runner
+FROM node:20-alpine AS runner
 
 # Version argument (passed from builder stage)
 ARG VERSION=dev
@@ -34,15 +38,12 @@ ENV NODE_ENV=production
 ENV PORT=3001
 ENV HOSTNAME="0.0.0.0"
 
-# Install nginx and supervisor for running multiple processes
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends nginx supervisor wget && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+# Install nginx and wget for running web server
+RUN apk add --no-cache nginx wget
 
-# Create non-root user for security
-RUN groupadd --system --gid 1001 nodejs && \
-    useradd --system --uid 1001 --gid nodejs --shell /bin/bash nextjs
+# Create non-root user for security (Alpine Linux)
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001 -G nodejs
 
 # Copy standalone build output from builder stage
 # The standalone output includes only production dependencies and necessary files
