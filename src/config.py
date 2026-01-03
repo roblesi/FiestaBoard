@@ -206,13 +206,13 @@ class Config:
     @property
     def TIMEZONE(cls) -> str:
         """Timezone for datetime display."""
-        return cls._get_feature("datetime").get("timezone", "America/Los_Angeles")
+        return cls._get_feature("date_time").get("timezone", "America/Los_Angeles")
     
     @classmethod
     @property
     def DATETIME_ENABLED(cls) -> bool:
         """Whether datetime is enabled."""
-        return cls._get_feature("datetime").get("enabled", True)
+        return cls._get_feature("date_time").get("enabled", True)
     
     # ==================== General Configuration ====================
     

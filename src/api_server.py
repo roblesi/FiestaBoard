@@ -25,7 +25,7 @@ from . import __version__
 from .main import DisplayService
 from .config import Config
 from .config_manager import get_config_manager
-from .displays.service import get_display_service, reset_display_service, DISPLAY_TYPES, DisplayResult
+from .displays.service import get_display_service, reset_display_service, DisplayResult
 from .settings.service import get_settings_service, VALID_STRATEGIES, VALID_OUTPUT_TARGETS
 from .pages.service import get_page_service, DeleteResult
 from .pages.models import PageCreate, PageUpdate
@@ -564,99 +564,6 @@ async def get_full_config():
     return config_manager.get_all_masked()
 
 
-@app.get("/config/features")
-async def get_features_config():
-    """Get configuration for all features."""
-    config_manager = get_config_manager()
-    full_config = config_manager.get_all_masked()
-    return {
-        "features": full_config.get("features", {}),
-        "available_features": config_manager.get_feature_list()
-    }
-
-
-@app.get("/config/features/{feature_name}")
-async def get_feature_config(feature_name: str):
-    """
-    Get configuration for a specific feature.
-    
-    Args:
-        feature_name: One of: weather, datetime, home_assistant,
-                      guest_wifi, star_trek_quotes, rotation
-    """
-    config_manager = get_config_manager()
-    feature = config_manager.get_feature(feature_name)
-    
-    if feature is None:
-        available = config_manager.get_feature_list()
-        raise HTTPException(
-            status_code=404,
-            detail=f"Feature not found: {feature_name}. Available: {available}"
-        )
-    
-    # Mask sensitive fields
-    masked = config_manager._mask_sensitive(feature)
-    
-    return {
-        "feature": feature_name,
-        "config": masked
-    }
-
-
-@app.put("/config/features/{feature_name}")
-async def update_feature_config(feature_name: str, request: dict):
-    """
-    Update configuration for a specific feature.
-    
-    Args:
-        feature_name: The feature to update
-        request: Partial feature configuration to update
-    
-    Example body:
-    {
-        "enabled": true,
-        "api_key": "your-api-key",
-        "location": "New York, NY"
-    }
-    """
-    config_manager = get_config_manager()
-    
-    if feature_name not in config_manager.get_feature_list():
-        available = config_manager.get_feature_list()
-        raise HTTPException(
-            status_code=404,
-            detail=f"Feature not found: {feature_name}. Available: {available}"
-        )
-    
-    # Update the feature
-    success = config_manager.set_feature(feature_name, request)
-    
-    if not success:
-        raise HTTPException(status_code=400, detail="Failed to update feature")
-    
-    # Reload config in the Config class
-    Config.reload()
-    
-    # Reset display service singleton to pick up new config
-    # This ensures data sources are recreated with updated settings
-    reset_display_service()
-    
-    # Reset template engine to pick up new display service
-    reset_template_engine()
-    
-    logger.info(f"Services reset after {feature_name} config update")
-    
-    # Get updated config (masked)
-    updated = config_manager.get_feature(feature_name)
-    masked = config_manager._mask_sensitive(updated)
-    
-    return {
-        "status": "success",
-        "feature": feature_name,
-        "config": masked
-    }
-
-
 @app.get("/config/board")
 async def get_board_config():
     """Get board connection configuration (keys masked)."""
@@ -853,14 +760,12 @@ async def get_display(display_type: str):
     Returns:
         Formatted message text ready for display on board.
     """
-    if display_type not in DISPLAY_TYPES:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Invalid display type: {display_type}. Valid types: {DISPLAY_TYPES}"
-        )
-    
     display_service = get_display_service()
     result = display_service.get_display(display_type)
+    
+    # Check for invalid display type (will have error message about valid types)
+    if not result.available and result.error and "Unknown display type" in result.error:
+        raise HTTPException(status_code=400, detail=result.error)
     
     if not result.available and result.error:
         raise HTTPException(status_code=503, detail=result.error)
@@ -882,17 +787,11 @@ async def get_display_raw(display_type: str):
     This is useful for debugging or building custom displays.
     
     Args:
-        display_type: One of: weather, datetime, weather_datetime,
-                      home_assistant, star_trek, guest_wifi
+        display_type: Plugin ID (e.g., weather, datetime, stocks)
     
     Returns:
         Raw data dictionary from the source.
     """
-    if display_type not in DISPLAY_TYPES:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid display type: {display_type}. Valid types: {DISPLAY_TYPES}"
-        )
     
     display_service = get_display_service()
     result = display_service.get_display(display_type)
@@ -926,12 +825,6 @@ async def send_display(
     """
     global _dev_mode
     
-    if display_type not in DISPLAY_TYPES:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid display type: {display_type}. Valid types: {DISPLAY_TYPES}"
-        )
-    
     if target is not None and target not in VALID_OUTPUT_TARGETS:
         raise HTTPException(
             status_code=400,
@@ -945,8 +838,12 @@ async def send_display(
     if not service or not service.vb_client:
         raise HTTPException(status_code=503, detail="Service not initialized")
     
-    # Get the display content
+    # Get the display content (validates display_type against plugin registry)
     result = display_service.get_display(display_type)
+    
+    # Check for invalid display type
+    if not result.available and result.error and "Unknown display type" in result.error:
+        raise HTTPException(status_code=400, detail=result.error)
     
     if not result.available:
         raise HTTPException(status_code=503, detail=result.error or "Display not available")
@@ -2539,6 +2436,401 @@ async def get_home_assistant_entities():
 # Legacy endpoints /preview and /publish-preview have been removed.
 # Use /pages/{page_id}/preview and /pages/{page_id}/send instead.
 # Set the active page with PUT /settings/active-page for automatic board updates.
+
+
+# =============================================================================
+# Plugin API Endpoints
+# =============================================================================
+
+# Import plugin system
+try:
+    from .plugins import get_plugin_registry
+    PLUGIN_SYSTEM_AVAILABLE = True
+except ImportError:
+    PLUGIN_SYSTEM_AVAILABLE = False
+    get_plugin_registry = None
+
+
+class PluginConfigRequest(BaseModel):
+    """Request body for plugin configuration updates."""
+    config: Dict[str, Any]
+
+
+class PluginEnableRequest(BaseModel):
+    """Request body for enabling/disabling a plugin."""
+    enabled: bool
+
+
+@app.get("/plugins")
+async def list_plugins():
+    """
+    List all available plugins.
+    
+    Returns plugins with their status, metadata, and whether they're enabled.
+    """
+    if not PLUGIN_SYSTEM_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail="Plugin system is not available."
+        )
+    
+    registry = get_plugin_registry()
+    plugins = registry.list_plugins()
+    
+    # Add configuration status (masked)
+    config_manager = get_config_manager()
+    for plugin in plugins:
+        plugin_config = config_manager.get_plugin_config(plugin["id"])
+        if plugin_config:
+            plugin["configured"] = True
+            # Add masked config
+            plugin["config"] = config_manager._mask_sensitive(plugin_config)
+        else:
+            plugin["configured"] = False
+            plugin["config"] = {}
+    
+    return {
+        "plugins": plugins,
+        "plugin_system_enabled": True,
+        "total": len(plugins),
+        "enabled_count": sum(1 for p in plugins if p.get("enabled", False))
+    }
+
+
+@app.get("/plugins/{plugin_id}")
+async def get_plugin(plugin_id: str):
+    """
+    Get details for a specific plugin.
+    
+    Returns the plugin's manifest, configuration, and status.
+    """
+    if not PLUGIN_SYSTEM_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail="Plugin system is not available."
+        )
+    
+    registry = get_plugin_registry()
+    manifest = registry.get_manifest(plugin_id)
+    
+    if not manifest:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Plugin not found: {plugin_id}"
+        )
+    
+    # Get configuration
+    config_manager = get_config_manager()
+    plugin_config = config_manager.get_plugin_config(plugin_id)
+    
+    return {
+        "id": plugin_id,
+        "name": manifest.name,
+        "version": manifest.version,
+        "description": manifest.description,
+        "author": manifest.author,
+        "icon": manifest.icon,
+        "category": manifest.category,
+        "enabled": registry.is_enabled(plugin_id),
+        "config": config_manager._mask_sensitive(plugin_config) if plugin_config else {},
+        "settings_schema": manifest.settings_schema,
+        "variables": manifest.raw.get("variables", {}),
+        "max_lengths": manifest.max_lengths,
+        "env_vars": manifest.env_vars,
+        "documentation": manifest.documentation
+    }
+
+
+@app.get("/plugins/{plugin_id}/manifest")
+async def get_plugin_manifest(plugin_id: str):
+    """
+    Get the full manifest for a plugin.
+    
+    Returns the raw manifest data for UI rendering.
+    """
+    if not PLUGIN_SYSTEM_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail="Plugin system is not available."
+        )
+    
+    registry = get_plugin_registry()
+    manifest = registry.get_manifest(plugin_id)
+    
+    if not manifest:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Plugin not found: {plugin_id}"
+        )
+    
+    return manifest.raw
+
+
+@app.put("/plugins/{plugin_id}/config")
+async def update_plugin_config(plugin_id: str, request: PluginConfigRequest):
+    """
+    Update configuration for a plugin.
+    
+    Args:
+        plugin_id: Plugin identifier
+        request: Configuration to apply
+    
+    Example body:
+    {
+        "config": {
+            "api_key": "your-api-key",
+            "location": "San Francisco, CA",
+            "refresh_seconds": 300
+        }
+    }
+    """
+    if not PLUGIN_SYSTEM_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail="Plugin system is not available."
+        )
+    
+    registry = get_plugin_registry()
+    
+    # Check if plugin exists
+    if not registry.get_plugin(plugin_id):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Plugin not found: {plugin_id}"
+        )
+    
+    # Validate configuration against manifest schema
+    errors = registry.set_plugin_config(plugin_id, request.config)
+    if errors:
+        raise HTTPException(
+            status_code=400,
+            detail={"errors": errors}
+        )
+    
+    # Save to config file
+    config_manager = get_config_manager()
+    config_manager.set_plugin_config(plugin_id, request.config)
+    
+    # Reset services to pick up new config
+    reset_display_service()
+    reset_template_engine()
+    
+    logger.info(f"Plugin '{plugin_id}' configuration updated")
+    
+    # Return masked config
+    updated = config_manager.get_plugin_config(plugin_id)
+    
+    return {
+        "status": "success",
+        "plugin_id": plugin_id,
+        "config": config_manager._mask_sensitive(updated) if updated else {}
+    }
+
+
+@app.post("/plugins/{plugin_id}/enable")
+async def enable_plugin(plugin_id: str):
+    """
+    Enable a plugin.
+    
+    Enables the plugin in both the registry and persists to config.
+    """
+    if not PLUGIN_SYSTEM_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail="Plugin system is not available."
+        )
+    
+    registry = get_plugin_registry()
+    
+    if not registry.get_plugin(plugin_id):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Plugin not found: {plugin_id}"
+        )
+    
+    # Enable in registry
+    success = registry.enable_plugin(plugin_id)
+    if not success:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to enable plugin: {plugin_id}"
+        )
+    
+    # Persist to config
+    config_manager = get_config_manager()
+    config_manager.enable_plugin(plugin_id)
+    
+    # Reset services
+    reset_display_service()
+    reset_template_engine()
+    
+    logger.info(f"Plugin '{plugin_id}' enabled")
+    
+    return {
+        "status": "success",
+        "plugin_id": plugin_id,
+        "enabled": True
+    }
+
+
+@app.post("/plugins/{plugin_id}/disable")
+async def disable_plugin(plugin_id: str):
+    """
+    Disable a plugin.
+    
+    Disables the plugin in both the registry and persists to config.
+    """
+    if not PLUGIN_SYSTEM_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail="Plugin system is not available."
+        )
+    
+    registry = get_plugin_registry()
+    
+    if not registry.get_plugin(plugin_id):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Plugin not found: {plugin_id}"
+        )
+    
+    # Disable in registry
+    success = registry.disable_plugin(plugin_id)
+    if not success:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to disable plugin: {plugin_id}"
+        )
+    
+    # Persist to config
+    config_manager = get_config_manager()
+    config_manager.disable_plugin(plugin_id)
+    
+    # Reset services
+    reset_display_service()
+    reset_template_engine()
+    
+    logger.info(f"Plugin '{plugin_id}' disabled")
+    
+    return {
+        "status": "success",
+        "plugin_id": plugin_id,
+        "enabled": False
+    }
+
+
+@app.get("/plugins/{plugin_id}/data")
+async def get_plugin_data(plugin_id: str):
+    """
+    Fetch current data from a plugin.
+    
+    Returns the plugin's latest data, formatted output, and status.
+    """
+    if not PLUGIN_SYSTEM_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail="Plugin system is not available."
+        )
+    
+    registry = get_plugin_registry()
+    
+    if not registry.get_plugin(plugin_id):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Plugin not found: {plugin_id}"
+        )
+    
+    if not registry.is_enabled(plugin_id):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Plugin not enabled: {plugin_id}"
+        )
+    
+    result = registry.fetch_plugin_data(plugin_id)
+    
+    return {
+        "plugin_id": plugin_id,
+        "available": result.available,
+        "data": result.data,
+        "formatted": result.formatted,
+        "error": result.error
+    }
+
+
+@app.get("/plugins/{plugin_id}/variables")
+async def get_plugin_variables(plugin_id: str):
+    """
+    Get template variables exposed by a plugin.
+    
+    Returns the variables schema for use in the template editor.
+    """
+    if not PLUGIN_SYSTEM_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail="Plugin system is not available."
+        )
+    
+    registry = get_plugin_registry()
+    manifest = registry.get_manifest(plugin_id)
+    
+    if not manifest:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Plugin not found: {plugin_id}"
+        )
+    
+    return {
+        "plugin_id": plugin_id,
+        "variables": manifest.raw.get("variables", {}),
+        "max_lengths": manifest.max_lengths,
+        "color_rules_schema": manifest.raw.get("color_rules_schema", {})
+    }
+
+
+@app.get("/plugins/variables/all")
+async def get_all_plugin_variables():
+    """
+    Get all template variables from enabled plugins.
+    
+    Returns a combined view of all variables for the template editor.
+    """
+    if not PLUGIN_SYSTEM_AVAILABLE:
+        # Fall back to legacy variables
+        template_engine = get_template_engine()
+        return {
+            "variables": template_engine.get_available_variables(),
+            "max_lengths": template_engine.get_variable_max_lengths(),
+            "plugin_system_enabled": False
+        }
+    
+    registry = get_plugin_registry()
+    
+    return {
+        "variables": registry.get_all_variables(),
+        "max_lengths": registry.get_all_max_lengths(),
+        "plugin_system_enabled": True
+    }
+
+
+@app.get("/plugins/errors")
+async def get_plugin_errors():
+    """
+    Get any plugin load errors.
+    
+    Returns errors from plugins that failed to load.
+    """
+    if not PLUGIN_SYSTEM_AVAILABLE:
+        return {
+            "errors": {},
+            "plugin_system_enabled": False
+        }
+    
+    registry = get_plugin_registry()
+    
+    return {
+        "errors": registry.get_load_errors(),
+        "plugin_system_enabled": True
+    }
 
 
 if __name__ == "__main__":

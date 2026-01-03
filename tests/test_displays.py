@@ -4,138 +4,95 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock
 from fastapi.testclient import TestClient
 
-from src.displays.service import DisplayService, DisplayResult, DISPLAY_TYPES, get_display_service
-
-
-class TestDisplayTypes:
-    """Test display type constants."""
-    
-    def test_all_display_types_defined(self):
-        """Test that all expected display types are defined."""
-        expected = ["weather", "datetime", "weather_datetime", "home_assistant",
-                    "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels", "traffic", "stocks", "flights"]
-        assert DISPLAY_TYPES == expected
+from src.displays.service import DisplayService, DisplayResult, get_display_service
 
 
 class TestDisplayService:
     """Tests for DisplayService class."""
     
     @pytest.fixture
-    def service(self):
-        """Create a display service with mocked sources."""
-        with patch('src.displays.service.get_weather_source') as mock_weather, \
-             patch('src.displays.service.get_datetime_source') as mock_datetime, \
-             patch('src.displays.service.get_home_assistant_source') as mock_ha, \
-             patch('src.displays.service.get_star_trek_quotes_source') as mock_trek, \
-             patch('src.displays.service.get_air_fog_source') as mock_air_fog, \
-             patch('src.displays.service.get_muni_source') as mock_muni, \
-             patch('src.displays.service.get_surf_source') as mock_surf, \
-             patch('src.displays.service.get_baywheels_source') as mock_baywheels, \
-             patch('src.displays.service.get_traffic_source') as mock_traffic:
-            
-            # Setup mock sources
-            mock_weather.return_value = Mock()
-            mock_datetime.return_value = Mock()
-            mock_ha.return_value = None
-            mock_trek.return_value = None
-            mock_air_fog.return_value = None  # Disabled by default
-            mock_muni.return_value = None  # Disabled by default
-            mock_surf.return_value = None  # Disabled by default
-            mock_baywheels.return_value = None
-            mock_traffic.return_value = None  # Disabled by default
-            
+    def mock_plugin_registry(self):
+        """Create a mock plugin registry."""
+        mock_registry = Mock()
+        mock_registry.list_plugins.return_value = [
+            {"id": "weather", "name": "Weather", "description": "Current weather conditions"},
+            {"id": "datetime", "name": "DateTime", "description": "Current date and time"},
+            {"id": "stocks", "name": "Stocks", "description": "Stock prices"},
+        ]
+        mock_registry.is_enabled.return_value = True
+        mock_registry.get_plugin.return_value = Mock()
+        return mock_registry
+    
+    @pytest.fixture
+    def service(self, mock_plugin_registry):
+        """Create a display service with mocked plugin registry."""
+        with patch('src.displays.service.PLUGIN_SYSTEM_AVAILABLE', True), \
+             patch('src.displays.service.get_plugin_registry') as mock_get_registry:
+            mock_get_registry.return_value = mock_plugin_registry
             service = DisplayService()
             yield service
     
-    def test_get_available_displays(self, service):
+    def test_get_available_displays(self, service, mock_plugin_registry):
         """Test listing available displays."""
         displays = service.get_available_displays()
         
-        assert len(displays) == 13
+        assert len(displays) == 3
         display_types = [d["type"] for d in displays]
         assert "weather" in display_types
         assert "datetime" in display_types
-        assert "guest_wifi" in display_types
-        assert "air_fog" in display_types
-        assert "muni" in display_types
-        assert "surf" in display_types
-        assert "baywheels" in display_types
-        assert "traffic" in display_types
+        assert "stocks" in display_types
     
-    def test_get_available_displays_includes_availability(self, service):
+    def test_get_available_displays_includes_availability(self, service, mock_plugin_registry):
         """Test that availability is correctly reported."""
         displays = service.get_available_displays()
         
         weather = next(d for d in displays if d["type"] == "weather")
         assert "available" in weather
         assert "description" in weather
+        assert weather["source"] == "plugin"
     
-    def test_get_display_invalid_type(self, service):
+    def test_get_display_invalid_type(self, service, mock_plugin_registry):
         """Test that invalid display type returns error."""
+        mock_plugin_registry.get_plugin.return_value = None
+        
         result = service.get_display("invalid_type")
         
         assert result.available is False
         assert "Unknown display type" in result.error
     
-    def test_get_display_weather_success(self, service):
-        """Test successful weather display fetch."""
-        # Mock fetch_multiple_locations (used by _get_weather)
-        service.weather_source.fetch_multiple_locations.return_value = [{
-            "temperature": 72,
-            "feels_like": 70,
-            "condition": "Sunny",
-            "humidity": 50,
-            "wind_speed": 5,
-            "wind_mph": 5,
-            "location": "San Francisco"
-        }]
+    def test_get_display_success(self, service, mock_plugin_registry):
+        """Test successful display fetch via plugin system."""
+        from src.plugins.base import PluginResult
+        
+        mock_plugin_result = PluginResult(
+            available=True,
+            data={"temperature": 72, "condition": "Sunny"},
+            formatted_lines=["Sunny, 72F"]
+        )
+        mock_plugin_registry.fetch_plugin_data.return_value = mock_plugin_result
         
         result = service.get_display("weather")
         
         assert result.display_type == "weather"
         assert result.available is True
         assert result.error is None
+        assert "Sunny, 72F" in result.formatted
     
-    def test_get_display_weather_unavailable(self, service):
-        """Test weather display when source returns None."""
-        service.weather_source.fetch_current_weather.return_value = None
+    def test_get_display_plugin_disabled(self, service, mock_plugin_registry):
+        """Test display fetch when plugin is disabled."""
+        from src.plugins.base import PluginResult
+        
+        mock_plugin_result = PluginResult(
+            available=False,
+            error="Plugin not enabled: weather"
+        )
+        mock_plugin_registry.fetch_plugin_data.return_value = mock_plugin_result
         
         result = service.get_display("weather")
         
         assert result.display_type == "weather"
-        assert "Unavailable" in result.formatted or result.error is not None
-    
-    def test_get_display_datetime_success(self, service):
-        """Test successful datetime display fetch."""
-        service.datetime_source.get_current_datetime.return_value = {
-            "day_of_week": "Monday",
-            "date": "Dec 25",
-            "time": "10:30 AM"
-        }
-        
-        result = service.get_display("datetime")
-        
-        assert result.display_type == "datetime"
-        assert result.available is True
-        assert "Monday" in result.formatted or "Dec 25" in result.formatted
-    
-    def test_get_display_combined(self, service):
-        """Test combined weather/datetime display."""
-        service.weather_source.fetch_current_weather.return_value = {
-            "temperature": 72,
-            "condition": "Sunny"
-        }
-        service.datetime_source.get_current_datetime.return_value = {
-            "day_of_week": "Monday",
-            "date": "Dec 25"
-        }
-        
-        result = service.get_display("weather_datetime")
-        
-        assert result.display_type == "weather_datetime"
-        assert result.available is True
-        assert "weather" in result.raw
-        assert "datetime" in result.raw
+        assert result.available is False
+        assert "not enabled" in result.error
 
 
 class TestDisplayResult:
@@ -176,7 +133,6 @@ class TestDisplayAPIEndpoints:
     @pytest.fixture
     def client(self):
         """Create a test client."""
-        # Import here to avoid circular imports
         from src.api_server import app
         return TestClient(app)
     
@@ -191,8 +147,8 @@ class TestDisplayAPIEndpoints:
     def test_list_displays(self, client, mock_display_service):
         """Test GET /displays endpoint."""
         mock_display_service.get_available_displays.return_value = [
-            {"type": "weather", "available": True, "description": "Weather"},
-            {"type": "datetime", "available": True, "description": "DateTime"},
+            {"type": "weather", "available": True, "description": "Weather", "source": "plugin"},
+            {"type": "date_time", "available": True, "description": "DateTime", "source": "plugin"},
         ]
         
         response = client.get("/displays")
@@ -220,12 +176,20 @@ class TestDisplayAPIEndpoints:
         assert data["message"] == "Sunny, 72F\nSan Francisco"
         assert len(data["lines"]) == 2
     
-    def test_get_display_invalid_type(self, client):
+    def test_get_display_invalid_type(self, client, mock_display_service):
         """Test GET /displays/{type} with invalid type."""
+        mock_display_service.get_display.return_value = DisplayResult(
+            display_type="invalid_type",
+            formatted="",
+            raw={},
+            available=False,
+            error="Unknown display type: invalid_type. Valid types: ['weather', 'datetime']"
+        )
+        
         response = client.get("/displays/invalid_type")
         
         assert response.status_code == 400
-        assert "Invalid display type" in response.json()["detail"]
+        assert "Unknown display type" in response.json()["detail"]
     
     def test_get_display_unavailable(self, client, mock_display_service):
         """Test GET /displays/{type} when source unavailable."""
@@ -259,9 +223,17 @@ class TestDisplayAPIEndpoints:
         assert data["data"]["temperature"] == 72
         assert data["available"] is True
     
-    def test_get_display_raw_invalid_type(self, client):
-        """Test GET /displays/{type}/raw with invalid type."""
+    def test_get_display_raw_invalid_type(self, client, mock_display_service):
+        """Test GET /displays/{type}/raw with invalid type returns 503."""
+        mock_display_service.get_display.return_value = DisplayResult(
+            display_type="invalid_type",
+            formatted="",
+            raw={},
+            available=False,
+            error="Unknown display type: invalid_type"
+        )
+        
         response = client.get("/displays/invalid_type/raw")
         
-        assert response.status_code == 400
-
+        # Raw endpoint returns 503 for any unavailable display
+        assert response.status_code == 503

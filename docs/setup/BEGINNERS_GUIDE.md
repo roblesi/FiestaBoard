@@ -182,9 +182,10 @@ Your board should now be updating automatically! Here are some tips:
 
 Once you have FiestaBoard running, explore these features:
 
-- **[Add more data sources](../../README.md#features)** - Check out all the available features like stocks, surf reports, transit times, and more
-- **[Customize your pages](../FEATURES.md)** - Learn how to create custom page layouts
+- **[Add more plugins](../../README.md#features)** - Check out all the available plugins like stocks, surf reports, transit times, and more
+- **Browse plugin docs** - Each plugin has setup instructions in `plugins/<plugin_name>/docs/SETUP.md`
 - **[Set up a silence schedule](../../README.md#configuration)** - Configure quiet hours when the board won't update
+- **Use the Integrations page** - Enable and configure plugins from the web UI
 
 Enjoy your new smart display! 🎊
 

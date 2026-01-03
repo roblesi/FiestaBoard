@@ -291,64 +291,7 @@ export interface BoardConfig {
 // Backward compatibility alias
 export type VestaboardConfig = BoardConfig;
 
-export interface WeatherFeatureConfig {
-  enabled: boolean;
-  api_key: string;
-  provider: "weatherapi" | "openweathermap";
-  location: string;  // Keep for backward compat
-  locations?: Array<{
-    location: string;
-    name: string;
-  }>;
-  refresh_seconds?: number;
-}
-
-export interface DateTimeFeatureConfig {
-  enabled: boolean;
-  timezone: string;
-}
-
-export interface HomeAssistantFeatureConfig {
-  enabled: boolean;
-  base_url: string;
-  access_token: string;
-  entities: Array<Record<string, string>>;
-  timeout: number;
-  refresh_seconds: number;
-}
-
-export interface GuestWifiFeatureConfig {
-  enabled: boolean;
-  ssid: string;
-  password: string;
-  refresh_seconds: number;
-}
-
-export interface StarTrekQuotesFeatureConfig {
-    enabled: boolean;
-    ratio: string;
-}
-
-export interface AirFogFeatureConfig {
-    enabled: boolean;
-    purpleair_api_key: string;
-    openweathermap_api_key: string;
-    purpleair_sensor_id: string;
-    latitude: number;
-    longitude: number;
-    refresh_seconds: number;
-}
-
-export interface MuniFeatureConfig {
-    enabled: boolean;
-    api_key: string;
-    stop_code?: string;  // Backward compatibility
-    stop_codes?: string[];  // New multi-stop support
-    stop_names?: string[];  // Stop names for display
-    line_name: string;
-    refresh_seconds: number;
-}
-
+// Utility types for API helper endpoints (station finder, stop finder, etc.)
 export interface MuniStop {
     stop_code: string;
     stop_id: string;
@@ -357,14 +300,6 @@ export interface MuniStop {
     lon: number | null;
     distance_km?: number;
     routes?: string[];
-}
-
-export interface BayWheelsFeatureConfig {
-    enabled: boolean;
-    station_id?: string;  // Backward compatibility
-    station_ids?: string[];  // New multi-station support
-    station_name?: string;  // Backward compatibility
-    refresh_seconds: number;
 }
 
 export interface BayWheelsStation {
@@ -382,48 +317,10 @@ export interface BayWheelsStation {
     is_renting?: boolean;
 }
 
-export interface SurfFeatureConfig {
-  enabled: boolean;
-  latitude: number;
-  longitude: number;
-  refresh_seconds: number;
-}
-
 export interface TrafficRoute {
     origin: string;
     destination: string;
     destination_name: string;
-}
-
-export interface TrafficFeatureConfig {
-    enabled: boolean;
-    api_key: string;
-    origin?: string;  // Backward compatibility
-    destination?: string;  // Backward compatibility
-    destination_name?: string;  // Backward compatibility
-    routes?: TrafficRoute[];  // New multi-route support
-    refresh_seconds: number;
-}
-
-export interface SilenceScheduleFeatureConfig {
-  enabled: boolean;
-  start_time: string; // UTC ISO format (e.g., "04:00+00:00")
-  end_time: string;   // UTC ISO format (e.g., "15:00+00:00")
-}
-
-export interface StocksFeatureConfig {
-  enabled: boolean;
-  finnhub_api_key?: string;  // Optional - enables better symbol search
-  symbols: string[];  // List of stock symbols (max 5)
-  time_window: string;  // "1 Day", "5 Days", "1 Month", "3 Months", "6 Months", "1 Year", "2 Years", "5 Years", "ALL"
-  refresh_seconds: number;
-  color_rules?: {
-    change_percent?: Array<{
-      condition: string;
-      value: number;
-      color: string;
-    }>;
-  };
 }
 
 export interface StockSymbol {
@@ -436,32 +333,6 @@ export interface StockSymbolValidation {
   symbol: string;
   name?: string;
   error?: string;
-}
-
-export interface FlightsFeatureConfig {
-  enabled: boolean;
-  api_key: string;  // aviationstack API key
-  latitude: number;  // Location latitude for monitoring
-  longitude: number;  // Location longitude for monitoring
-  radius_km: number;  // Search radius in kilometers
-  max_count: number;  // Maximum flights to display (1-4)
-  refresh_seconds: number;  // Update interval
-}
-
-export interface FeaturesConfig {
-  weather: WeatherFeatureConfig;
-  datetime: DateTimeFeatureConfig;
-  home_assistant: HomeAssistantFeatureConfig;
-  guest_wifi: GuestWifiFeatureConfig;
-  star_trek_quotes: StarTrekQuotesFeatureConfig;
-  air_fog: AirFogFeatureConfig;
-  muni: MuniFeatureConfig;
-  surf: SurfFeatureConfig;
-  baywheels: BayWheelsFeatureConfig;
-  traffic: TrafficFeatureConfig;
-  silence_schedule: SilenceScheduleFeatureConfig;
-  stocks: StocksFeatureConfig;
-  flights: FlightsFeatureConfig;
 }
 
 export interface GeneralConfig {
@@ -489,15 +360,10 @@ export interface BoardSettings {
 
 export interface FullConfig {
   board: BoardConfig;
-  features: FeaturesConfig;
   general: GeneralConfig;
+  plugins: Record<string, Record<string, unknown>>;
   // Backward compatibility alias (in case API returns old key)
   vestaboard?: BoardConfig;
-}
-
-export interface FeatureConfigResponse {
-  feature: string;
-  config: Record<string, unknown>;
 }
 
 export interface ConfigValidationResponse {
@@ -534,20 +400,112 @@ export interface LogsResponse {
   };
 }
 
-export type FeatureName = 
-  | "weather"
-  | "datetime"
-  | "home_assistant"
-  | "guest_wifi"
-  | "star_trek_quotes"
-  | "baywheels"
-  | "muni"
-  | "surf"
-  | "traffic"
-  | "air_fog"
-  | "stocks"
-  | "flights"
-  | "silence_schedule";
+// Plugin system types
+export interface PluginInfo {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  author: string;
+  enabled: boolean;
+  configured: boolean;
+  icon: string;
+  category: string;
+  config: Record<string, unknown>;
+}
+
+export interface PluginsListResponse {
+  plugins: PluginInfo[];
+  plugin_system_enabled: boolean;
+  total: number;
+  enabled_count: number;
+  message?: string;
+}
+
+export interface PluginManifest {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  author: string;
+  icon?: string;
+  category?: string;
+  repository?: string;
+  documentation?: string;
+  settings_schema: Record<string, unknown>;
+  variables: {
+    simple?: string[];
+    arrays?: Record<string, { label_field: string; item_fields: string[] }>;
+    nested?: Record<string, unknown>;
+    dynamic?: boolean;
+  };
+  max_lengths: Record<string, number>;
+  color_rules_schema?: Record<string, unknown>;
+  env_vars?: Array<{
+    name: string;
+    required: boolean;
+    description: string;
+  }>;
+}
+
+export interface PluginDetailResponse {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  author: string;
+  icon: string;
+  category: string;
+  enabled: boolean;
+  config: Record<string, unknown>;
+  settings_schema: Record<string, unknown>;
+  variables: Record<string, unknown>;
+  max_lengths: Record<string, number>;
+  env_vars: Array<{
+    name: string;
+    required: boolean;
+    description: string;
+  }>;
+  documentation: string;
+}
+
+export interface PluginConfigUpdateResponse {
+  status: string;
+  plugin_id: string;
+  config: Record<string, unknown>;
+}
+
+export interface PluginEnableResponse {
+  status: string;
+  plugin_id: string;
+  enabled: boolean;
+}
+
+export interface PluginDataResponse {
+  plugin_id: string;
+  available: boolean;
+  data: Record<string, unknown>;
+  formatted?: string;
+  error?: string;
+}
+
+export interface PluginVariablesResponse {
+  plugin_id: string;
+  variables: Record<string, unknown>;
+  max_lengths: Record<string, number>;
+  color_rules_schema: Record<string, unknown>;
+}
+
+export interface AllPluginVariablesResponse {
+  variables: Record<string, string[]>;
+  max_lengths: Record<string, number>;
+  plugin_system_enabled: boolean;
+}
+
+export interface PluginErrorsResponse {
+  errors: Record<string, string[]>;
+  plugin_system_enabled: boolean;
+}
 
 export interface VersionResponse {
   package_version: string;
@@ -675,18 +633,6 @@ export const api = {
 
   // Configuration endpoints
   getFullConfig: () => fetchApi<FullConfig>("/config/full"),
-  getFeaturesConfig: () =>
-    fetchApi<{ features: FeaturesConfig; available_features: FeatureName[] }>("/config/features"),
-  getFeatureConfig: (featureName: FeatureName) =>
-    fetchApi<FeatureConfigResponse>(`/config/features/${featureName}`),
-  updateFeatureConfig: (featureName: FeatureName, config: Record<string, unknown>) =>
-    fetchApi<{ status: string; feature: string; config: Record<string, unknown> }>(
-      `/config/features/${featureName}`,
-      {
-        method: "PUT",
-        body: JSON.stringify(config),
-      }
-    ),
   getBoardConfig: () =>
     fetchApi<{ config: BoardConfig; api_modes: string[] }>("/config/board"),
   updateBoardConfig: (config: Partial<BoardConfig>) =>
@@ -840,4 +786,42 @@ export const api = {
   // Version endpoint
   getVersion: () =>
     fetchApi<VersionResponse>("/version"),
+
+  // Plugin system endpoints
+  listPlugins: () =>
+    fetchApi<PluginsListResponse>("/plugins"),
+  
+  getPlugin: (pluginId: string) =>
+    fetchApi<PluginDetailResponse>(`/plugins/${pluginId}`),
+  
+  getPluginManifest: (pluginId: string) =>
+    fetchApi<PluginManifest>(`/plugins/${pluginId}/manifest`),
+  
+  updatePluginConfig: (pluginId: string, config: Record<string, unknown>) =>
+    fetchApi<PluginConfigUpdateResponse>(`/plugins/${pluginId}/config`, {
+      method: "PUT",
+      body: JSON.stringify({ config }),
+    }),
+  
+  enablePlugin: (pluginId: string) =>
+    fetchApi<PluginEnableResponse>(`/plugins/${pluginId}/enable`, {
+      method: "POST",
+    }),
+  
+  disablePlugin: (pluginId: string) =>
+    fetchApi<PluginEnableResponse>(`/plugins/${pluginId}/disable`, {
+      method: "POST",
+    }),
+  
+  getPluginData: (pluginId: string) =>
+    fetchApi<PluginDataResponse>(`/plugins/${pluginId}/data`),
+  
+  getPluginVariables: (pluginId: string) =>
+    fetchApi<PluginVariablesResponse>(`/plugins/${pluginId}/variables`),
+  
+  getAllPluginVariables: () =>
+    fetchApi<AllPluginVariablesResponse>("/plugins/variables/all"),
+  
+  getPluginErrors: () =>
+    fetchApi<PluginErrorsResponse>("/plugins/errors"),
 };

@@ -59,22 +59,24 @@ docker-compose down
 
 ## Features
 
-### Core Features
-- 🌤️ **Weather Display**: Current weather conditions with text-based icons
-- 📅 **Date/Time**: Current date and time with timezone support
-- 🏠 **[Home Assistant](./docs/features/HOME_ASSISTANT_SETUP.md)**: House status display (doors, garage, locks, etc.)
-- 🖖 **[Star Trek Quotes](./docs/features/STAR_TREK_QUOTES_SETUP.md)**: Random quotes from TNG, Voyager, and DS9 with configurable ratio
-- 📶 **[Guest WiFi](./docs/features/GUEST_WIFI_SETUP.md)**: Display WiFi credentials for guests (easily toggled on/off)
-- 🚴 **[Bay Wheels](./docs/features/BAYWHEELS_SETUP.md)**: Track bike availability at multiple stations with visual station finder
-- 🚇 **[Muni Transit](./docs/features/MUNI_SETUP.md)**: Real-time SF Muni arrival predictions with stop finder
-- 🚗 **[Traffic](./docs/features/TRAFFIC_SETUP.md)**: Travel time to destinations with live traffic (multiple modes: drive, bike, transit, walk)
-- 📈 **[Stocks](./docs/features/STOCKS_SETUP.md)**: Monitor stock prices and percentage changes with color-coded indicators
-- 🌊 **[Surf Conditions](./docs/features/SURF_SETUP.md)**: Live surf reports with wave height, swell period, wind, and quality ratings
-- 💨 **[Air Quality & Fog](./docs/features/AIR_FOG_SETUP.md)**: Monitor AQI and fog conditions with intelligent alerts
-- ✈️ **[Flight Tracking](./docs/features/FLIGHTS_SETUP.md)**: Display nearby aircraft with call signs, altitude, and speed
-- 🌙 **Silence Schedule**: Configure quiet hours when the board won't update (e.g., 8pm-7am)
+FiestaBoard uses a **plugin architecture** - each feature is a self-contained plugin with its own documentation. Browse the `plugins/` directory or use the web UI's **Integrations** page to discover and enable plugins.
 
-**→ [View detailed feature documentation](./docs/FEATURES.md)**
+### Available Plugins
+- 🌤️ **[Weather](./plugins/weather/docs/SETUP.md)**: Current weather conditions with text-based icons
+- 📅 **[Date/Time](./plugins/datetime/README.md)**: Current date and time with timezone support
+- 🏠 **[Home Assistant](./plugins/home_assistant/docs/SETUP.md)**: House status display (doors, garage, locks, etc.)
+- 🖖 **[Star Trek Quotes](./plugins/star_trek_quotes/docs/SETUP.md)**: Random quotes from TNG, Voyager, and DS9
+- 📶 **[Guest WiFi](./plugins/guest_wifi/docs/SETUP.md)**: Display WiFi credentials for guests
+- 🚴 **[Bay Wheels](./plugins/baywheels/docs/SETUP.md)**: Track bike availability at multiple stations
+- 🚇 **[Muni Transit](./plugins/muni/docs/SETUP.md)**: Real-time SF Muni arrival predictions
+- 🚗 **[Traffic](./plugins/traffic/docs/SETUP.md)**: Travel time to destinations with live traffic
+- 📈 **[Stocks](./plugins/stocks/docs/SETUP.md)**: Monitor stock prices with color-coded indicators
+- 🌊 **[Surf Conditions](./plugins/surf/docs/SETUP.md)**: Live surf reports with wave height and quality ratings
+- 💨 **[Air Quality & Fog](./plugins/air_fog/docs/SETUP.md)**: Monitor AQI and fog conditions
+- ✈️ **[Flight Tracking](./plugins/flights/docs/SETUP.md)**: Display nearby aircraft with call signs and altitude
+- 🌙 **Silence Schedule**: Configure quiet hours when the board won't update
+
+**→ [Plugin Development Guide](./docs/development/PLUGIN_DEVELOPMENT.md)** - Create your own plugins!
 
 ### System Features
 - 📄 **Page-Based Display**: Create and select pages via the web UI
@@ -138,15 +140,9 @@ See [CODESPACES_SETUP.md](./docs/setup/CODESPACES_SETUP.md) for detailed instruc
    WEATHER_PROVIDER=weatherapi
    WEATHER_LOCATION=San Francisco, CA
    TIMEZONE=America/Los_Angeles
-   
-   # Optional features (see setup guides)
-   STAR_TREK_QUOTES_ENABLED=true
-   HOME_ASSISTANT_ENABLED=false
-   GUEST_WIFI_ENABLED=false
-   SURF_ENABLED=false
-   AIR_FOG_ENABLED=false
-   SILENCE_SCHEDULE_ENABLED=false
    ```
+   
+   > **Note**: Plugins are enabled via the web UI's **Integrations** page, not environment variables. See each plugin's setup guide for API keys and configuration.
 
 4. **Build and run with Docker Compose**:
    ```bash
@@ -174,10 +170,12 @@ See [CODESPACES_SETUP.md](./docs/setup/CODESPACES_SETUP.md) for detailed instruc
 
 ### Advanced Setup
 
-For detailed setup instructions for specific features, see:
-- **Home Assistant**: [HOME_ASSISTANT_SETUP.md](./docs/features/HOME_ASSISTANT_SETUP.md)
-- **Star Trek Quotes**: [STAR_TREK_QUOTES_SETUP.md](./docs/features/STAR_TREK_QUOTES_SETUP.md)
-- **Guest WiFi**: [GUEST_WIFI_SETUP.md](./docs/features/GUEST_WIFI_SETUP.md)
+For detailed setup instructions for specific plugins, see each plugin's `docs/SETUP.md`:
+- **Home Assistant**: [plugins/home_assistant/docs/SETUP.md](./plugins/home_assistant/docs/SETUP.md)
+- **Weather**: [plugins/weather/docs/SETUP.md](./plugins/weather/docs/SETUP.md)
+- **Stocks**: [plugins/stocks/docs/SETUP.md](./plugins/stocks/docs/SETUP.md)
+
+Browse `plugins/*/docs/SETUP.md` for all plugin setup guides.
 
 ## Configuration
 
@@ -195,20 +193,22 @@ All configuration is done via environment variables in `.env`:
 - `TIMEZONE`: Timezone name (default: "America/Los_Angeles")
 - `REFRESH_INTERVAL_SECONDS`: Update frequency in seconds (default: 300 = 5 minutes)
 
-### Feature Configuration
+### Plugin Configuration
 
-All features can be configured via the web UI (Settings page) or environment variables. Each feature has detailed setup documentation:
+All plugins can be configured via the web UI (**Integrations** page) or environment variables. Each plugin has its own setup documentation in `plugins/<plugin_name>/docs/SETUP.md`.
 
-- **[Bay Wheels](./docs/features/BAYWHEELS_SETUP.md)**: Bike share stations (no API key required)
-- **[Muni Transit](./docs/features/MUNI_SETUP.md)**: SF transit arrivals (requires free 511.org API key)
-- **[Traffic](./docs/features/TRAFFIC_SETUP.md)**: Travel times (requires Google Routes API key)
-- **[Stocks](./docs/features/STOCKS_SETUP.md)**: Stock prices (no API key required, optional Finnhub for search)
-- **[Surf Conditions](./docs/features/SURF_SETUP.md)**: Surf reports (no API key required)
-- **[Air Quality & Fog](./docs/features/AIR_FOG_SETUP.md)**: AQI and fog monitoring (requires PurpleAir or OpenWeatherMap)
-- **[Flight Tracking](./docs/features/FLIGHTS_SETUP.md)**: Nearby aircraft (requires aviationstack API key)
-- **[Star Trek Quotes](./docs/features/STAR_TREK_QUOTES_SETUP.md)**: Random quotes (no API key required)
-- **[Home Assistant](./docs/features/HOME_ASSISTANT_SETUP.md)**: Smart home integration (requires HA access token)
-- **[Guest WiFi](./docs/features/GUEST_WIFI_SETUP.md)**: WiFi credentials display (no API key required)
+| Plugin | API Key Required | Setup Guide |
+|--------|-----------------|-------------|
+| Bay Wheels | No | [plugins/baywheels/docs/SETUP.md](./plugins/baywheels/docs/SETUP.md) |
+| Muni Transit | Yes (free 511.org) | [plugins/muni/docs/SETUP.md](./plugins/muni/docs/SETUP.md) |
+| Traffic | Yes (Google Routes) | [plugins/traffic/docs/SETUP.md](./plugins/traffic/docs/SETUP.md) |
+| Stocks | No (optional Finnhub) | [plugins/stocks/docs/SETUP.md](./plugins/stocks/docs/SETUP.md) |
+| Surf | No | [plugins/surf/docs/SETUP.md](./plugins/surf/docs/SETUP.md) |
+| Air/Fog | Yes (PurpleAir/OWM) | [plugins/air_fog/docs/SETUP.md](./plugins/air_fog/docs/SETUP.md) |
+| Flights | Yes (aviationstack) | [plugins/flights/docs/SETUP.md](./plugins/flights/docs/SETUP.md) |
+| Star Trek Quotes | No | [plugins/star_trek_quotes/docs/SETUP.md](./plugins/star_trek_quotes/docs/SETUP.md) |
+| Home Assistant | Yes (HA token) | [plugins/home_assistant/docs/SETUP.md](./plugins/home_assistant/docs/SETUP.md) |
+| Guest WiFi | No | [plugins/guest_wifi/docs/SETUP.md](./plugins/guest_wifi/docs/SETUP.md) |
 
 See `env.example` for all available environment variables.
 
@@ -236,22 +236,28 @@ Select a page in the web UI and the service will keep it updated on your board. 
 
 ```
 FiestaBoard/
-├── src/                            # Python API and display service
+├── plugins/                        # Plugin-based data sources
+│   ├── _template/                  # Template for new plugins
+│   ├── weather/                    # Weather plugin
+│   ├── stocks/                     # Stocks plugin
+│   ├── muni/                       # Muni transit plugin
+│   └── .../                        # Other plugins
+├── src/                            # Platform core (API, display service)
 │   ├── api_server.py               # FastAPI REST API
 │   ├── main.py                     # Display service core
 │   ├── config.py                   # Configuration management
 │   ├── board_client.py             # Board API client
-│   ├── data_sources/               # Data integrations
+│   ├── plugins/                    # Plugin system infrastructure
 │   └── formatters/                 # Message formatting
 ├── web/                            # Next.js web UI
 │   └── src/                        # React components and pages
 ├── docs/                           # Documentation
 │   ├── setup/                      # Setup guides
-│   ├── features/                   # Feature guides
+│   ├── development/                # Plugin development guide
 │   ├── deployment/                 # Deployment guides
 │   └── reference/                  # API research and reference
 ├── scripts/                        # Utility scripts
-├── tests/                          # Test suite
+├── tests/                          # Platform test suite
 ├── Dockerfile.api                  # API service Dockerfile
 ├── Dockerfile.ui                   # Web UI Dockerfile
 ├── docker-compose.yml              # Production compose
@@ -341,18 +347,12 @@ See deployment guides for detailed instructions.
 - **[GitHub Codespaces](./docs/setup/CODESPACES_SETUP.md)**: Cloud development setup
 - **[Cloud API Setup](./docs/setup/CLOUD_API_SETUP.md)**: Production API configuration
 
-### Feature Guides
-- **[Complete Feature Overview](./docs/FEATURES.md)**: All features with examples and use cases
-- **[Home Assistant](./docs/features/HOME_ASSISTANT_SETUP.md)**: Smart home integration
-- **[Star Trek Quotes](./docs/features/STAR_TREK_QUOTES_SETUP.md)**: Random quotes display
-- **[Guest WiFi](./docs/features/GUEST_WIFI_SETUP.md)**: WiFi credentials display
-- **[Bay Wheels](./docs/features/BAYWHEELS_SETUP.md)**: Bike share monitoring
-- **[Muni Transit](./docs/features/MUNI_SETUP.md)**: SF transit arrivals
-- **[Traffic](./docs/features/TRAFFIC_SETUP.md)**: Travel times with live traffic
-- **[Stocks](./docs/features/STOCKS_SETUP.md)**: Stock price monitoring
-- **[Surf Conditions](./docs/features/SURF_SETUP.md)**: Surf reports
-- **[Air Quality & Fog](./docs/features/AIR_FOG_SETUP.md)**: AQI and fog monitoring
-- **[Flight Tracking](./docs/features/FLIGHTS_SETUP.md)**: Nearby aircraft tracking
+### Plugin Documentation
+Each plugin includes its own documentation:
+- **Developer docs**: `plugins/<plugin>/README.md` - How the plugin works
+- **Setup guide**: `plugins/<plugin>/docs/SETUP.md` - User-facing configuration
+
+See **[Plugin Development Guide](./docs/development/PLUGIN_DEVELOPMENT.md)** to create your own plugins.
 
 ### Deployment Guides
 - **[GitHub Container Registry](./docs/deployment/GITHUB_REGISTRY_SETUP.md)**: Production deployment with GHCR

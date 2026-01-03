@@ -475,10 +475,14 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
               <label className="text-xs sm:text-sm font-medium">Template Lines</label>
 
               {/* Helper text */}
-              <div className="p-2 sm:p-3 bg-muted/50 rounded-md text-xs space-y-1">
+              <div className="p-2 sm:p-3 bg-muted/50 rounded-md text-xs space-y-2">
                 <div className="flex items-start gap-2 text-muted-foreground">
                   <Info className="h-3 w-3 mt-0.5 shrink-0" />
                   <span>Type template syntax like {"{{weather.temp}}"} or {"{{red}}"} for color tiles. Click variables in sidebar to insert them.</span>
+                </div>
+                <div className="flex items-start gap-2 text-muted-foreground">
+                  <Info className="h-3 w-3 mt-0.5 shrink-0" />
+                  <span><strong>|wrap filter:</strong> Use {"{{variable|wrap}}"} for long text. Leave consecutive empty lines below for text to wrap into.</span>
                 </div>
               </div>
 

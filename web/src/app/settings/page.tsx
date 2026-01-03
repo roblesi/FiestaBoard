@@ -1,8 +1,10 @@
 "use client";
 
-import { FeatureSettings } from "@/components/feature-settings";
 import { BoardSettings } from "@/components/feature-settings/board-settings";
 import { GeneralSettings } from "@/components/general-settings";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Puzzle } from "lucide-react";
 
 export default function SettingsPage() {
   return (
@@ -13,7 +15,7 @@ export default function SettingsPage() {
             Settings
           </h1>
           <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-            Configure your FiestaBoard service and integrations
+            Configure your FiestaBoard service
           </p>
         </div>
 
@@ -30,14 +32,18 @@ export default function SettingsPage() {
             <BoardSettings />
           </section>
 
-          {/* Feature Configuration */}
+          {/* Integrations Link */}
           <section>
-            <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Features</h2>
+            <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Data Sources</h2>
             <p className="text-sm text-muted-foreground mb-4">
-              Enable and configure data sources for your board display. 
-              Click a feature to expand its settings.
+              Enable and configure data source plugins for your board display.
             </p>
-            <FeatureSettings />
+            <Link href="/integrations">
+              <Button variant="outline" className="gap-2">
+                <Puzzle className="h-4 w-4" />
+                Manage Integrations
+              </Button>
+            </Link>
           </section>
         </div>
       </div>
