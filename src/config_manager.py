@@ -183,6 +183,16 @@ DEFAULT_CONFIG: Dict[str, Any] = {
                 ],
             },
         },
+        "flights": {
+            "enabled": False,
+            "api_key": "",  # aviationstack API key
+            "latitude": 37.7749,  # San Francisco (default)
+            "longitude": -122.4194,  # San Francisco (default)
+            "radius_km": 50,  # Search radius in kilometers
+            "max_count": 4,  # Maximum flights to display (1-4)
+            "refresh_seconds": 28800,  # 8 hours (free tier: 100 requests/month limit)
+            "color_rules": {},
+        },
     },
     "general": {
         "timezone": "America/Los_Angeles",  # User's timezone for display purposes
