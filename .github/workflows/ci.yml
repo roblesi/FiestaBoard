@@ -46,10 +46,8 @@ jobs:
         find src -name "*.py" -exec python -m py_compile {} \;
         echo "✅ All Python files compile successfully"
     
-    - name: Run pytest (if tests exist)
-      run: |
-        pytest tests/ -v || echo "⚠️  No tests directory found, skipping pytest"
-      continue-on-error: true
+    - name: Run pytest
+      run: pytest tests/ -v
     
     - name: Test basic functionality
       run: |

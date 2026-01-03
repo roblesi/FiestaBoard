@@ -239,7 +239,7 @@ def format_weather(self, weather_data: Dict) -> str:
 Run the test script to see color codes in action:
 
 ```bash
-cd /path/to/Vesta
+cd /path/to/FiestaBoard
 python3 -c "
 import sys
 sys.path.insert(0, 'src')

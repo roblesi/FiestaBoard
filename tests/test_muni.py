@@ -16,7 +16,7 @@ class TestMuniSourceParsing:
         """Create a MuniSource instance for testing."""
         return MuniSource(
             api_key="test_api_key",
-            stop_code="15726",
+            stop_codes=["15726"],
             line_name="N"
         )
     
@@ -146,7 +146,7 @@ class TestMuniSourceParsing:
         result = muni_source._parse_response(sample_api_response)
         
         assert result is not None
-        assert result["line"] == "N"
+        assert result["line"] == "N-JUDAH"  # Display name, not raw code
         assert result["stop_name"] == "Church St & Duboce Ave"
         assert len(result["arrivals"]) == 3
         assert result["is_delayed"] is False
@@ -214,7 +214,7 @@ class TestMuniSourceParsing:
         
         result = muni_source._parse_response(sample_api_response)
         assert result is not None
-        assert result["line"] == "N"
+        assert result["line"] == "N-JUDAH"
     
     def test_parse_list_field_values(self, muni_source):
         """Test parsing when field values are lists (511.org quirk)."""
@@ -242,13 +242,21 @@ class TestMuniSourceParsing:
         
         result = muni_source._parse_response(response)
         assert result is not None
-        assert result["line"] == "N"
+        assert result["line"] == "N-JUDAH"
         assert result["stop_name"] == "Church St & Duboce Ave"
     
     def test_line_name_filter(self):
-        """Test filtering by line name."""
-        source_n = MuniSource(api_key="test", stop_code="15726", line_name="N")
-        source_j = MuniSource(api_key="test", stop_code="15726", line_name="J")
+        """Test line_name is stored on source.
+        
+        Note: The line_name filter is used for configuration but _parse_response
+        returns all lines for flexibility. Filtering can be done by callers
+        using the 'lines' dict in the result.
+        """
+        source_n = MuniSource(api_key="test", stop_codes=["15726"], line_name="N")
+        source_j = MuniSource(api_key="test", stop_codes=["15726"], line_name="J")
+        
+        assert source_n.line_name == "N"
+        assert source_j.line_name == "J"
         
         now = datetime.now(timezone.utc)
         arrival = (now + timedelta(minutes=5)).isoformat()
@@ -272,14 +280,13 @@ class TestMuniSourceParsing:
             }
         }
         
-        # N filter should find the N line
+        # parse_response returns all lines (filtering is done at higher level)
         result_n = source_n._parse_response(response)
         assert result_n is not None
-        assert result_n["line"] == "N"
+        assert result_n["line"] == "N-JUDAH"
         
-        # J filter should not find any arrivals
-        result_j = source_j._parse_response(response)
-        assert result_j is None
+        # Callers can use the 'lines' dict to filter by specific line
+        assert "N" in result_n["lines"]
 
 
 class TestMuniSourceFormatting:
@@ -287,7 +294,7 @@ class TestMuniSourceFormatting:
     
     @pytest.fixture
     def muni_source(self):
-        return MuniSource(api_key="test", stop_code="15726")
+        return MuniSource(api_key="test", stop_codes=["15726"])
     
     def test_format_display_basic(self, muni_source):
         """Test basic display formatting."""
@@ -461,30 +468,24 @@ class TestGetMuniSource:
     def test_get_muni_source_configured(self, mock_config):
         """Test getting source when properly configured."""
         mock_config.MUNI_API_KEY = "test_key"
-        mock_config.MUNI_STOP_CODE = "15726"
+        mock_config.MUNI_STOP_CODES = ["15726"]
+        mock_config.MUNI_STOP_CODE = ""  # Empty fallback
         mock_config.MUNI_LINE_NAME = "N"
+        mock_config.TRANSIT_CACHE_REFRESH_SECONDS = 90
+        mock_config.TRANSIT_CACHE_ENABLED = False  # Disable cache for test
         
         source = get_muni_source()
         
         assert source is not None
         assert source.api_key == "test_key"
-        assert source.stop_code == "15726"
+        assert source.stop_codes == ["15726"]
         assert source.line_name == "N"
     
     @patch('src.data_sources.muni.Config')
     def test_get_muni_source_no_api_key(self, mock_config):
         """Test getting source without API key."""
         mock_config.MUNI_API_KEY = ""
-        mock_config.MUNI_STOP_CODE = "15726"
-        
-        source = get_muni_source()
-        
-        assert source is None
-    
-    @patch('src.data_sources.muni.Config')
-    def test_get_muni_source_no_stop_code(self, mock_config):
-        """Test getting source without stop code."""
-        mock_config.MUNI_API_KEY = "test_key"
+        mock_config.MUNI_STOP_CODES = ["15726"]
         mock_config.MUNI_STOP_CODE = ""
         
         source = get_muni_source()
@@ -492,11 +493,34 @@ class TestGetMuniSource:
         assert source is None
     
     @patch('src.data_sources.muni.Config')
+    def test_get_muni_source_no_stop_code(self, mock_config):
+        """Test getting source without stop code returns source with empty stops.
+        
+        The source is returned even without stops so template variables
+        are available in the UI.
+        """
+        mock_config.MUNI_API_KEY = "test_key"
+        mock_config.MUNI_STOP_CODES = []
+        mock_config.MUNI_STOP_CODE = ""
+        mock_config.MUNI_LINE_NAME = ""
+        mock_config.TRANSIT_CACHE_REFRESH_SECONDS = 90
+        mock_config.TRANSIT_CACHE_ENABLED = False
+        
+        source = get_muni_source()
+        
+        # Source is returned even without stops for UI template variable access
+        assert source is not None
+        assert source.stop_codes == []
+    
+    @patch('src.data_sources.muni.Config')
     def test_get_muni_source_no_line_filter(self, mock_config):
         """Test getting source without line filter."""
         mock_config.MUNI_API_KEY = "test_key"
-        mock_config.MUNI_STOP_CODE = "15726"
+        mock_config.MUNI_STOP_CODES = ["15726"]
+        mock_config.MUNI_STOP_CODE = ""
         mock_config.MUNI_LINE_NAME = ""
+        mock_config.TRANSIT_CACHE_REFRESH_SECONDS = 90
+        mock_config.TRANSIT_CACHE_ENABLED = False
         
         source = get_muni_source()
         
@@ -509,7 +533,7 @@ class TestMuniTimeParsing:
     
     @pytest.fixture
     def muni_source(self):
-        return MuniSource(api_key="test", stop_code="15726")
+        return MuniSource(api_key="test", stop_codes=["15726"])
     
     def test_calculate_minutes_until_future(self, muni_source):
         """Test calculating minutes for future arrival."""

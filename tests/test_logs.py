@@ -217,12 +217,18 @@ class TestLogsEndpoint:
         assert data["has_more"] == False
 
     def test_get_logs_limit_max_value(self, mock_api_server):
-        """Test that limit is capped at maximum value."""
+        """Test that limit above maximum returns validation error."""
         response = mock_api_server.get("/logs?limit=1000")
+        # API rejects values above 500 with a validation error
+        assert response.status_code == 422
+    
+    def test_get_logs_limit_at_max(self, mock_api_server):
+        """Test that limit at maximum is accepted."""
+        response = mock_api_server.get("/logs?limit=500")
         assert response.status_code == 200
         
         data = response.json()
-        assert data["limit"] <= 500  # Max is 500
+        assert data["limit"] == 500
 
     def test_get_logs_limit_min_value(self, mock_api_server):
         """Test that limit has minimum value validation."""

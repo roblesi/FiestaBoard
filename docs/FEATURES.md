@@ -1,6 +1,6 @@
-# Vesta Features Overview
+# FiestaBoard Features Overview
 
-This document provides a comprehensive overview of all Vesta features. For detailed setup instructions, see the individual feature guides.
+This document provides a comprehensive overview of all FiestaBoard features. For detailed setup instructions, see the individual feature guides.
 
 ## Table of Contents
 
@@ -510,7 +510,7 @@ Adjust how often the board checks for new content.
 
 ## Template System
 
-Vesta uses a powerful Jinja2-based template engine that allows you to create custom displays.
+FiestaBoard uses a powerful Jinja2-based template engine that allows you to create custom displays.
 
 ### Accessing Variables
 

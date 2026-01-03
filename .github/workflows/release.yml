@@ -126,8 +126,8 @@ jobs:
           build-args: |
             VERSION=${{ steps.version.outputs.version }}
           tags: |
-            ghcr.io/${{ github.repository_owner }}/vesta-api:${{ steps.version.outputs.version }}
-            ghcr.io/${{ github.repository_owner }}/vesta-api:latest
+            ghcr.io/${{ github.repository_owner }}/fiestaboard-api:${{ steps.version.outputs.version }}
+            ghcr.io/${{ github.repository_owner }}/fiestaboard-api:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -142,8 +142,8 @@ jobs:
           build-args: |
             VERSION=${{ steps.version.outputs.version }}
           tags: |
-            ghcr.io/${{ github.repository_owner }}/vesta-ui:${{ steps.version.outputs.version }}
-            ghcr.io/${{ github.repository_owner }}/vesta-ui:latest
+            ghcr.io/${{ github.repository_owner }}/fiestaboard-ui:${{ steps.version.outputs.version }}
+            ghcr.io/${{ github.repository_owner }}/fiestaboard-ui:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -208,8 +208,8 @@ jobs:
             
             releaseNotes += `**Platforms:** ${platforms}\n\n`;
             releaseNotes += `\`\`\`bash\n`;
-            releaseNotes += `docker pull ghcr.io/${{ github.repository_owner }}/vesta-api:${version}\n`;
-            releaseNotes += `docker pull ghcr.io/${{ github.repository_owner }}/vesta-ui:${version}\n`;
+            releaseNotes += `docker pull ghcr.io/${{ github.repository_owner }}/fiestaboard-api:${version}\n`;
+            releaseNotes += `docker pull ghcr.io/${{ github.repository_owner }}/fiestaboard-ui:${version}\n`;
             releaseNotes += `\`\`\`\n`;
             
             if (buildPi) {

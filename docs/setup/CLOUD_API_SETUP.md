@@ -55,7 +55,7 @@ docker-compose -f docker-compose.dev.yml up -d
 curl http://localhost:8000/health
 
 # Check the logs for any connection errors
-docker-compose -f docker-compose.dev.yml logs -f vestaboard-api
+docker-compose -f docker-compose.dev.yml logs -f fiestaboard-api
 ```
 
 If successful, the API should connect to your Vestaboard without errors.

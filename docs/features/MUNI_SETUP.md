@@ -36,7 +36,7 @@ SF Muni integration provides real-time arrival predictions for San Francisco Mun
 
 **Rate Limits:**
 - Free tier: 60 requests per hour
-- Vesta's regional caching reduces usage to ~40 requests/hour
+- FiestaBoard's regional caching reduces usage to ~40 requests/hour
 
 ### 2. Enable Muni Transit
 
@@ -233,7 +233,7 @@ MUNI_REFRESH_SECONDS=60          # Default: 60 (1 minute)
 
 ## Regional Transit Cache
 
-Vesta uses an intelligent caching system to stay within 511.org API rate limits:
+FiestaBoard uses an intelligent caching system to stay within 511.org API rate limits:
 
 ### How It Works
 

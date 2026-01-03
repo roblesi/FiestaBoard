@@ -46,80 +46,70 @@ class TestTimeServiceCore:
 class TestTimeServiceSilenceMode:
     """Tests for silence mode time window checking."""
     
-    @patch('src.time_service.datetime')
-    def test_is_time_in_window_same_day_inside(self, mock_datetime):
+    def test_is_time_in_window_same_day_inside(self):
         """Test time window check for same-day window, time inside."""
-        # Mock current time to 12:00 UTC
-        mock_now = Mock()
-        mock_now.time.return_value = time(12, 0)
-        mock_datetime.now.return_value = mock_now
-        
         service = TimeService()
         
-        # Window: 10:00 UTC to 14:00 UTC
-        result = service.is_time_in_window("10:00+00:00", "14:00+00:00")
-        
-        assert result is True
+        # Mock get_current_utc to return 12:00 UTC
+        with patch.object(service, 'get_current_utc') as mock_get_utc:
+            mock_get_utc.return_value = datetime(2024, 1, 15, 12, 0, tzinfo=pytz.UTC)
+            
+            # Window: 10:00 UTC to 14:00 UTC
+            result = service.is_time_in_window("10:00+00:00", "14:00+00:00")
+            
+            assert result is True
     
-    @patch('src.time_service.datetime')
-    def test_is_time_in_window_same_day_outside(self, mock_datetime):
+    def test_is_time_in_window_same_day_outside(self):
         """Test time window check for same-day window, time outside."""
-        # Mock current time to 15:00 UTC
-        mock_now = Mock()
-        mock_now.time.return_value = time(15, 0)
-        mock_datetime.now.return_value = mock_now
-        
         service = TimeService()
         
-        # Window: 10:00 UTC to 14:00 UTC
-        result = service.is_time_in_window("10:00+00:00", "14:00+00:00")
-        
-        assert result is False
+        # Mock get_current_utc to return 15:00 UTC
+        with patch.object(service, 'get_current_utc') as mock_get_utc:
+            mock_get_utc.return_value = datetime(2024, 1, 15, 15, 0, tzinfo=pytz.UTC)
+            
+            # Window: 10:00 UTC to 14:00 UTC
+            result = service.is_time_in_window("10:00+00:00", "14:00+00:00")
+            
+            assert result is False
     
-    @patch('src.time_service.datetime')
-    def test_is_time_in_window_midnight_spanning_before_midnight(self, mock_datetime):
+    def test_is_time_in_window_midnight_spanning_before_midnight(self):
         """Test midnight-spanning window, current time before midnight."""
-        # Mock current time to 22:00 UTC
-        mock_now = Mock()
-        mock_now.time.return_value = time(22, 0)
-        mock_datetime.now.return_value = mock_now
-        
         service = TimeService()
         
-        # Window: 20:00 UTC to 08:00 UTC (spans midnight)
-        result = service.is_time_in_window("20:00+00:00", "08:00+00:00")
-        
-        assert result is True
+        # Mock get_current_utc to return 22:00 UTC
+        with patch.object(service, 'get_current_utc') as mock_get_utc:
+            mock_get_utc.return_value = datetime(2024, 1, 15, 22, 0, tzinfo=pytz.UTC)
+            
+            # Window: 20:00 UTC to 08:00 UTC (spans midnight)
+            result = service.is_time_in_window("20:00+00:00", "08:00+00:00")
+            
+            assert result is True
     
-    @patch('src.time_service.datetime')
-    def test_is_time_in_window_midnight_spanning_after_midnight(self, mock_datetime):
+    def test_is_time_in_window_midnight_spanning_after_midnight(self):
         """Test midnight-spanning window, current time after midnight."""
-        # Mock current time to 06:00 UTC
-        mock_now = Mock()
-        mock_now.time.return_value = time(6, 0)
-        mock_datetime.now.return_value = mock_now
-        
         service = TimeService()
         
-        # Window: 20:00 UTC to 08:00 UTC (spans midnight)
-        result = service.is_time_in_window("20:00+00:00", "08:00+00:00")
-        
-        assert result is True
+        # Mock get_current_utc to return 06:00 UTC
+        with patch.object(service, 'get_current_utc') as mock_get_utc:
+            mock_get_utc.return_value = datetime(2024, 1, 15, 6, 0, tzinfo=pytz.UTC)
+            
+            # Window: 20:00 UTC to 08:00 UTC (spans midnight)
+            result = service.is_time_in_window("20:00+00:00", "08:00+00:00")
+            
+            assert result is True
     
-    @patch('src.time_service.datetime')
-    def test_is_time_in_window_midnight_spanning_outside(self, mock_datetime):
+    def test_is_time_in_window_midnight_spanning_outside(self):
         """Test midnight-spanning window, current time outside."""
-        # Mock current time to 12:00 UTC
-        mock_now = Mock()
-        mock_now.time.return_value = time(12, 0)
-        mock_datetime.now.return_value = mock_now
-        
         service = TimeService()
         
-        # Window: 20:00 UTC to 08:00 UTC (spans midnight)
-        result = service.is_time_in_window("20:00+00:00", "08:00+00:00")
-        
-        assert result is False
+        # Mock get_current_utc to return 12:00 UTC
+        with patch.object(service, 'get_current_utc') as mock_get_utc:
+            mock_get_utc.return_value = datetime(2024, 1, 15, 12, 0, tzinfo=pytz.UTC)
+            
+            # Window: 20:00 UTC to 08:00 UTC (spans midnight)
+            result = service.is_time_in_window("20:00+00:00", "08:00+00:00")
+            
+            assert result is False
     
     def test_is_time_in_window_invalid_format_returns_false(self):
         """Test invalid time format returns False."""
