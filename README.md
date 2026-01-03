@@ -1,6 +1,8 @@
-# Vestaboard Display Service
+# FiestaBoard 🎉
 
-A Python service that runs in Docker to display dynamic information on your Vestaboard, including weather, date/time, house status, Star Trek quotes, stock prices, surf conditions, air quality monitoring, transit arrivals, traffic conditions, flight tracking, and guest WiFi credentials.
+**Turn your Vestaboard into a living dashboard.** FiestaBoard transforms your iconic split-flap display into a real-time information hub—track your morning commute, monitor the markets, check surf conditions, or display Star Trek wisdom. All beautifully formatted, endlessly customizable, and running in Docker with zero hassle.
+
+Built for San Francisco life, but works anywhere.
 
 ## 🚀 TLDR - Quick Start
 
@@ -46,18 +48,19 @@ docker-compose down
 ### Core Features
 - 🌤️ **Weather Display**: Current weather conditions with text-based icons
 - 📅 **Date/Time**: Current date and time with timezone support
-- 🏠 **Home Assistant**: House status display (doors, garage, locks, etc.)
-- 🖖 **Star Trek Quotes**: Random quotes from TNG, Voyager, and DS9 with configurable ratio
-- 📶 **Guest WiFi**: Display WiFi credentials for guests (easily toggled on/off)
-- 🚴 **Bay Wheels**: Track bike availability at multiple stations with visual station finder
-- 🚇 **Muni Transit**: Real-time SF Muni arrival predictions with stop finder (search by address or location)
-- 🚗 **Traffic**: Travel time to destinations with live traffic conditions (multiple routes supported, compare different modes: drive, bike, transit, walk)
-- 📈 **Stocks**: Monitor stock prices and percentage changes for up to 5 symbols with color-coded indicators
-- 🌊 **Surf Conditions**: Live surf reports with wave height, swell period, wind conditions, and quality ratings
-- 💨 **Air Quality & Fog**: Monitor air quality (AQI) and fog conditions with intelligent alerts for SF fog and wildfire smoke
-- ✈️ **Flight Tracking**: Display nearby aircraft with call signs, altitude, ground speed, and squawk codes
-- 🌙 **Silence Schedule**: Configure a time window when the Vestaboard won't send updates (e.g., 8pm-7am)
+- 🏠 **[Home Assistant](./docs/features/HOME_ASSISTANT_SETUP.md)**: House status display (doors, garage, locks, etc.)
+- 🖖 **[Star Trek Quotes](./docs/features/STAR_TREK_QUOTES_SETUP.md)**: Random quotes from TNG, Voyager, and DS9 with configurable ratio
+- 📶 **[Guest WiFi](./docs/features/GUEST_WIFI_SETUP.md)**: Display WiFi credentials for guests (easily toggled on/off)
+- 🚴 **[Bay Wheels](./docs/features/BAYWHEELS_SETUP.md)**: Track bike availability at multiple stations with visual station finder
+- 🚇 **[Muni Transit](./docs/features/MUNI_SETUP.md)**: Real-time SF Muni arrival predictions with stop finder
+- 🚗 **[Traffic](./docs/features/TRAFFIC_SETUP.md)**: Travel time to destinations with live traffic (multiple modes: drive, bike, transit, walk)
+- 📈 **[Stocks](./docs/features/STOCKS_SETUP.md)**: Monitor stock prices and percentage changes with color-coded indicators
+- 🌊 **[Surf Conditions](./docs/features/SURF_SETUP.md)**: Live surf reports with wave height, swell period, wind, and quality ratings
+- 💨 **[Air Quality & Fog](./docs/features/AIR_FOG_SETUP.md)**: Monitor AQI and fog conditions with intelligent alerts
+- ✈️ **[Flight Tracking](./docs/features/FLIGHTS_SETUP.md)**: Display nearby aircraft with call signs, altitude, and speed
+- 🌙 **Silence Schedule**: Configure quiet hours when the board won't update (e.g., 8pm-7am)
 
+**→ [View detailed feature documentation](./docs/FEATURES.md)**
 
 ### System Features
 - 📄 **Page-Based Display**: Create and select pages via the web UI
@@ -170,50 +173,20 @@ All configuration is done via environment variables in `.env`:
 
 ### Feature Configuration
 
-#### Star Trek Quotes
-- `STAR_TREK_QUOTES_ENABLED`: Enable Star Trek quotes (default: `false`)
-- `STAR_TREK_QUOTES_RATIO`: Ratio between TNG:Voyager:DS9 (default: `3:5:9`)
+All features can be configured via the web UI (Settings page) or environment variables. Each feature has detailed setup documentation:
 
-#### Home Assistant
-- `HOME_ASSISTANT_ENABLED`: Enable Home Assistant integration (default: `false`)
-- `HOME_ASSISTANT_BASE_URL`: Your Home Assistant URL
-- `HOME_ASSISTANT_ACCESS_TOKEN`: Long-lived access token
-- `HOME_ASSISTANT_ENTITIES`: JSON array of entities to monitor
+- **[Bay Wheels](./docs/features/BAYWHEELS_SETUP.md)**: Bike share stations (no API key required)
+- **[Muni Transit](./docs/features/MUNI_SETUP.md)**: SF transit arrivals (requires free 511.org API key)
+- **[Traffic](./docs/features/TRAFFIC_SETUP.md)**: Travel times (requires Google Routes API key)
+- **[Stocks](./docs/features/STOCKS_SETUP.md)**: Stock prices (no API key required, optional Finnhub for search)
+- **[Surf Conditions](./docs/features/SURF_SETUP.md)**: Surf reports (no API key required)
+- **[Air Quality & Fog](./docs/features/AIR_FOG_SETUP.md)**: AQI and fog monitoring (requires PurpleAir or OpenWeatherMap)
+- **[Flight Tracking](./docs/features/FLIGHTS_SETUP.md)**: Nearby aircraft (requires aviationstack API key)
+- **[Star Trek Quotes](./docs/features/STAR_TREK_QUOTES_SETUP.md)**: Random quotes (no API key required)
+- **[Home Assistant](./docs/features/HOME_ASSISTANT_SETUP.md)**: Smart home integration (requires HA access token)
+- **[Guest WiFi](./docs/features/GUEST_WIFI_SETUP.md)**: WiFi credentials display (no API key required)
 
-#### Guest WiFi
-- `GUEST_WIFI_ENABLED`: Display guest WiFi credentials (default: `false`)
-- `GUEST_WIFI_SSID`: Network name
-- `GUEST_WIFI_PASSWORD`: Network password
-
-#### Stocks
-- `STOCKS_ENABLED`: Enable stock monitoring (default: `false`)
-- `STOCKS_SYMBOLS`: Comma-separated list of stock symbols (max 5, e.g., "GOOG,AAPL,MSFT,TSLA,NVDA")
-- `STOCKS_TIME_WINDOW`: Time period for percentage change calculation (default: `1 Day`)
-  - Options: `1 Day`, `5 Days`, `1 Month`, `3 Months`, `6 Months`, `1 Year`, `2 Years`, `5 Years`, `ALL`
-- `STOCKS_REFRESH_SECONDS`: How often to fetch stock data (default: `300` = 5 minutes)
-- `FINNHUB_API_KEY`: Optional - enables better symbol search/autocomplete (get free key from [finnhub.io](https://finnhub.io/))
-
-#### Flight Tracking
-- `FLIGHTS_ENABLED`: Enable flight tracking (default: `false`)
-- `AVIATIONSTACK_API_KEY`: Your aviationstack API key (required - get free key from [aviationstack.com](https://aviationstack.com/))
-  - ⚠️ **Free tier: only 100 requests/month** - use high refresh interval or upgrade to paid plan
-- `FLIGHTS_LATITUDE`: Your location latitude for monitoring (default: `37.7749` - San Francisco)
-- `FLIGHTS_LONGITUDE`: Your location longitude for monitoring (default: `-122.4194` - San Francisco)
-- `FLIGHTS_RADIUS_KM`: Search radius in kilometers (default: `50`)
-- `FLIGHTS_MAX_COUNT`: Maximum number of flights to display (default: `4`, max: `4`)
-- `FLIGHTS_REFRESH_SECONDS`: How often to fetch flight data (default: `28800` = 8 hours to stay within free tier)
-  - Recommended: `28800` (8 hours, 90 req/month), `43200` (12 hours, 60 req/month), or `86400` (daily, 30 req/month)
-
-See [FLIGHTS_SETUP.md](./docs/features/FLIGHTS_SETUP.md) for detailed setup instructions.
-
-#### Silence Schedule
-- `SILENCE_SCHEDULE_ENABLED`: Enable silence schedule (default: `false`)
-- `SILENCE_SCHEDULE_START_TIME`: When silence mode starts (default: `20:00` / 8pm)
-- `SILENCE_SCHEDULE_END_TIME`: When silence mode ends (default: `07:00` / 7am)
-
-The silence schedule prevents the Vestaboard from sending updates during the configured time window. Times are in your local timezone (configured via `TIMEZONE`). The window can span midnight (e.g., 8pm to 7am).
-
-See `env.example` for all available options.
+See `env.example` for all available environment variables.
 
 ## Local Development
 
@@ -284,9 +257,7 @@ Vesta/
 
 ## Deployment
 
-### Local Development / Testing
-
-Use Docker Compose for local development:
+### Local Development
 
 ```bash
 # Build and start services
@@ -295,75 +266,26 @@ docker-compose up --build
 # Run in background
 docker-compose up -d --build
 
-# View logs
-docker-compose logs -f
-
-# View specific service logs
-docker-compose logs -f vestaboard-api
-docker-compose logs -f vestaboard-ui
-
 # Stop services
 docker-compose down
-
-# Rebuild after code changes
-docker-compose up --build
 ```
 
-### Production Deployment (Synology NAS)
+See [LOCAL_DEVELOPMENT.md](./docs/setup/LOCAL_DEVELOPMENT.md) for detailed development workflows.
 
-Vesta uses **GitHub Container Registry (GHCR)** for production deployments with automatic builds:
+### Production Deployment
 
-#### Features
-- ✅ **Automatic Builds**: GitHub Actions builds images on every push to `main`
-- ✅ **One-Click Updates**: Use Synology Container Manager's Update button
-- ✅ **Portable Images**: No hardcoded IPs, works anywhere
-- ✅ **Version Control**: Tagged images for easy rollbacks
+Vesta supports multiple deployment options:
 
-#### Initial Setup (One-Time)
+- **[GitHub Container Registry](./docs/deployment/GITHUB_REGISTRY_SETUP.md)**: Recommended for production with automatic builds
+- **[Synology NAS](./docs/deployment/DEPLOY_TO_SYNOLOGY.md)**: One-click updates via Container Manager
+- **[Raspberry Pi](./docs/deployment/PI_BUILD_GUIDE.md)**: ARM-compatible builds
 
-1. **Create GitHub Personal Access Token**
-   - Go to GitHub → Settings → Developer settings → Personal access tokens
-   - Create token with `read:packages` permission
-   - Add to your `.env` file: `GITHUB_TOKEN=ghp_xxx...`
-
-2. **Configure Synology in `.env`**
-   ```bash
-   SYNOLOGY_HOST=192.168.x.x
-   SYNOLOGY_USER=your-username
-   GITHUB_TOKEN=ghp_xxx...
-   ```
-
-3. **Deploy to Synology**
-   ```bash
-   ./deploy.sh
-   ```
-
-#### Updating to Latest Version
-
-**Method 1: Synology Container Manager (Recommended)**
-1. Open Container Manager on Synology
-2. Select `vestaboard-api` and `vestaboard-ui` containers
-3. Click Action → Update
-4. Done! Latest version is now running
-
-**Method 2: Command Line**
+**Quick Deploy to Synology:**
 ```bash
-# Re-run deploy script
 ./deploy.sh
-
-# Or SSH directly to Synology
-ssh user@synology-ip
-cd ~/vestaboard
-sudo docker-compose pull
-sudo docker-compose down
-sudo docker-compose up -d
 ```
 
-#### Complete Documentation
-
-For detailed setup instructions, troubleshooting, and advanced topics:
-- **[GitHub Registry Setup Guide](./docs/deployment/GITHUB_REGISTRY_SETUP.md)** - Complete GHCR deployment guide
-- **[Deploy to Synology](./docs/deployment/DEPLOY_TO_SYNOLOGY.md)** - Synology-specific instructions
+See deployment guides for detailed instructions.
 
 
 ## Troubleshooting
@@ -386,299 +308,36 @@ For detailed setup instructions, troubleshooting, and advanced topics:
 - Check container logs: `docker-compose logs`
 - Verify `.env` file is readable
 
-## Feature Guides
+## Documentation
 
-### Star Trek Quotes
-Display inspiring quotes from TNG, Voyager, and DS9 with a configurable ratio between series.
+### Setup Guides
+- **[Local Development](./docs/setup/LOCAL_DEVELOPMENT.md)**: Development environment setup
+- **[Docker Setup](./docs/setup/DOCKER_SETUP.md)**: Docker configuration details
+- **[GitHub Codespaces](./docs/setup/CODESPACES_SETUP.md)**: Cloud development setup
+- **[Cloud API Setup](./docs/setup/CLOUD_API_SETUP.md)**: Production API configuration
 
-See [STAR_TREK_QUOTES_SETUP.md](./docs/features/STAR_TREK_QUOTES_SETUP.md) for:
-- Quote ratio configuration (default: 3:5:9)
-- Full list of 102 quotes
-- Custom quote addition
-- Display format
+### Feature Guides
+- **[Complete Feature Overview](./docs/FEATURES.md)**: All features with examples and use cases
+- **[Home Assistant](./docs/features/HOME_ASSISTANT_SETUP.md)**: Smart home integration
+- **[Star Trek Quotes](./docs/features/STAR_TREK_QUOTES_SETUP.md)**: Random quotes display
+- **[Guest WiFi](./docs/features/GUEST_WIFI_SETUP.md)**: WiFi credentials display
+- **[Bay Wheels](./docs/features/BAYWHEELS_SETUP.md)**: Bike share monitoring
+- **[Muni Transit](./docs/features/MUNI_SETUP.md)**: SF transit arrivals
+- **[Traffic](./docs/features/TRAFFIC_SETUP.md)**: Travel times with live traffic
+- **[Stocks](./docs/features/STOCKS_SETUP.md)**: Stock price monitoring
+- **[Surf Conditions](./docs/features/SURF_SETUP.md)**: Surf reports
+- **[Air Quality & Fog](./docs/features/AIR_FOG_SETUP.md)**: AQI and fog monitoring
+- **[Flight Tracking](./docs/features/FLIGHTS_SETUP.md)**: Nearby aircraft tracking
 
-### Home Assistant Integration
-Show real-time status of doors, garage, locks, and other Home Assistant entities.
+### Deployment Guides
+- **[GitHub Container Registry](./docs/deployment/GITHUB_REGISTRY_SETUP.md)**: Production deployment with GHCR
+- **[Synology NAS](./docs/deployment/DEPLOY_TO_SYNOLOGY.md)**: Deploy to Synology
+- **[Raspberry Pi](./docs/deployment/PI_BUILD_GUIDE.md)**: Build on Raspberry Pi
 
-See [HOME_ASSISTANT_SETUP.md](./docs/features/HOME_ASSISTANT_SETUP.md) for:
-- Getting access tokens
-- Finding entity IDs
-- Status indicators ([G] = good, [R] = attention needed)
-- Entity configuration
-
-### Guest WiFi Display
-Easily display WiFi credentials for guests, toggled on/off via configuration.
-
-See [GUEST_WIFI_SETUP.md](./docs/features/GUEST_WIFI_SETUP.md) for:
-- Simple toggle setup
-- Display format
-- Security considerations
-
-### Board Update Interval
-Configure how often the board checks for new content to display. The default is 60 seconds (1 minute).
-
-**Features:**
-- Adjustable from 10 seconds to 3600 seconds (1 hour)
-- Configure via web UI Settings page
-- Requires service restart to take effect
-
-**Use Cases:**
-- **Faster updates (10-30 seconds)**: For time-sensitive displays like transit arrivals or traffic
-- **Standard updates (60 seconds)**: Default, good balance for most use cases
-- **Slower updates (300+ seconds)**: For static content or to reduce API calls
-
-**To configure:** Go to Settings → General Settings → Board Update Interval in the web UI.
-
-### Silence Schedule
-Configure a time window when the Vestaboard won't send updates. Perfect for quiet hours (e.g., 8pm to 7am).
-
-**Features:**
-- Set custom start and end times (24-hour format)
-- Times are in your configured timezone
-- Supports windows that span midnight (e.g., 8pm to 7am)
-- Configure via web UI or environment variables
-
-**Example:** Set `SILENCE_SCHEDULE_START_TIME=20:00` and `SILENCE_SCHEDULE_END_TIME=07:00` to prevent updates between 8pm and 7am.
-
-### Bay Wheels Bike Share
-Track bike availability at multiple Bay Wheels stations with an easy-to-use station finder.
-
-**Features:**
-- **Visual Station Finder**: Search for stations by address, coordinates, or your current location
-- **Multiple Stations**: Track up to 4 stations simultaneously
-- **Live Data**: See real-time electric and classic bike availability
-- **Indexed Template Access**: Use `{{baywheels.stations.0.electric_bikes}}` to access specific stations
-- **Aggregate Stats**: Display totals across all stations with `{{baywheels.total_electric}}`
-
-**Setup:**
-1. Enable Bay Wheels in Settings
-2. Use the station finder to search near your location
-3. Select up to 4 stations to monitor
-4. Use indexed variables in your page templates
-
-### Muni Transit
-Real-time SF Muni arrival predictions with an intelligent stop finder.
-
-**Features:**
-- **Visual Stop Finder**: Search for Muni stops by address, coordinates, or your current location
-- **Multiple Stops**: Track up to 4 stops simultaneously
-- **Route Information**: See which lines serve each stop
-- **Live Arrivals**: Real-time arrival predictions for all configured stops
-- **Indexed Template Access**: Use `{{muni.stops.0.formatted}}` to display arrivals for specific stops
-- **Line Filtering**: Optionally filter to specific lines (e.g., N-Judah only)
-
-**Setup:**
-1. Get a free API key from [511.org/open-data](https://511.org/open-data)
-2. Enable Muni in Settings and enter your API key
-3. Use the stop finder to search near your location
-4. Select up to 4 stops to monitor
-5. Use indexed variables in your page templates (e.g., `{{muni.stops.0.line}}`, `{{muni.stops.1.formatted}}`)
-
-**Example Template:**
-```
-{center}MUNI ARRIVALS
-{{muni.stops.0.formatted}}
-{{muni.stops.1.formatted}}
-```
-
-**Regional Transit Caching:**
-
-Vesta uses an intelligent regional caching system to avoid 511.org API rate limits:
-- **Single Regional Request**: Fetches ALL Bay Area transit data (Muni, BART, Caltrain, etc.) in one API call
-- **Automatic Refresh**: Cache refreshes every 90 seconds (configurable), staying well within the 60 requests/hour limit
-- **Instant Responses**: All Muni data served from cache with zero API latency
-- **Graceful Degradation**: If API is unavailable, serves stale cache data
-- **API Call Reduction**: Reduces API calls from 100+ per hour to ~40 per hour
-
-**Cache Configuration** (optional):
-```json
-{
-  "features": {
-    "muni": {
-      "transit_cache_enabled": true,
-      "transit_cache_refresh_seconds": 90
-    }
-  }
-}
-```
-
-**Monitoring Cache Health:**
-
-Check cache status via API endpoint:
-```bash
-curl http://localhost:8000/transit/cache/status
-```
-
-Returns cache age, refresh count, agencies cached, and staleness warnings.
-
-### Traffic
-Monitor drive times to multiple destinations with live traffic conditions.
-
-**Features:**
-- **Visual Route Planner**: Configure routes with origin and destination
-- **Multiple Routes**: Track up to 4 routes simultaneously
-- **Route Validation**: Validate routes before saving to ensure they work
-- **Live Traffic**: Real-time traffic conditions and delay estimates
-- **Indexed Template Access**: Use `{{traffic.routes.0.formatted}}` to display specific routes
-- **Status Colors**: Automatic color coding based on traffic conditions (green/yellow/red)
-
-**Setup:**
-1. Get a Google Routes API key with Routes API enabled
-2. Enable Traffic in Settings and enter your API key
-3. Use the route planner to add routes:
-   - Enter origin (address or coordinates)
-   - Enter destination (address or coordinates)
-   - Add a short display name (e.g., "WORK", "AIRPORT")
-   - Click "Validate Route" to test
-   - Click "Add Route" to save
-4. Use indexed variables in your page templates (e.g., `{{traffic.routes.0.formatted}}`, `{{traffic.routes.1.duration_minutes}}`)
-
-**Example Template:**
-```
-{center}COMMUTE TIMES
-HOME→WORK: {{traffic.routes.0.duration_minutes}}m
-HOME→AIRPORT: {{traffic.routes.1.duration_minutes}}m
-```
-
-### Stocks
-Monitor stock prices and percentage changes for up to 5 symbols with automatic color coding.
-
-**Features:**
-- **Multiple Symbols**: Track up to 5 stock symbols simultaneously
-- **Color-Coded Display**: Automatic green/red/white indicators based on price change
-- **Time Window Selection**: Choose percentage change period (1 Day, 5 Days, 1 Month, etc.)
-- **Column Alignment**: Prices and percentages are automatically aligned for clean display
-- **Symbol Search**: Autocomplete with popular stocks (optional Finnhub API for enhanced search)
-- **Indexed Template Access**: Use `{{stocks.stocks.0.symbol}}` to access specific stocks
-- **Formatted Display**: Pre-formatted strings with symbol, color, price, and percentage
-
-**Setup:**
-1. Enable Stocks in Settings
-2. (Optional) Add a Finnhub API key for enhanced symbol search (get free key from [finnhub.io](https://finnhub.io/))
-3. Add up to 5 stock symbols (e.g., GOOG, AAPL, MSFT, TSLA, NVDA)
-4. Select a time window for percentage change calculation
-5. Use indexed variables in your page templates
-
-**Template Variables:**
-- `{{stocks.stocks.0.symbol}}` - Stock symbol (e.g., "GOOG")
-- `{{stocks.stocks.0.current_price}}` - Current price (e.g., "150.25")
-- `{{stocks.stocks.0.change_percent}}` - Percentage change with sign (e.g., "+1.18%")
-- `{{stocks.stocks.0.formatted}}` - Pre-formatted string: `SYMBOL{COLOR} $PRICE PERCENTAGE`
-  - Example: `GOOG{green} $150.25 +1.18%`
-  - Color is green for positive, red for negative, white for zero change
-- Replace `0` with `1`, `2`, `3`, or `4` for additional stocks
-
-**Example Template:**
-```
-{center}STOCK PRICES
-{{stocks.stocks.0.formatted}}
-{{stocks.stocks.1.formatted}}
-{{stocks.stocks.2.formatted}}
-```
-
-**Data Source:**
-- Uses Yahoo Finance (yfinance) for stock data - no API key required
-- Optional Finnhub integration for enhanced symbol search and autocomplete
-
-### Surf Conditions
-Monitor surf conditions with real-time wave height, swell period, wind data, and quality ratings.
-
-**Features:**
-- **Wave Data**: Real-time wave height (in feet) and swell period (in seconds)
-- **Wind Conditions**: Wind speed and direction (cardinal directions)
-- **Quality Ratings**: Automatic surf quality assessment based on swell period and wind
-  - 🟢 EXCELLENT: Long period swell (>12s) with light winds (<12mph)
-  - 🟡 GOOD: Decent period swell (>10s) with moderate winds (<15mph)
-  - 🟠 FAIR: Reasonable conditions (>8s period or <20mph winds)
-  - 🔴 POOR: Short period swell with strong winds
-- **Location Configurable**: Set custom coordinates (default: Ocean Beach, SF)
-- **No API Key Required**: Uses free Open-Meteo Marine API
-
-**Setup:**
-1. Enable Surf in Settings
-2. Configure location (latitude/longitude) - defaults to Ocean Beach, SF
-3. Adjust refresh interval (default: 10 minutes)
-4. Use template variables in your pages:
-   - `{{surf.wave_height}}` - Wave height in feet (e.g., "4.5")
-   - `{{surf.swell_period}}` - Swell period in seconds (e.g., "12.0")
-   - `{{surf.quality}}` - Quality rating (EXCELLENT, GOOD, FAIR, POOR)
-   - `{{surf.wind_speed}}` - Wind speed in mph
-   - `{{surf.wind_direction_cardinal}}` - Wind direction (N, NE, E, etc.)
-   - `{{surf.formatted_message}}` - Pre-formatted: "OB SURF: 4.5ft @ 12s"
-
-**Example Template:**
-```
-{center}SURF REPORT
-{{surf.formatted_message}}
-Quality: {{surf.quality}}
-Wind: {{surf.wind_speed}}mph {{surf.wind_direction_cardinal}}
-```
-
-**Data Source:**
-- Uses Open-Meteo Marine API (free, no API key required)
-- Wave height and swell period from marine forecast
-- Wind data from weather forecast
-
-### Air Quality & Fog Monitoring
-Monitor air quality (AQI from PM2.5) and fog conditions with intelligent alert system for Bay Area fog and wildfire smoke.
-
-**Features:**
-- **Air Quality Index (AQI)**: Real-time AQI calculated from PM2.5 concentrations
-  - 🟢 GOOD (0-50): Air quality is satisfactory
-  - 🟡 MODERATE (51-100): Acceptable for most people
-  - 🟠 UNHEALTHY FOR SENSITIVE (101-150): Sensitive groups may experience effects
-  - 🔴 UNHEALTHY (151-200): Everyone may experience effects
-  - 🟣 VERY UNHEALTHY (201-300): Health alert
-  - 🟤 HAZARDOUS (301+): Emergency conditions
-- **Fog Detection**: Intelligent fog detection based on visibility and weather conditions
-  - Triggers on visibility <1600m or high humidity (>95%) with cool temps (<60°F)
-  - 🟠 HEAVY FOG: Visibility significantly reduced
-  - 🟡 LIGHT FOG: Some reduction in visibility
-  - 🟢 CLEAR: Good visibility
-- **Wildfire Alerts**: Automatically alerts when AQI >100 (unhealthy air quality)
-- **Dual Data Sources**: Combines PurpleAir (air quality) and OpenWeatherMap (visibility/fog)
-- **Location Configurable**: Set custom coordinates (default: San Francisco)
-
-**Setup:**
-1. Get API keys:
-   - **PurpleAir** (optional): Sign up at [purpleair.com](https://www2.purpleair.com/) for air quality data
-   - **OpenWeatherMap** (optional): Sign up at [openweathermap.org](https://openweathermap.org/) for visibility/fog data
-   - *Note: At least one API key is required*
-2. Enable Air Quality/Fog in Settings
-3. Configure API keys and location (latitude/longitude)
-4. Optionally specify a PurpleAir sensor ID for precise air quality monitoring
-5. Use template variables in your pages:
-   - `{{air_fog.pm2_5_aqi}}` - Air Quality Index value (e.g., "42")
-   - `{{air_fog.pm2_5}}` - PM2.5 concentration in µg/m³
-   - `{{air_fog.air_status}}` - Air status (e.g., "AIR: GOOD", "AIR: UNHEALTHY")
-   - `{{air_fog.air_color}}` - Color code for air quality
-   - `{{air_fog.fog_status}}` - Fog status (e.g., "FOG: HEAVY", "CLEAR")
-   - `{{air_fog.fog_color}}` - Color code for fog conditions
-   - `{{air_fog.is_foggy}}` - Boolean fog indicator
-   - `{{air_fog.visibility_m}}` - Visibility in meters
-   - `{{air_fog.humidity}}` - Relative humidity percentage
-   - `{{air_fog.dew_point_f}}` - Dew point in Fahrenheit
-   - `{{air_fog.alert_message}}` - Combined alert (e.g., "FOG: HEAVY | AIR: UNHEALTHY")
-   - `{{air_fog.formatted_message}}` - Pre-formatted: "AQI:42 VIS:2.5mi HUM:85%"
-
-**Example Template:**
-```
-{center}AIR & FOG
-{{air_fog.alert_message}}
-{{air_fog.formatted_message}}
-Dew Point: {{air_fog.dew_point_f}}°F
-```
-
-**Data Sources:**
-- **PurpleAir API**: Real-time PM2.5 air quality data from community sensors
-- **OpenWeatherMap API**: Visibility, humidity, and temperature data for fog detection
-- AQI calculated using US EPA standard formula
-
-**Use Cases:**
-- **SF Fog Monitoring**: Know when Karl the Fog is rolling in
-- **Wildfire Season**: Monitor smoke and air quality during fire season
-- **Commute Planning**: Check visibility before heading out
-- **Health Alerts**: Track air quality for sensitive individuals
+### Reference
+- **[API Research](./docs/reference/API_RESEARCH.md)**: API integration details
+- **[Character Codes](./docs/reference/VESTABOARD_CHARACTER_CODES.md)**: Vestaboard character reference
+- **[Color Guide](./docs/reference/COLOR_GUIDE.md)**: Color coding reference
 
 ## Future Features
 
@@ -705,22 +364,12 @@ The Vestaboard can display various screens:
 **System Features:**
 - **Silence Schedule**: Configure quiet hours when the board won't update (e.g., 8pm-7am)
 
-## References
+## External Resources
 
-### APIs and Services
 - [Vestaboard API Docs](https://docs.vestaboard.com/docs/read-write-api/introduction)
 - [WeatherAPI.com](https://www.weatherapi.com/)
 - [OpenWeatherMap](https://openweathermap.org/api)
 - [Home Assistant REST API](https://developers.home-assistant.io/docs/api/rest/)
-
-### Documentation
-- [Local Development](./docs/setup/LOCAL_DEVELOPMENT.md)
-- [Docker Setup](./docs/setup/DOCKER_SETUP.md)
-- [Cloud API Setup](./docs/setup/CLOUD_API_SETUP.md)
-- [GitHub Registry Setup](./docs/deployment/GITHUB_REGISTRY_SETUP.md) - **Recommended for production**
-- [Deploy to Synology](./docs/deployment/DEPLOY_TO_SYNOLOGY.md)
-- [API Research](./docs/reference/API_RESEARCH.md)
-- [Character Codes](./docs/reference/VESTABOARD_CHARACTER_CODES.md)
 
 
 ---
