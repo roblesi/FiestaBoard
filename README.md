@@ -8,6 +8,20 @@ Built for San Francisco life, but works anywhere.
 
 **Just want to get it running? Here's the fastest way:**
 
+### Easiest: Use the Installation Script
+
+```bash
+# Mac/Linux
+./scripts/install.sh
+
+# Windows (PowerShell)
+.\scripts\install.ps1
+```
+
+The script will guide you through everything! 🎉
+
+### Manual Setup
+
 ```bash
 # 1. Create .env file with your API keys
 cp env.example .env
@@ -69,6 +83,16 @@ docker-compose down
 - 🐳 **Docker Ready**: Containerized for easy deployment on any system
 - ⚙️ **Highly Configurable**: Environment-based configuration for all features
 - 🔒 **Secure**: API token support for all integrations
+
+---
+
+## 👋 New to Technical Setup?
+
+**Not comfortable with Docker or terminal commands?** We've got you covered! Check out our step-by-step beginner's guide that walks through everything in plain language.
+
+**→ [Complete Beginner's Setup Guide](./docs/setup/BEGINNERS_GUIDE.md)**
+
+---
 
 ## Quick Start (Detailed)
 
@@ -311,6 +335,7 @@ See deployment guides for detailed instructions.
 ## Documentation
 
 ### Setup Guides
+- **[Beginner's Guide](./docs/setup/BEGINNERS_GUIDE.md)**: Step-by-step setup for non-technical users
 - **[Local Development](./docs/setup/LOCAL_DEVELOPMENT.md)**: Development environment setup
 - **[Docker Setup](./docs/setup/DOCKER_SETUP.md)**: Docker configuration details
 - **[GitHub Codespaces](./docs/setup/CODESPACES_SETUP.md)**: Cloud development setup
