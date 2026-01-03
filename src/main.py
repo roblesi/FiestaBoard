@@ -1,4 +1,4 @@
-"""Main application entry point for Vestaboard Display Service."""
+"""Main application entry point for FiestaBoard Display Service."""
 
 import logging
 import sys
@@ -9,7 +9,8 @@ from typing import Optional
 import schedule
 
 from .config import Config
-from .vestaboard_client import VestaboardClient
+from .board_client import BoardClient
+from .board_chars import BoardChars
 from .text_to_board import text_to_board_array, format_board_array_preview
 from .settings.service import get_settings_service
 from .pages.service import get_page_service
@@ -24,13 +25,13 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-class VestaboardDisplayService:
-    """Main service for displaying information on Vestaboard."""
+class DisplayService:
+    """Main service for displaying information on the board."""
     
     def __init__(self):
         """Initialize the display service."""
         self.running = True
-        self.vb_client: Optional[VestaboardClient] = None
+        self.vb_client: Optional[BoardClient] = None
         
         # Active page polling state
         self._last_active_page_content: Optional[str] = None
@@ -49,19 +50,19 @@ class VestaboardDisplayService:
     
     def initialize(self) -> bool:
         """Initialize all components."""
-        logger.info("Initializing Vestaboard Display Service...")
+        logger.info("Initializing FiestaBoard Display Service...")
         
         # Validate configuration
         if not Config.validate():
             logger.error("Configuration validation failed")
             return False
         
-        # Initialize Vestaboard client (Local or Cloud API)
+        # Initialize board client (Local or Cloud API)
         try:
-            use_cloud = Config.VB_API_MODE.lower() == "cloud"
-            self.vb_client = VestaboardClient(
-                api_key=Config.get_vb_api_key(),
-                host=Config.VB_HOST if not use_cloud else None,
+            use_cloud = Config.BOARD_API_MODE.lower() == "cloud"
+            self.vb_client = BoardClient(
+                api_key=Config.get_board_api_key(),
+                host=Config.BOARD_HOST if not use_cloud else None,
                 use_cloud=use_cloud,
                 skip_unchanged=True  # Default: skip sending unchanged messages
             )
@@ -74,7 +75,7 @@ class VestaboardDisplayService:
             if transition["strategy"]:
                 logger.info(f"Default transition: {transition['strategy']} (interval={transition['step_interval_ms']}ms, step_size={transition['step_size']})")
         except Exception as e:
-            logger.error(f"Failed to initialize Vestaboard client: {e}")
+            logger.error(f"Failed to initialize board client: {e}")
             return False
         
         # Log configuration summary
@@ -188,7 +189,7 @@ class VestaboardDisplayService:
                 return False
             
             if not self.vb_client:
-                logger.warning("Vestaboard client not initialized")
+                logger.warning("Board client not initialized")
                 return False
             
             # Get transition settings - use page-level if set, otherwise system defaults
@@ -205,7 +206,7 @@ class VestaboardDisplayService:
                 indicator = "SNOOZING"
                 for i, char in enumerate(indicator):
                     col = 14 + i  # Start at position 14 (last 8 positions of row)
-                    char_code = VestaboardChars.get_char_code(char)
+                    char_code = BoardChars.get_char_code(char)
                     if char_code is not None:
                         board_array[5][col] = char_code
             
@@ -276,8 +277,14 @@ class VestaboardDisplayService:
 
 def main():
     """Main entry point."""
-    service = VestaboardDisplayService()
+    service = DisplayService()
     service.run()
+
+
+# Aliases for the display service class
+FiestaBoardDisplayService = DisplayService
+# Backward compatibility alias
+VestaboardDisplayService = DisplayService
 
 
 if __name__ == "__main__":

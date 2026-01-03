@@ -1,13 +1,13 @@
 version: '3.8'
 
 services:
-  # API Service - REST API for controlling the Vestaboard display
-  vestaboard-api:
-    image: vestaboard-api
+  # API Service - REST API for controlling the FiestaBoard display
+  fiestaboard-api:
+    image: fiestaboard-api
     build:
       context: .
       dockerfile: Dockerfile.api
-    container_name: vestaboard-api
+    container_name: fiestaboard-api
     env_file:
       - .env
     environment:
@@ -31,19 +31,19 @@ services:
       start_period: 5s
 
   # Web UI - Monitoring and control interface
-  vestaboard-ui:
-    image: vestaboard-ui
+  fiestaboard-ui:
+    image: fiestaboard-ui
     build:
       context: .
       dockerfile: Dockerfile.ui
-    container_name: vestaboard-ui
+    container_name: fiestaboard-ui
     restart: unless-stopped
     ports:
       - "4420:3000"
     environment:
       - NEXT_PUBLIC_API_URL=http://192.168.0.2:6969
     depends_on:
-      - vestaboard-api
+      - fiestaboard-api
     logging:
       driver: "json-file"
       options:

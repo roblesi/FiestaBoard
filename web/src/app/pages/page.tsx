@@ -26,7 +26,7 @@ export default function PagesPage() {
             Pages
           </h1>
           <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-            Create and manage content for your Vestaboard
+            Create and manage content for your board
           </p>
         </div>
 

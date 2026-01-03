@@ -32,7 +32,7 @@ def sample_log_entries():
         {
             "timestamp": "2025-12-25T10:00:01",
             "level": "DEBUG",
-            "logger": "src.vestaboard_client",
+            "logger": "src.board_client",
             "message": "Connecting to board"
         },
         {

@@ -11,7 +11,7 @@ export default function Home() {
             Dashboard
           </h1>
           <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-            Monitor your Vestaboard display and system activity
+            Monitor your board display and system activity
           </p>
         </div>
 

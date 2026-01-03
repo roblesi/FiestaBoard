@@ -45,15 +45,24 @@
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
 
-  /* Vestaboard Official Colors - use these for all status/tile colors */
-  --color-vesta-red: #eb4034;
-  --color-vesta-orange: #f5a623;
-  --color-vesta-yellow: #f8e71c;
-  --color-vesta-green: #7ed321;
-  --color-vesta-blue: #4a90d9;
-  --color-vesta-violet: #9b59b6;
-  --color-vesta-white: #ffffff;
-  --color-vesta-black: #1a1a1a;
+  /* Board Official Colors - use these for all status/tile colors */
+  --color-board-red: #eb4034;
+  --color-board-orange: #f5a623;
+  --color-board-yellow: #f8e71c;
+  --color-board-green: #7ed321;
+  --color-board-blue: #4a90d9;
+  --color-board-violet: #9b59b6;
+  --color-board-white: #ffffff;
+  --color-board-black: #1a1a1a;
+  /* Backward compatibility aliases */
+  --color-vesta-red: var(--color-board-red);
+  --color-vesta-orange: var(--color-board-orange);
+  --color-vesta-yellow: var(--color-board-yellow);
+  --color-vesta-green: var(--color-board-green);
+  --color-vesta-blue: var(--color-board-blue);
+  --color-vesta-violet: var(--color-board-violet);
+  --color-vesta-white: var(--color-board-white);
+  --color-vesta-black: var(--color-board-black);
 }
 
 :root {

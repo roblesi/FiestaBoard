@@ -1,6 +1,6 @@
-"""Vestaboard character codes and symbol mappings.
+"""Board character codes and symbol mappings.
 
-Official Vestaboard character codes (0-71).
+Official board character codes (0-71).
 Reference: https://docs.vestaboard.com/docs/characterCodes
 
 Note: Some codes (43, 45, 46, 51, 57, 58, 61) are not defined in the official table.
@@ -9,8 +9,8 @@ Note: Some codes (43, 45, 46, 51, 57, 58, 61) are not defined in the official ta
 from typing import Dict, Optional, List
 
 
-class VestaboardChars:
-    """Vestaboard character code mappings - Official codes."""
+class BoardChars:
+    """Board character code mappings - Official codes."""
     
     # Blank/Space
     SPACE = 0       # Black on black / white on white
@@ -80,7 +80,7 @@ class VestaboardChars:
     SLASH = 59           # /
     QUESTION = 60        # ?
     # 61 is undefined
-    DEGREE = 62          # ° (Vestaboard Flagship only, Heart on Vestaboard Note)
+    DEGREE = 62          # ° (Flagship only, Heart on Note)
     
     # Color codes (filled color tiles)
     RED = 63
@@ -89,8 +89,8 @@ class VestaboardChars:
     GREEN = 66
     BLUE = 67
     VIOLET = 68          # Also called Purple
-    WHITE = 69           # Black on white Vestaboard (local API)
-    BLACK = 70           # White on white Vestaboard (local API)
+    WHITE = 69           # Black on white board (local API)
+    BLACK = 70           # White on white board (local API)
     FILLED = 71          # White on black / black on white (not available for local API)
     
     # Aliases for compatibility
@@ -197,77 +197,77 @@ class VestaboardChars:
 WEATHER_SYMBOLS: Dict[str, Dict[str, any]] = {
     "Clear": {
         "symbol": "O",  # Sun approximation
-        "char_code": VestaboardChars.O,
+        "char_code": BoardChars.O,
         "description": "Sunny"
     },
     "Sunny": {
         "symbol": "O",
-        "char_code": VestaboardChars.O,
+        "char_code": BoardChars.O,
         "description": "Sunny"
     },
     "Partly Cloudy": {
         "symbol": "%",
-        "char_code": VestaboardChars.PERCENT,
+        "char_code": BoardChars.PERCENT,
         "description": "Partly"
     },
     "Cloudy": {
         "symbol": "O",
-        "char_code": VestaboardChars.O,
+        "char_code": BoardChars.O,
         "description": "Cloudy"
     },
     "Overcast": {
         "symbol": "O",
-        "char_code": VestaboardChars.O,
+        "char_code": BoardChars.O,
         "description": "Overcast"
     },
     "Rain": {
         "symbol": "/",
-        "char_code": VestaboardChars.SLASH,
+        "char_code": BoardChars.SLASH,
         "description": "Rain"
     },
     "Rainy": {
         "symbol": "/",
-        "char_code": VestaboardChars.SLASH,
+        "char_code": BoardChars.SLASH,
         "description": "Rain"
     },
     "Light Rain": {
         "symbol": "/",
-        "char_code": VestaboardChars.SLASH,
+        "char_code": BoardChars.SLASH,
         "description": "Lt Rain"
     },
     "Heavy Rain": {
         "symbol": "/",
-        "char_code": VestaboardChars.SLASH,
+        "char_code": BoardChars.SLASH,
         "description": "Hvy Rain"
     },
     "Thunderstorm": {
         "symbol": "!",
-        "char_code": VestaboardChars.EXCLAMATION,
+        "char_code": BoardChars.EXCLAMATION,
         "description": "Storm"
     },
     "Storm": {
         "symbol": "!",
-        "char_code": VestaboardChars.EXCLAMATION,
+        "char_code": BoardChars.EXCLAMATION,
         "description": "Storm"
     },
     "Snow": {
         "symbol": "O",
-        "char_code": VestaboardChars.O,
+        "char_code": BoardChars.O,
         "description": "Snow"
     },
     "Snowy": {
         "symbol": "O",
-        "char_code": VestaboardChars.O,
+        "char_code": BoardChars.O,
         "description": "Snow"
     },
     "Fog": {
         "symbol": "-",
-        "char_code": VestaboardChars.DASH,
+        "char_code": BoardChars.DASH,
         "description": "Fog"
     },
     "Mist": {
         "symbol": "-",
-        "char_code": VestaboardChars.DASH,
+        "char_code": BoardChars.DASH,
         "description": "Mist"
     },
 }
@@ -304,6 +304,10 @@ def get_weather_symbol(condition: str) -> Dict[str, any]:
     # Default fallback
     return {
         "symbol": "?",
-        "char_code": VestaboardChars.QUESTION,
+        "char_code": BoardChars.QUESTION,
         "description": condition[:8]  # Truncate long descriptions
     }
+
+
+# Backward compatibility aliases
+VestaboardChars = BoardChars

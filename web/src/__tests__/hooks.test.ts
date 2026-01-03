@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useStatus, useConfig, useActivePage, usePages } from "@/hooks/use-vestaboard";
+import { useStatus, useConfig, useActivePage, usePages } from "@/hooks/use-board";
 import React from "react";
 
 // Wrapper for react-query

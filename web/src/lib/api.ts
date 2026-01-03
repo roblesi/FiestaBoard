@@ -1,4 +1,4 @@
-// API client for Vestaboard service
+// API client for FiestaBoard service
 // Extensible pattern - easy to add updateConfig(), savePage() later
 
 // Runtime configuration - API URL is fetched at startup from /api/runtime-config
@@ -278,7 +278,7 @@ export interface TemplateRenderResponse {
 }
 
 // Configuration types
-export interface VestaboardConfig {
+export interface BoardConfig {
   api_mode: "local" | "cloud";
   local_api_key: string;
   cloud_key: string;
@@ -287,6 +287,9 @@ export interface VestaboardConfig {
   transition_interval_ms: number | null;
   transition_step_size: number | null;
 }
+
+// Backward compatibility alias
+export type VestaboardConfig = BoardConfig;
 
 export interface WeatherFeatureConfig {
   enabled: boolean;
@@ -485,9 +488,11 @@ export interface BoardSettings {
 }
 
 export interface FullConfig {
-  vestaboard: VestaboardConfig;
+  board: BoardConfig;
   features: FeaturesConfig;
   general: GeneralConfig;
+  // Backward compatibility alias (in case API returns old key)
+  vestaboard?: BoardConfig;
 }
 
 export interface FeatureConfigResponse {
@@ -682,10 +687,18 @@ export const api = {
         body: JSON.stringify(config),
       }
     ),
+  getBoardConfig: () =>
+    fetchApi<{ config: BoardConfig; api_modes: string[] }>("/config/board"),
+  updateBoardConfig: (config: Partial<BoardConfig>) =>
+    fetchApi<{ status: string; config: BoardConfig }>("/config/board", {
+      method: "PUT",
+      body: JSON.stringify(config),
+    }),
+  // Backward compatibility aliases
   getVestaboardConfig: () =>
-    fetchApi<{ config: VestaboardConfig; api_modes: string[] }>("/config/vestaboard"),
-  updateVestaboardConfig: (config: Partial<VestaboardConfig>) =>
-    fetchApi<{ status: string; config: VestaboardConfig }>("/config/vestaboard", {
+    fetchApi<{ config: BoardConfig; api_modes: string[] }>("/config/board"),
+  updateVestaboardConfig: (config: Partial<BoardConfig>) =>
+    fetchApi<{ status: string; config: BoardConfig }>("/config/board", {
       method: "PUT",
       body: JSON.stringify(config),
     }),

@@ -1,4 +1,4 @@
-"""Configuration management for Vestaboard Display Service.
+"""Configuration management for FiestaBoard Display Service.
 
 This module provides the Config class which reads settings from the
 ConfigManager (JSON file-based storage).
@@ -31,9 +31,9 @@ class Config:
         return get_config_manager()
     
     @classmethod
-    def _get_vestaboard(cls) -> Dict:
-        """Get vestaboard config section."""
-        return cls._get_cm().get_vestaboard()
+    def _get_board(cls) -> Dict:
+        """Get board config section."""
+        return cls._get_cm().get_board()
     
     @classmethod
     def _get_feature(cls, name: str) -> Dict:
@@ -45,56 +45,96 @@ class Config:
         """Get general config section."""
         return cls._get_cm().get_general()
     
-    # ==================== Vestaboard API Configuration ====================
+    # ==================== Board API Configuration ====================
     
     @classmethod
     @property
-    def VB_API_MODE(cls) -> str:
+    def BOARD_API_MODE(cls) -> str:
         """API mode: 'local' or 'cloud'."""
-        return cls._get_vestaboard().get("api_mode", "local")
+        return cls._get_board().get("api_mode", "local")
+    
+    @classmethod
+    @property
+    def BOARD_LOCAL_API_KEY(cls) -> str:
+        """Local API key."""
+        return cls._get_board().get("local_api_key", "")
+    
+    @classmethod
+    @property
+    def BOARD_READ_WRITE_KEY(cls) -> str:
+        """Cloud API read/write key."""
+        return cls._get_board().get("cloud_key", "")
+    
+    @classmethod
+    @property
+    def BOARD_HOST(cls) -> str:
+        """Board host address."""
+        return cls._get_board().get("host", "")
+    
+    @classmethod
+    @property
+    def BOARD_TRANSITION_STRATEGY(cls) -> Optional[str]:
+        """Transition animation strategy."""
+        return cls._get_board().get("transition_strategy")
+    
+    @classmethod
+    @property
+    def BOARD_TRANSITION_INTERVAL_MS(cls) -> Optional[int]:
+        """Transition step interval in milliseconds."""
+        return cls._get_board().get("transition_interval_ms")
+    
+    @classmethod
+    @property
+    def BOARD_TRANSITION_STEP_SIZE(cls) -> Optional[int]:
+        """Transition step size."""
+        return cls._get_board().get("transition_step_size")
+    
+    @classmethod
+    def get_board_api_key(cls) -> str:
+        """Get the appropriate API key based on mode."""
+        if cls.BOARD_API_MODE.lower() == "cloud":
+            return cls.BOARD_READ_WRITE_KEY
+        return cls.BOARD_LOCAL_API_KEY
+    
+    # Backward compatibility aliases
+    @classmethod
+    @property
+    def VB_API_MODE(cls) -> str:
+        return cls.BOARD_API_MODE
     
     @classmethod
     @property
     def VB_LOCAL_API_KEY(cls) -> str:
-        """Local API key."""
-        return cls._get_vestaboard().get("local_api_key", "")
+        return cls.BOARD_LOCAL_API_KEY
     
     @classmethod
     @property
     def VB_READ_WRITE_KEY(cls) -> str:
-        """Cloud API read/write key."""
-        return cls._get_vestaboard().get("cloud_key", "")
+        return cls.BOARD_READ_WRITE_KEY
     
     @classmethod
     @property
     def VB_HOST(cls) -> str:
-        """Vestaboard host address."""
-        return cls._get_vestaboard().get("host", "")
+        return cls.BOARD_HOST
     
     @classmethod
     @property
     def VB_TRANSITION_STRATEGY(cls) -> Optional[str]:
-        """Transition animation strategy."""
-        return cls._get_vestaboard().get("transition_strategy")
+        return cls.BOARD_TRANSITION_STRATEGY
     
     @classmethod
     @property
     def VB_TRANSITION_INTERVAL_MS(cls) -> Optional[int]:
-        """Transition step interval in milliseconds."""
-        return cls._get_vestaboard().get("transition_interval_ms")
+        return cls.BOARD_TRANSITION_INTERVAL_MS
     
     @classmethod
     @property
     def VB_TRANSITION_STEP_SIZE(cls) -> Optional[int]:
-        """Transition step size."""
-        return cls._get_vestaboard().get("transition_step_size")
+        return cls.BOARD_TRANSITION_STEP_SIZE
     
     @classmethod
     def get_vb_api_key(cls) -> str:
-        """Get the appropriate API key based on mode."""
-        if cls.VB_API_MODE.lower() == "cloud":
-            return cls.VB_READ_WRITE_KEY
-        return cls.VB_LOCAL_API_KEY
+        return cls.get_board_api_key()
     
     # ==================== Output Configuration ====================
     
@@ -742,13 +782,13 @@ class Config:
             "traffic_enabled": cls.TRAFFIC_ENABLED,
             "stocks_enabled": cls.STOCKS_ENABLED,
             "flights_enabled": cls.FLIGHTS_ENABLED,
-            # Vestaboard config
-            "vb_api_mode": cls.VB_API_MODE,
-            "vb_host": cls.VB_HOST if cls.VB_API_MODE.lower() == "local" else "cloud",
-            "vb_key_set": bool(cls.get_vb_api_key()),
+            # Board config
+            "board_api_mode": cls.BOARD_API_MODE,
+            "board_host": cls.BOARD_HOST if cls.BOARD_API_MODE.lower() == "local" else "cloud",
+            "board_key_set": bool(cls.get_board_api_key()),
             "weather_key_set": bool(cls.WEATHER_API_KEY),
             # Transition settings (only available in Local API mode)
-            "transition_strategy": cls.VB_TRANSITION_STRATEGY if cls.VB_API_MODE.lower() == "local" else None,
-            "transition_interval_ms": cls.VB_TRANSITION_INTERVAL_MS if cls.VB_API_MODE.lower() == "local" else None,
-            "transition_step_size": cls.VB_TRANSITION_STEP_SIZE if cls.VB_API_MODE.lower() == "local" else None,
+            "transition_strategy": cls.BOARD_TRANSITION_STRATEGY if cls.BOARD_API_MODE.lower() == "local" else None,
+            "transition_interval_ms": cls.BOARD_TRANSITION_INTERVAL_MS if cls.BOARD_API_MODE.lower() == "local" else None,
+            "transition_step_size": cls.BOARD_TRANSITION_STEP_SIZE if cls.BOARD_API_MODE.lower() == "local" else None,
         }

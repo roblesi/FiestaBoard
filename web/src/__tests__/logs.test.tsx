@@ -93,7 +93,7 @@ describe("LogsViewer Component", () => {
     });
 
     // Check that all log messages are rendered
-    expect(screen.getByText("Initializing Vestaboard Display Service...")).toBeInTheDocument();
+    expect(screen.getByText("Initializing FiestaBoard Display Service...")).toBeInTheDocument();
     expect(screen.getByText("Background service auto-started")).toBeInTheDocument();
   });
 

@@ -1,8 +1,8 @@
-"""Vestaboard API client with support for both Local and Cloud APIs.
+"""Board API client with support for both Local and Cloud APIs.
 
 Supports:
 - Local API: Fast updates with transitions (requires local network access)
-- Cloud API: Remote access via Vestaboard's Read/Write API (internet required)
+- Cloud API: Remote access via the board's Read/Write API (internet required)
 
 Local API Reference:
 - POST http://{host}:7000/local-api/message - Send message with optional transitions
@@ -20,12 +20,15 @@ from typing import Optional, List, Tuple, Literal
 
 logger = logging.getLogger(__name__)
 
-# Regex pattern to match color markers like {{63}}, {{red}}
+# Regex pattern to match color markers like {63}, {red}, {/}, {/red}
 COLOR_MARKER_PATTERN = re.compile(
-    r'\{\{(?:' +
+    r'\{(?:' +
+    r'/?' +  # Optional closing slash
+    r'(?:' +
     r'6[3-9]|70|' +  # Numeric codes 63-70
-    r'red|orange|yellow|green|blue|violet|purple|white|black'  # Named colors
-    r')\}\}',
+    r'red|orange|yellow|green|blue|violet|purple|white|black' +  # Named colors
+    r')?' +  # Color name/code is optional for {/}
+    r')\}',
     re.IGNORECASE
 )
 
@@ -33,7 +36,7 @@ COLOR_MARKER_PATTERN = re.compile(
 def strip_color_markers(text: str) -> str:
     """Strip color marker codes from text.
     
-    Removes markers like {{63}}, {{red}} that are used for
+    Removes markers like {63}, {red}, {/}, {/red} that are used for
     color tile formatting but would display as literal text on the board
     when using send_text().
     
@@ -61,8 +64,8 @@ VALID_STRATEGIES = [
 ]
 
 
-class VestaboardClient:
-    """Client for Vestaboard with support for Local and Cloud APIs.
+class BoardClient:
+    """Client for the board with support for Local and Cloud APIs.
     
     Features:
     - Local API: Fast updates with transition animations (requires local network)
@@ -82,11 +85,11 @@ class VestaboardClient:
         skip_unchanged: bool = True
     ):
         """
-        Initialize Vestaboard API client.
+        Initialize board API client.
         
         Args:
-            api_key: Vestaboard API key (Local API key or Read/Write key)
-            host: IP or hostname of Vestaboard for Local API (e.g., "192.168.0.11")
+            api_key: Board API key (Local API key or Read/Write key)
+            host: IP or hostname of board for Local API (e.g., "192.168.0.11")
             use_cloud: If True, use Cloud API instead of Local API
             skip_unchanged: If True (default), skip sending if message hasn't changed
         """
@@ -104,7 +107,7 @@ class VestaboardClient:
                 "X-Vestaboard-Read-Write-Key": api_key,
                 "Content-Type": "application/json"
             }
-            logger.info(f"Vestaboard client initialized with Cloud API (skip_unchanged={skip_unchanged})")
+            logger.info(f"Board client initialized with Cloud API (skip_unchanged={skip_unchanged})")
         else:
             # Local API mode
             if not host:
@@ -115,7 +118,7 @@ class VestaboardClient:
                 "X-Vestaboard-Local-Api-Key": api_key,
                 "Content-Type": "application/json"
             }
-            logger.info(f"Vestaboard client initialized with Local API at {host} (skip_unchanged={skip_unchanged})")
+            logger.info(f"Board client initialized with Local API at {host} (skip_unchanged={skip_unchanged})")
         
         # Client-side cache to avoid sending unchanged messages
         self._last_text: Optional[str] = None
@@ -127,11 +130,11 @@ class VestaboardClient:
         force: bool = False
     ) -> Tuple[bool, bool]:
         """
-        Send plain text message to Vestaboard.
+        Send plain text message to the board.
         
         Note: This method automatically:
         - Strips color markers (like {{63}} or {{red}}) - text API doesn't support colors
-        - Converts to UPPERCASE - Vestaboard only displays uppercase letters
+        - Converts to UPPERCASE - the board only displays uppercase letters
         
         For transition animations or color support, use send_characters() instead.
         
@@ -144,7 +147,7 @@ class VestaboardClient:
             - success: True if message was sent successfully OR skipped because unchanged
             - was_sent: True if message was actually sent to the board
         """
-        # Strip color markers and convert to uppercase (Vestaboard requirement)
+        # Strip color markers and convert to uppercase (board requirement)
         clean_text = strip_color_markers(text).upper()
         
         # Check if message has changed (client-side caching)
@@ -167,11 +170,11 @@ class VestaboardClient:
             self._last_text = clean_text
             self._last_characters = None
             api_type = "Cloud API" if self.use_cloud else "Local API"
-            logger.info(f"Message sent successfully to Vestaboard via {api_type}")
+            logger.info(f"Message sent successfully to board via {api_type}")
             return (True, True)
             
         except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to send message to Vestaboard: {e}")
+            logger.error(f"Failed to send message to board: {e}")
             if hasattr(e, 'response') and e.response is not None:
                 logger.error(f"Response: {e.response.text}")
             return (False, False)
@@ -257,18 +260,18 @@ class VestaboardClient:
                 if step_interval_ms:
                     transition_info += f" ({step_interval_ms}ms interval)"
             
-            logger.info(f"Character array sent successfully to Vestaboard{transition_info}")
+            logger.info(f"Character array sent successfully to board{transition_info}")
             return (True, True)
             
         except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to send character array to Vestaboard: {e}")
+            logger.error(f"Failed to send character array to board: {e}")
             if hasattr(e, 'response') and e.response is not None:
                 logger.error(f"Response: {e.response.text}")
             return (False, False)
     
     def read_current_message(self, sync_cache: bool = False) -> Optional[List[List[int]]]:
         """
-        Read the current message displayed on the Vestaboard.
+        Read the current message displayed on the board.
         
         Args:
             sync_cache: If True, sync the client cache with the board's current state.
@@ -344,7 +347,7 @@ class VestaboardClient:
     
     def test_connection(self) -> bool:
         """
-        Test the connection to the Vestaboard.
+        Test the connection to the board.
         
         Returns:
             True if connection successful, False otherwise
@@ -355,3 +358,7 @@ class VestaboardClient:
         except Exception as e:
             logger.error(f"Connection test failed: {e}")
             return False
+
+
+# Backward compatibility aliases
+VestaboardClient = BoardClient

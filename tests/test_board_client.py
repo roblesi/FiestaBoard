@@ -1,10 +1,10 @@
-"""Tests for Vestaboard Local API client."""
+"""Tests for Board Local API client."""
 
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 import requests
 
-from src.vestaboard_client import VestaboardClient, VALID_STRATEGIES, strip_color_markers
+from src.board_client import BoardClient, VALID_STRATEGIES, strip_color_markers
 
 
 class TestStripColorMarkers:
@@ -42,12 +42,12 @@ class TestStripColorMarkers:
         assert strip_color_markers("{Red}test{/Red}") == "test"
 
 
-class TestVestaboardClientInit:
-    """Tests for VestaboardClient initialization."""
+class TestBoardClientInit:
+    """Tests for BoardClient initialization."""
     
     def test_init_with_valid_params(self):
         """Test successful initialization with valid parameters."""
-        client = VestaboardClient(
+        client = BoardClient(
             api_key="test_key",
             host="192.168.0.11"
         )
@@ -59,25 +59,25 @@ class TestVestaboardClientInit:
     
     def test_init_with_hostname(self):
         """Test initialization with hostname instead of IP."""
-        client = VestaboardClient(
+        client = BoardClient(
             api_key="test_key",
-            host="vestaboard.local"
+            host="board.local"
         )
-        assert client.base_url == "http://vestaboard.local:7000/local-api/message"
+        assert client.base_url == "http://board.local:7000/local-api/message"
     
     def test_init_without_api_key_raises(self):
         """Test that missing api_key raises ValueError."""
         with pytest.raises(ValueError, match="api_key is required"):
-            VestaboardClient(api_key="", host="192.168.0.11")
+            BoardClient(api_key="", host="192.168.0.11")
     
     def test_init_without_host_raises(self):
         """Test that missing host raises ValueError."""
         with pytest.raises(ValueError, match="host is required"):
-            VestaboardClient(api_key="test_key", host="")
+            BoardClient(api_key="test_key", host="")
     
     def test_init_with_skip_unchanged_false(self):
         """Test initialization with skip_unchanged disabled."""
-        client = VestaboardClient(
+        client = BoardClient(
             api_key="test_key",
             host="192.168.0.11",
             skip_unchanged=False
@@ -91,9 +91,9 @@ class TestSendText:
     @pytest.fixture
     def client(self):
         """Create a client for testing."""
-        return VestaboardClient(api_key="test_key", host="192.168.0.11")
+        return BoardClient(api_key="test_key", host="192.168.0.11")
     
-    @patch('src.vestaboard_client.requests.post')
+    @patch('src.board_client.requests.post')
     def test_send_text_success(self, mock_post, client):
         """Test successful text send."""
         mock_post.return_value.raise_for_status = Mock()
@@ -104,9 +104,9 @@ class TestSendText:
         assert was_sent is True
         mock_post.assert_called_once()
         call_args = mock_post.call_args
-        assert call_args.kwargs["json"] == {"text": "Hello World"}
+        assert call_args.kwargs["json"] == {"text": "HELLO WORLD"}
     
-    @patch('src.vestaboard_client.requests.post')
+    @patch('src.board_client.requests.post')
     def test_send_text_cached_skips(self, mock_post, client):
         """Test that sending same text twice skips the second send."""
         mock_post.return_value.raise_for_status = Mock()
@@ -121,7 +121,7 @@ class TestSendText:
         assert was_sent is False
         assert mock_post.call_count == 1  # Only called once
     
-    @patch('src.vestaboard_client.requests.post')
+    @patch('src.board_client.requests.post')
     def test_send_text_force_ignores_cache(self, mock_post, client):
         """Test that force=True ignores cache."""
         mock_post.return_value.raise_for_status = Mock()
@@ -136,7 +136,7 @@ class TestSendText:
         assert was_sent is True
         assert mock_post.call_count == 2
     
-    @patch('src.vestaboard_client.requests.post')
+    @patch('src.board_client.requests.post')
     def test_send_text_network_error(self, mock_post, client):
         """Test handling of network error."""
         mock_post.side_effect = requests.exceptions.ConnectionError("Network error")
@@ -146,7 +146,7 @@ class TestSendText:
         assert success is False
         assert was_sent is False
     
-    @patch('src.vestaboard_client.requests.post')
+    @patch('src.board_client.requests.post')
     def test_send_text_strips_color_markers(self, mock_post, client):
         """Test that color markers are stripped from text."""
         mock_post.return_value.raise_for_status = Mock()
@@ -157,7 +157,7 @@ class TestSendText:
         assert was_sent is True
         call_args = mock_post.call_args
         # Color markers should be stripped
-        assert call_args.kwargs["json"]["text"] == "Warning: Check status"
+        assert call_args.kwargs["json"]["text"] == "WARNING: CHECK STATUS"
 
 
 class TestSendCharacters:
@@ -166,14 +166,14 @@ class TestSendCharacters:
     @pytest.fixture
     def client(self):
         """Create a client for testing."""
-        return VestaboardClient(api_key="test_key", host="192.168.0.11")
+        return BoardClient(api_key="test_key", host="192.168.0.11")
     
     @pytest.fixture
     def valid_grid(self):
         """Create a valid 6x22 character grid."""
         return [[0] * 22 for _ in range(6)]
     
-    @patch('src.vestaboard_client.requests.post')
+    @patch('src.board_client.requests.post')
     def test_send_characters_success(self, mock_post, client, valid_grid):
         """Test successful character array send."""
         mock_post.return_value.raise_for_status = Mock()
@@ -185,7 +185,7 @@ class TestSendCharacters:
         call_args = mock_post.call_args
         assert call_args.kwargs["json"]["characters"] == valid_grid
     
-    @patch('src.vestaboard_client.requests.post')
+    @patch('src.board_client.requests.post')
     def test_send_characters_with_transition(self, mock_post, client, valid_grid):
         """Test sending with transition settings."""
         mock_post.return_value.raise_for_status = Mock()
@@ -205,7 +205,7 @@ class TestSendCharacters:
         assert payload["step_interval_ms"] == 500
         assert payload["step_size"] == 2
     
-    @patch('src.vestaboard_client.requests.post')
+    @patch('src.board_client.requests.post')
     def test_send_characters_all_strategies(self, mock_post, client, valid_grid):
         """Test all valid transition strategies."""
         mock_post.return_value.raise_for_status = Mock()
@@ -240,7 +240,7 @@ class TestSendCharacters:
         assert success is False
         assert was_sent is False
     
-    @patch('src.vestaboard_client.requests.post')
+    @patch('src.board_client.requests.post')
     def test_send_characters_cached_skips(self, mock_post, client, valid_grid):
         """Test that sending same characters twice skips the second send."""
         mock_post.return_value.raise_for_status = Mock()
@@ -262,9 +262,9 @@ class TestReadCurrentMessage:
     @pytest.fixture
     def client(self):
         """Create a client for testing."""
-        return VestaboardClient(api_key="test_key", host="192.168.0.11")
+        return BoardClient(api_key="test_key", host="192.168.0.11")
     
-    @patch('src.vestaboard_client.requests.get')
+    @patch('src.board_client.requests.get')
     def test_read_current_message_success(self, mock_get, client):
         """Test successful read of current message."""
         expected_chars = [[0] * 22 for _ in range(6)]
@@ -275,7 +275,7 @@ class TestReadCurrentMessage:
         
         assert result == expected_chars
     
-    @patch('src.vestaboard_client.requests.get')
+    @patch('src.board_client.requests.get')
     def test_read_current_message_with_sync_cache(self, mock_get, client):
         """Test that sync_cache updates internal cache."""
         expected_chars = [[1] * 22 for _ in range(6)]
@@ -287,7 +287,7 @@ class TestReadCurrentMessage:
         assert result == expected_chars
         assert client._last_characters == expected_chars
     
-    @patch('src.vestaboard_client.requests.get')
+    @patch('src.board_client.requests.get')
     def test_read_current_message_network_error(self, mock_get, client):
         """Test handling of network error during read."""
         mock_get.side_effect = requests.exceptions.ConnectionError("Network error")
@@ -303,7 +303,7 @@ class TestCacheManagement:
     @pytest.fixture
     def client(self):
         """Create a client for testing."""
-        return VestaboardClient(api_key="test_key", host="192.168.0.11")
+        return BoardClient(api_key="test_key", host="192.168.0.11")
     
     def test_clear_cache(self, client):
         """Test that clear_cache clears internal state."""
@@ -323,7 +323,7 @@ class TestCacheManagement:
         assert status["has_cached_characters"] is False
         assert status["skip_unchanged_enabled"] is True
     
-    @patch('src.vestaboard_client.requests.post')
+    @patch('src.board_client.requests.post')
     def test_get_cache_status_with_text(self, mock_post, client):
         """Test cache status after sending text."""
         mock_post.return_value.raise_for_status = Mock()
@@ -332,21 +332,21 @@ class TestCacheManagement:
         status = client.get_cache_status()
         
         assert status["has_cached_text"] is True
-        assert status["cached_text_preview"] == "Hello World"
+        assert status["cached_text_preview"] == "HELLO WORLD"
     
     def test_would_send_with_same_text(self, client):
         """Test would_send returns False for cached text."""
-        client._last_text = "Hello World"
+        client._last_text = "HELLO WORLD"
         
-        assert client.would_send(text="Hello World") is False
+        assert client.would_send(text="HELLO WORLD") is False
         assert client.would_send(text="Different") is True
     
     def test_would_send_with_skip_unchanged_disabled(self, client):
         """Test would_send always returns True when caching disabled."""
         client.skip_unchanged = False
-        client._last_text = "Hello World"
+        client._last_text = "HELLO WORLD"
         
-        assert client.would_send(text="Hello World") is True
+        assert client.would_send(text="HELLO WORLD") is True
 
 
 class TestConnectionTest:
@@ -355,9 +355,9 @@ class TestConnectionTest:
     @pytest.fixture
     def client(self):
         """Create a client for testing."""
-        return VestaboardClient(api_key="test_key", host="192.168.0.11")
+        return BoardClient(api_key="test_key", host="192.168.0.11")
     
-    @patch('src.vestaboard_client.requests.get')
+    @patch('src.board_client.requests.get')
     def test_connection_success(self, mock_get, client):
         """Test successful connection test."""
         mock_get.return_value.raise_for_status = Mock()
@@ -365,10 +365,9 @@ class TestConnectionTest:
         
         assert client.test_connection() is True
     
-    @patch('src.vestaboard_client.requests.get')
+    @patch('src.board_client.requests.get')
     def test_connection_failure(self, mock_get, client):
         """Test failed connection test."""
         mock_get.side_effect = requests.exceptions.ConnectionError("Network error")
         
         assert client.test_connection() is False
-

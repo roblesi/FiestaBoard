@@ -357,7 +357,7 @@ export function GeneralSettings() {
                 Silence Schedule
               </label>
               <p className="text-xs text-muted-foreground">
-                Prevent Vestaboard updates during specified hours
+                Prevent board updates during specified hours
               </p>
             </div>
           </div>

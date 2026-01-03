@@ -74,7 +74,7 @@ describe("GeneralSettings", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Silence Schedule")).toBeInTheDocument();
-      expect(screen.getByText(/Prevent Vestaboard updates/i)).toBeInTheDocument();
+      expect(screen.getByText(/Prevent board updates/i)).toBeInTheDocument();
     });
   });
 
@@ -192,7 +192,7 @@ describe("GeneralSettings", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/Prevent Vestaboard updates during specified hours/i)
+        screen.getByText(/Prevent board updates during specified hours/i)
       ).toBeInTheDocument();
     });
   });

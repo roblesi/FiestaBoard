@@ -1,4 +1,4 @@
-"""REST API server for Vestaboard Display Service."""
+"""REST API server for FiestaBoard Display Service."""
 
 import logging
 import logging.handlers
@@ -22,7 +22,7 @@ from pydantic import BaseModel
 load_dotenv()
 
 from . import __version__
-from .main import VestaboardDisplayService
+from .main import DisplayService
 from .config import Config
 from .config_manager import get_config_manager
 from .displays.service import get_display_service, reset_display_service, DISPLAY_TYPES, DisplayResult
@@ -41,11 +41,11 @@ LOG_MAX_BYTES = 5 * 1024 * 1024  # 5MB per file
 LOG_BACKUP_COUNT = 5  # Keep 5 backup files (25MB total max)
 
 # Global service instance
-_service: Optional[VestaboardDisplayService] = None
+_service: Optional[DisplayService] = None
 _service_lock = threading.Lock()
 _service_thread: Optional[threading.Thread] = None
 _service_running = False
-_dev_mode = False  # When True, preview only - don't send to Vestaboard
+_dev_mode = False  # When True, preview only - don't send to board
 
 # In-memory log buffer (last 500 log entries for quick access)
 _log_buffer: deque = deque(maxlen=500)
@@ -242,8 +242,8 @@ class VersionResponse(BaseModel):
 
 # Create FastAPI app
 app = FastAPI(
-    title="Vestaboard Display API",
-    description="REST API for controlling and monitoring the Vestaboard Display Service",
+    title="FiestaBoard Display API",
+    description="REST API for controlling and monitoring the FiestaBoard Display Service",
     version=__version__
 )
 
@@ -262,13 +262,13 @@ log_buffer_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(le
 logging.getLogger().addHandler(log_buffer_handler)
 
 
-def get_service() -> Optional[VestaboardDisplayService]:
+def get_service() -> Optional[DisplayService]:
     """Get or create the service instance."""
     global _service
     if _service is None:
         with _service_lock:
             if _service is None:
-                _service = VestaboardDisplayService()
+                _service = DisplayService()
                 if not _service.initialize():
                     logger.error("Failed to initialize service")
                     return None
@@ -331,7 +331,7 @@ async def shutdown_event():
 async def root():
     """Root endpoint with API information."""
     return {
-        "name": "Vestaboard Display API",
+        "name": "FiestaBoard Display API",
         "version": "1.0.0",
         "status": "running"
     }
@@ -481,7 +481,7 @@ async def refresh_display():
         if _dev_mode:
             return {
                 "status": "success", 
-                "message": "Display previewed (dev mode enabled - not sent to Vestaboard)",
+                "message": "Display previewed (dev mode enabled - not sent to board)",
                 "dev_mode": True
             }
         return {"status": "success", "message": "Display refreshed successfully"}
@@ -492,7 +492,7 @@ async def refresh_display():
 
 @app.post("/send-message")
 async def send_message(request: MessageRequest):
-    """Send a custom message to the Vestaboard."""
+    """Send a custom message to the board."""
     global _dev_mode
     service = get_service()
     if not service:
@@ -502,7 +502,7 @@ async def send_message(request: MessageRequest):
         logger.info(f"[DEV MODE] Would send message (not actually sending):\n{request.text}")
         return {
             "status": "success", 
-            "message": "Message previewed (dev mode enabled - not sent to Vestaboard)",
+            "message": "Message previewed (dev mode enabled - not sent to board)",
             "dev_mode": True
         }
     
@@ -516,7 +516,7 @@ async def send_message(request: MessageRequest):
         }
     
     if not service.vb_client:
-        raise HTTPException(status_code=503, detail="Vestaboard client not initialized")
+        raise HTTPException(status_code=503, detail="Board client not initialized")
     
     try:
         # Convert text to board array for proper character/color support
@@ -657,12 +657,12 @@ async def update_feature_config(feature_name: str, request: dict):
     }
 
 
-@app.get("/config/vestaboard")
-async def get_vestaboard_config():
-    """Get Vestaboard connection configuration (keys masked)."""
+@app.get("/config/board")
+async def get_board_config():
+    """Get board connection configuration (keys masked)."""
     config_manager = get_config_manager()
-    vb_config = config_manager.get_vestaboard()
-    masked = config_manager._mask_sensitive(vb_config)
+    board_config = config_manager.get_board()
+    masked = config_manager._mask_sensitive(board_config)
     
     return {
         "config": masked,
@@ -670,10 +670,17 @@ async def get_vestaboard_config():
     }
 
 
-@app.put("/config/vestaboard")
-async def update_vestaboard_config(request: dict):
+# Backward compatibility endpoint
+@app.get("/config/vestaboard")
+async def get_vestaboard_config_compat():
+    """Backward compatibility endpoint. Use /config/board instead."""
+    return await get_board_config()
+
+
+@app.put("/config/board")
+async def update_board_config(request: dict):
     """
-    Update Vestaboard configuration.
+    Update board configuration.
     
     Example body:
     {
@@ -684,20 +691,27 @@ async def update_vestaboard_config(request: dict):
     """
     config_manager = get_config_manager()
     
-    # Update vestaboard config
-    config_manager.set_vestaboard(request)
+    # Update board config
+    config_manager.set_board(request)
     
     # Reload config in the Config class
     Config.reload()
     
     # Get updated config (masked)
-    updated = config_manager.get_vestaboard()
+    updated = config_manager.get_board()
     masked = config_manager._mask_sensitive(updated)
     
     return {
         "status": "success",
         "config": masked
     }
+
+
+# Backward compatibility endpoint
+@app.put("/config/vestaboard")
+async def update_vestaboard_config_compat(request: dict):
+    """Backward compatibility endpoint. Use /config/board instead."""
+    return await update_board_config(request)
 
 
 @app.get("/config/validate")
@@ -837,7 +851,7 @@ async def get_display(display_type: str):
                       home_assistant, star_trek, guest_wifi
     
     Returns:
-        Formatted message text ready for display on Vestaboard.
+        Formatted message text ready for display on board.
     """
     if display_type not in DISPLAY_TYPES:
         raise HTTPException(
@@ -1132,7 +1146,7 @@ async def search_baywheels_stations_by_address(
             "limit": 1
         }
         geocode_headers = {
-            "User-Agent": "Vesta-Vestaboard-Service/1.0"
+            "User-Agent": "FiestaBoard-Service/1.0"
         }
         
         geocode_response = requests.get(geocode_url, params=geocode_params, headers=geocode_headers, timeout=10)
@@ -1436,7 +1450,7 @@ async def search_muni_stops_by_address(
             "limit": 1
         }
         geocode_headers = {
-            "User-Agent": "Vesta-Vestaboard-Service/1.0"
+            "User-Agent": "FiestaBoard-Service/1.0"
         }
         
         geocode_response = requests.get(geocode_url, params=geocode_params, headers=geocode_headers, timeout=10)
@@ -1613,7 +1627,7 @@ async def geocode_address(request: dict):
             "limit": 1
         }
         geocode_headers = {
-            "User-Agent": "Vesta-Vestaboard-Service/1.0"
+            "User-Agent": "FiestaBoard-Service/1.0"
         }
         
         response = requests.get(geocode_url, params=geocode_params, headers=geocode_headers, timeout=10)
@@ -2411,7 +2425,7 @@ async def set_dev_mode(request: dict):
 
 @app.get("/cache-status")
 async def get_cache_status():
-    """Get the current client-side cache status for the Vestaboard client."""
+    """Get the current client-side cache status for the board client."""
     service = get_service()
     if not service or not service.vb_client:
         raise HTTPException(status_code=503, detail="Service not initialized")
@@ -2424,7 +2438,7 @@ async def clear_cache():
     """
     Clear the client-side message cache.
     
-    This forces the next update to be sent to the Vestaboard, 
+    This forces the next update to be sent to the board, 
     even if the message content hasn't changed.
     """
     service = get_service()
@@ -2439,7 +2453,8 @@ async def clear_cache():
 async def get_runtime_config():
     """Return runtime configuration for UI."""
     # Allow override via environment variable, default to same origin
-    api_url = os.getenv("VESTA_API_URL", "")
+    # Support both old and new variable names for backward compatibility
+    api_url = os.getenv("FIESTA_API_URL", os.getenv("VESTA_API_URL", ""))
     return {
         "apiUrl": api_url
     }
@@ -2450,7 +2465,7 @@ async def force_refresh():
     """
     Force a display refresh, ignoring the cache.
     
-    Unlike /refresh, this will send to the Vestaboard even if the message 
+    Unlike /refresh, this will send to the board even if the message 
     content hasn't changed. Useful when you want to resync the board.
     """
     global _dev_mode
@@ -2461,7 +2476,7 @@ async def force_refresh():
     if _dev_mode:
         return {
             "status": "success", 
-            "message": "Force refresh previewed (dev mode enabled - not sent to Vestaboard)",
+            "message": "Force refresh previewed (dev mode enabled - not sent to board)",
             "dev_mode": True
         }
     

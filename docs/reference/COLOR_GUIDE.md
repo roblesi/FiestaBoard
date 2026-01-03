@@ -1,10 +1,10 @@
-# Vestaboard Color Guide
+# Board Color Guide
 
-This guide explains how colors are used throughout the Vestaboard Display Service to enhance visual communication.
+This guide explains how colors are used throughout the FiestaBoard Display Service to enhance visual communication.
 
 ## Overview
 
-Vestaboard supports 8 color codes (63-70) that display as solid color tiles. The service uses these colors strategically to convey meaning and improve readability.
+The board supports 8 color codes (63-70) that display as solid color tiles. The service uses these colors strategically to convey meaning and improve readability.
 
 ## Color Codes
 
@@ -110,18 +110,18 @@ Password: {68}Welcome123
 
 ### Using Colors in Code
 
-Colors are defined in `src/vestaboard_chars.py`:
+Colors are defined in `src/board_chars.py`:
 
 ```python
-from src.vestaboard_chars import VestaboardChars
+from src.board_chars import BoardChars
 
 # Access color codes
-red = VestaboardChars.RED      # 63
-green = VestaboardChars.GREEN  # 66
-blue = VestaboardChars.BLUE    # 67
+red = BoardChars.RED      # 63
+green = BoardChars.GREEN  # 66
+blue = BoardChars.BLUE    # 67
 
 # Get color by name
-color_code = VestaboardChars.get_color_code("red")  # Returns 63
+color_code = BoardChars.get_color_code("red")  # Returns 63
 ```
 
 ### Formatting with Colors
@@ -138,14 +138,14 @@ message = f"Temp: {color}{temp}°F"
 
 ### Color in Text API
 
-When using the Vestaboard text API, color codes are embedded in the string:
+When using the board text API, color codes are embedded in the string:
 
 ```python
 # Send colored message
 vb_client.send_text("Status: {66}Good")
 ```
 
-The Vestaboard API automatically interprets `{63}` through `{70}` as color codes.
+The board API automatically interprets `{63}` through `{70}` as color codes.
 
 ## Design Principles
 
@@ -256,12 +256,12 @@ print(formatter.format_house_status(ha_data))
 "
 ```
 
-### On Actual Vestaboard
+### On Actual Board
 
-The color codes display as solid color tiles on the physical Vestaboard. Test by:
+The color codes display as solid color tiles on the physical board. Test by:
 
 1. Enable a feature with colors (e.g., Home Assistant)
-2. Deploy to your Vestaboard
+2. Deploy to your board
 3. Observe the colored tiles in the display
 4. Adjust colors if needed for better visibility
 
@@ -273,7 +273,7 @@ The color codes display as solid color tiles on the physical Vestaboard. Test by
 
 **Solution:**
 - Verify you're using the Read/Write API (not older APIs)
-- Check Vestaboard firmware is up to date
+- Check board firmware is up to date
 - Ensure color codes are in correct format: `{63}` not `63`
 
 ### Wrong Colors Showing
@@ -305,14 +305,14 @@ Potential color improvements:
 
 ## References
 
-- [Vestaboard Character Codes](https://docs.vestaboard.com/docs/charactercodes)
+- [Board Character Codes](https://docs.vestaboard.com/docs/charactercodes)
 - [VBML Documentation](https://docs.vestaboard.com/docs/vbml)
-- Project: `src/vestaboard_chars.py`
+- Project: `src/board_chars.py`
 - Project: `src/formatters/message_formatter.py`
 
 ## Summary
 
-Colors enhance the Vestaboard display by:
+Colors enhance the board display by:
 - ✅ Conveying status at a glance (red/green)
 - ✅ Representing temperature ranges (hot to cold)
 - ✅ Distinguishing series (Star Trek)
