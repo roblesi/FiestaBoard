@@ -4,12 +4,12 @@
 
 This project uses a **two-container architecture**:
 
-1. **API Service** (`vestaboard-api`) - FastAPI REST API server
+1. **API Service** (`fiestaboard-api`) - FastAPI REST API server
    - Port: `8000`
    - Controls the Vestaboard display service
    - Provides REST endpoints for monitoring and control
 
-2. **Web UI** (`vestaboard-ui`) - Nginx web server with HTML/JS interface
+2. **Web UI** (`fiestaboard-ui`) - Nginx web server with HTML/JS interface
    - Port: `8080`
    - Provides a web interface for monitoring and control
    - Proxies API requests to the API service
@@ -41,10 +41,10 @@ docker-compose down
 
 ```bash
 # Build API service only
-docker build -f Dockerfile.api -t vestaboard-api .
+docker build -f Dockerfile.api -t fiestaboard-api .
 
 # Build UI service only
-docker build -f Dockerfile.ui -t vestaboard-ui .
+docker build -f Dockerfile.ui -t fiestaboard-ui .
 ```
 
 ### Run Individual Services
@@ -52,17 +52,17 @@ docker build -f Dockerfile.ui -t vestaboard-ui .
 ```bash
 # Run API service
 docker run -d \
-  --name vestaboard-api \
+  --name fiestaboard-api \
   --env-file .env \
   -p 8000:8000 \
-  vestaboard-api
+  fiestaboard-api
 
 # Run UI service
 docker run -d \
-  --name vestaboard-ui \
+  --name fiestaboard-ui \
   -p 8080:80 \
-  --link vestaboard-api:vestaboard-api \
-  vestaboard-ui
+  --link fiestaboard-api:fiestaboard-api \
+  fiestaboard-ui
 ```
 
 ## API Endpoints
@@ -138,12 +138,12 @@ curl -X POST http://localhost:8000/send-message \
 
 1. **Check API container is running:**
    ```bash
-   docker ps | grep vestaboard-api
+   docker ps | grep fiestaboard-api
    ```
 
 2. **Check API logs:**
    ```bash
-   docker logs vestaboard-api
+   docker logs fiestaboard-api
    ```
 
 3. **Test API directly:**
@@ -160,12 +160,12 @@ curl -X POST http://localhost:8000/send-message \
 
 2. **Check nginx proxy config:**
    ```bash
-   docker exec vestaboard-ui cat /etc/nginx/conf.d/default.conf
+   docker exec fiestaboard-ui cat /etc/nginx/conf.d/default.conf
    ```
 
 3. **Check UI logs:**
    ```bash
-   docker logs vestaboard-ui
+   docker logs fiestaboard-ui
    ```
 
 ## File Structure

@@ -51,10 +51,10 @@ docker-compose -f docker-compose.dev.yml up --build
 
 ```bash
 # Run API tests
-docker-compose exec vestaboard-api pytest
+docker-compose exec fiestaboard-api pytest
 
 # Run web tests
-docker-compose exec vestaboard-ui-dev npm test
+docker-compose exec fiestaboard-ui-dev npm test
 ```
 
 ## Testing API Endpoints
@@ -94,20 +94,20 @@ cp env.example .env
 docker-compose -f docker-compose.dev.yml logs -f
 
 # API only
-docker-compose -f docker-compose.dev.yml logs -f vestaboard-api
+docker-compose -f docker-compose.dev.yml logs -f fiestaboard-api
 
 # Web UI only
-docker-compose -f docker-compose.dev.yml logs -f vestaboard-ui-dev
+docker-compose -f docker-compose.dev.yml logs -f fiestaboard-ui-dev
 ```
 
 ### Access Container Shell
 
 ```bash
 # API container
-docker-compose exec vestaboard-api bash
+docker-compose exec fiestaboard-api bash
 
 # Web container
-docker-compose exec vestaboard-ui-dev sh
+docker-compose exec fiestaboard-ui-dev sh
 ```
 
 ### Check Container Status
@@ -131,7 +131,7 @@ If using VS Code with Dev Containers:
 | Start dev environment | `docker-compose -f docker-compose.dev.yml up` |
 | Stop dev environment | `docker-compose -f docker-compose.dev.yml down` |
 | Rebuild containers | `docker-compose -f docker-compose.dev.yml up --build` |
-| Run API tests | `docker-compose exec vestaboard-api pytest` |
+| Run API tests | `docker-compose exec fiestaboard-api pytest` |
 | View logs | `docker-compose -f docker-compose.dev.yml logs -f` |
 | View API docs | http://localhost:8000/docs |
 | View Web UI | http://localhost:3000 |

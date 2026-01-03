@@ -353,7 +353,7 @@ Springfield  (many states have one)
 - 3-day forecast
 - Historical data (7 days)
 
-**Rate with Vesta:**
+**Rate with FiestaBoard:**
 - Default: 12 calls/hour = ~8,640/month
 - Well within free tier limits
 
@@ -375,7 +375,7 @@ Springfield  (many states have one)
 - Current weather
 - 5-day forecast
 
-**Rate with Vesta:**
+**Rate with FiestaBoard:**
 - Default: 12 calls/hour = ~288/day
 - Within free tier but less headroom
 

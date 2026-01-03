@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Vesta GHCR Deployment Script
-# This script deploys Vesta to Synology NAS using pre-built images from GitHub Container Registry
+# FiestaBoard GHCR Deployment Script
+# This script deploys FiestaBoard to Synology NAS using pre-built images from GitHub Container Registry
 
 set -e  # Exit on error
 
@@ -60,7 +60,7 @@ GITHUB_TOKEN=$(load_env_var "GITHUB_TOKEN" "")
 API_PORT=6969
 UI_PORT=4420
 
-print_header "Vesta GHCR Deployment to Synology"
+print_header "FiestaBoard GHCR Deployment to Synology"
 
 echo "Configuration:"
 echo "  Synology Host: $SYNOLOGY_HOST"
@@ -232,7 +232,7 @@ ssh_sudo_exec "cd $SYNOLOGY_DEPLOY_DIR && $DOCKER_COMPOSE_BIN ps"
 # Final summary
 print_header "Deployment Complete!"
 
-echo -e "${GREEN}Your Vesta application is now running on Synology!${NC}"
+echo -e "${GREEN}Your FiestaBoard application is now running on Synology!${NC}"
 echo ""
 echo "Access URLs:"
 echo -e "  ${BLUE}Web UI:${NC}  http://$SYNOLOGY_HOST:$UI_PORT"

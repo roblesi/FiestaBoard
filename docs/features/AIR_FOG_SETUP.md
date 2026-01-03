@@ -117,7 +117,7 @@ For precise monitoring of a specific sensor:
 PURPLEAIR_SENSOR_ID=12345
 ```
 
-Without a sensor ID, Vesta averages nearby outdoor sensors within ~5km.
+Without a sensor ID, FiestaBoard averages nearby outdoor sensors within ~5km.
 
 ### 5. Create a Page to Display Air Quality/Fog Data
 

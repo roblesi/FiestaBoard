@@ -37,7 +37,7 @@ class DockerManager:
             raise RuntimeError("Docker client not initialized")
     
     def get_container_status(self) -> Dict[str, Any]:
-        """Get status of all Vesta containers."""
+        """Get status of all FiestaBoard containers."""
         self._check_production()
         
         try:
@@ -129,12 +129,12 @@ class DockerManager:
         try:
             logger.info("Starting container upgrade process...")
             
-            # Get all Vesta containers
+            # Get all FiestaBoard containers
             containers = self.client.containers.list(all=True)
             vesta_containers = [c for c in containers if 'vestaboard' in c.name.lower()]
             
             if not vesta_containers:
-                raise RuntimeError("No Vesta containers found")
+                raise RuntimeError("No FiestaBoard containers found")
             
             # Pull latest images for each container
             images_pulled = []

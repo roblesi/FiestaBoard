@@ -1,6 +1,6 @@
 # GitHub Container Registry Deployment Guide
 
-This guide explains how to deploy Vesta using GitHub Container Registry (GHCR) for automated, one-click updates on your Synology NAS.
+This guide explains how to deploy FiestaBoard using GitHub Container Registry (GHCR) for automated, one-click updates on your Synology NAS.
 
 ## Overview
 
@@ -35,7 +35,7 @@ Push to main → GitHub Actions Build → GHCR → Synology NAS → Update Butto
 1. Go to GitHub → **Settings** → **Developer settings** → **Personal access tokens** → **Tokens (classic)**
 2. Click **"Generate new token (classic)"**
 3. Set:
-   - **Note:** `Synology Vesta Deployment`
+   - **Note:** `Synology FiestaBoard Deployment`
    - **Expiration:** 90 days (or your preference)
    - **Scopes:** Check `read:packages`
 4. Click **"Generate token"**
@@ -56,7 +56,7 @@ SYNOLOGY_SSH_PORT=22
 SYNOLOGY_DEPLOY_DIR=~/fiestaboard
 
 # Optional: Runtime API URL (if accessing from different network)
-VESTA_API_URL=http://192.168.x.x:6969
+FIESTA_API_URL=http://192.168.x.x:6969
 ```
 
 ### Step 3: Set Up SSH Keys (if not already done)
@@ -140,22 +140,22 @@ The system uses three key files on Synology:
 
 1. **docker-compose.yml** - Container configuration (from `docker-compose.ghcr.yml`)
 2. **.env** - Environment variables and secrets
-3. **data/config.json** - Vesta feature configuration
+3. **data/config.json** - FiestaBoard feature configuration
 
 ### Runtime API URL Configuration
 
 The UI fetches its API URL at runtime from the `/api/runtime-config` endpoint. This means:
 - Same Docker image works everywhere (local dev, Synology, cloud)
 - No hardcoded IPs in the image
-- Change API URL by setting `VESTA_API_URL` environment variable
+- Change API URL by setting `FIESTA_API_URL` environment variable
 
 In `.env`:
 ```bash
 # Leave empty for same-origin (if UI and API are on same host)
-VESTA_API_URL=
+FIESTA_API_URL=
 
 # Or set explicitly (if accessing from different network)
-VESTA_API_URL=http://192.168.1.100:6969
+FIESTA_API_URL=http://192.168.1.100:6969
 ```
 
 ---
@@ -187,7 +187,7 @@ VESTA_API_URL=http://192.168.1.100:6969
 
 **Solution:**
 1. Check API container is running: `sudo docker-compose ps`
-2. Verify `VESTA_API_URL` is set correctly in `.env`
+2. Verify `FIESTA_API_URL` is set correctly in `.env`
 3. Check API logs: `sudo docker-compose logs fiestaboard-api`
 
 ### Container Won't Start
