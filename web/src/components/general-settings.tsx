@@ -33,10 +33,10 @@ export function GeneralSettings() {
     queryFn: api.getGeneralConfig,
   });
 
-  // Fetch silence schedule config
+  // Fetch silence schedule config (now uses plugin API)
   const { data: silenceConfig, isLoading: isLoadingSilence } = useQuery({
-    queryKey: ["features-config", "silence_schedule"],
-    queryFn: () => api.getFeatureConfig("silence_schedule"),
+    queryKey: ["plugin", "silence_schedule"],
+    queryFn: () => api.getPlugin("silence_schedule"),
   });
 
   // Fetch polling settings
@@ -99,12 +99,13 @@ export function GeneralSettings() {
     },
   });
 
-  // Update silence schedule mutation
+  // Update silence schedule mutation (now uses plugin API)
   const updateSilenceMutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => 
-      api.updateFeatureConfig("silence_schedule", data),
+      api.updatePluginConfig("silence_schedule", data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["features-config"] });
+      queryClient.invalidateQueries({ queryKey: ["plugin", "silence_schedule"] });
+      queryClient.invalidateQueries({ queryKey: ["plugins"] });
       queryClient.invalidateQueries({ queryKey: ["config"] });
       toast.success("Settings saved successfully");
     },

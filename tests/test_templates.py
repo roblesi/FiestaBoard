@@ -7,7 +7,6 @@ from src.templates.engine import (
     TemplateEngine,
     COLOR_CODES,
     SYMBOL_CHARS,
-    AVAILABLE_VARIABLES,
     TemplateError,
 )
 from src.displays.service import DisplayResult
@@ -241,23 +240,21 @@ class TestRenderLines:
 
 
 class TestAvailableVariables:
-    """Tests for available variables listing."""
+    """Tests for available variables listing via plugin system."""
     
-    def test_all_sources_listed(self):
-        """Test all sources are listed."""
-        expected = ["weather", "datetime", "home_assistant", "star_trek", "guest_wifi"]
-        for source in expected:
-            assert source in AVAILABLE_VARIABLES
+    @pytest.fixture
+    def engine(self):
+        return TemplateEngine()
     
-    def test_weather_variables(self):
-        """Test weather has expected variables."""
-        assert "temperature" in AVAILABLE_VARIABLES["weather"]
-        assert "condition" in AVAILABLE_VARIABLES["weather"]
+    def test_get_available_variables_returns_dict(self, engine):
+        """Test get_available_variables returns a dictionary."""
+        variables = engine.get_available_variables()
+        assert isinstance(variables, dict)
     
-    def test_datetime_variables(self):
-        """Test datetime has expected variables."""
-        assert "time" in AVAILABLE_VARIABLES["datetime"]
-        assert "date" in AVAILABLE_VARIABLES["datetime"]
+    def test_get_all_known_sources_returns_set(self, engine):
+        """Test _get_all_known_sources returns a set of plugin IDs."""
+        sources = engine._get_all_known_sources()
+        assert isinstance(sources, set)
 
 
 class TestAlignment:

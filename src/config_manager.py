@@ -2,6 +2,10 @@
 
 Manages reading and writing configuration to a JSON file with validation
 and thread-safe file operations.
+
+Supports:
+- Legacy features (config.features.*) for backward compatibility
+- Plugin system (config.plugins.*) for data source integrations
 """
 
 import json
@@ -9,7 +13,7 @@ import logging
 import os
 import threading
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 # Import TimeService for migration
 from .time_service import get_time_service
@@ -46,7 +50,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
                 ],
             },
         },
-        "datetime": {
+        "date_time": {
             "enabled": True,
             "timezone": "America/Los_Angeles",
             # No refresh_seconds - always current
@@ -199,6 +203,10 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "refresh_interval_seconds": 300,
         "output_target": "board",
     },
+    # Plugin configurations
+    # Each plugin's config is stored under plugins.<plugin_id>
+    # Example: plugins.weather = {enabled: true, api_key: "...", ...}
+    "plugins": {},
 }
 
 # Fields that should be masked in API responses
@@ -209,6 +217,8 @@ SENSITIVE_FIELDS = {
     "access_token",
     "password",
     "finnhub_api_key",
+    "purpleair_api_key",
+    "openweathermap_api_key",
 }
 
 
@@ -782,8 +792,8 @@ class ConfigManager:
             timezone = general_config.get("timezone")
             
             if not timezone:
-                # Fall back to datetime feature timezone
-                datetime_config = self.get_feature("datetime")
+                # Fall back to date_time feature timezone
+                datetime_config = self.get_feature("date_time")
                 timezone = datetime_config.get("timezone", "America/Los_Angeles")
             
             logger.info(f"Migrating silence schedule from local time to UTC using timezone: {timezone}")
@@ -805,6 +815,166 @@ class ConfigManager:
                 logger.error("Failed to save migrated silence schedule")
             
             return success
+
+    # ==================== Plugin Configuration Methods ====================
+    
+    def get_plugin_config(self, plugin_id: str) -> Optional[Dict[str, Any]]:
+        """Get configuration for a specific plugin.
+        
+        Args:
+            plugin_id: Plugin identifier (e.g., 'weather', 'stocks').
+            
+        Returns:
+            Plugin configuration dict or None if not found.
+        """
+        with self._file_lock:
+            plugins = self._config.get("plugins", {})
+            if plugin_id in plugins:
+                return self._deep_copy(plugins[plugin_id])
+            return None
+    
+    def set_plugin_config(self, plugin_id: str, config: Dict[str, Any]) -> bool:
+        """Set configuration for a specific plugin.
+        
+        Args:
+            plugin_id: Plugin identifier.
+            config: Full plugin configuration (replaces existing).
+            
+        Returns:
+            True if successful.
+        """
+        with self._file_lock:
+            if "plugins" not in self._config:
+                self._config["plugins"] = {}
+            
+            # Preserve sensitive fields if they're masked
+            existing = self._config["plugins"].get(plugin_id, {})
+            for key, value in config.items():
+                if key in SENSITIVE_FIELDS and value == "***":
+                    # Keep existing value
+                    config[key] = existing.get(key, "")
+            
+            self._config["plugins"][plugin_id] = config
+            self._save_internal()
+        
+        logger.info(f"Plugin '{plugin_id}' configuration updated")
+        return True
+    
+    def update_plugin_config(self, plugin_id: str, updates: Dict[str, Any]) -> bool:
+        """Update specific fields in a plugin's configuration.
+        
+        Args:
+            plugin_id: Plugin identifier.
+            updates: Partial configuration to merge.
+            
+        Returns:
+            True if successful.
+        """
+        with self._file_lock:
+            if "plugins" not in self._config:
+                self._config["plugins"] = {}
+            
+            if plugin_id not in self._config["plugins"]:
+                self._config["plugins"][plugin_id] = {}
+            
+            # Merge updates, preserving masked sensitive fields
+            for key, value in updates.items():
+                if key in SENSITIVE_FIELDS and value == "***":
+                    logger.debug(f"Preserving existing value for masked field: plugins.{plugin_id}.{key}")
+                    continue
+                self._config["plugins"][plugin_id][key] = value
+            
+            self._save_internal()
+        
+        logger.debug(f"Plugin '{plugin_id}' configuration updated")
+        return True
+    
+    def is_plugin_enabled(self, plugin_id: str) -> bool:
+        """Check if a plugin is enabled.
+        
+        Args:
+            plugin_id: Plugin identifier.
+            
+        Returns:
+            True if plugin is enabled, False otherwise.
+        """
+        config = self.get_plugin_config(plugin_id)
+        if config:
+            return config.get("enabled", False)
+        return False
+    
+    def enable_plugin(self, plugin_id: str) -> bool:
+        """Enable a plugin.
+        
+        Args:
+            plugin_id: Plugin identifier.
+            
+        Returns:
+            True if successful.
+        """
+        return self.update_plugin_config(plugin_id, {"enabled": True})
+    
+    def disable_plugin(self, plugin_id: str) -> bool:
+        """Disable a plugin.
+        
+        Args:
+            plugin_id: Plugin identifier.
+            
+        Returns:
+            True if successful.
+        """
+        return self.update_plugin_config(plugin_id, {"enabled": False})
+    
+    def get_all_plugin_configs(self) -> Dict[str, Dict[str, Any]]:
+        """Get all plugin configurations.
+        
+        Returns:
+            Dict mapping plugin_id to configuration.
+        """
+        with self._file_lock:
+            return self._deep_copy(self._config.get("plugins", {}))
+    
+    def get_all_plugin_configs_masked(self) -> Dict[str, Dict[str, Any]]:
+        """Get all plugin configurations with sensitive fields masked.
+        
+        Returns:
+            Dict mapping plugin_id to masked configuration.
+        """
+        configs = self.get_all_plugin_configs()
+        return self._mask_sensitive(configs)
+    
+    def get_enabled_plugins(self) -> List[str]:
+        """Get list of enabled plugin IDs.
+        
+        Returns:
+            List of plugin IDs that are enabled.
+        """
+        enabled = []
+        for plugin_id, config in self.get_all_plugin_configs().items():
+            if config.get("enabled", False):
+                enabled.append(plugin_id)
+        return enabled
+    
+    def migrate_feature_to_plugin(self, feature_name: str, plugin_id: str) -> bool:
+        """Migrate a legacy feature configuration to plugin format.
+        
+        This copies the feature configuration to the plugins section,
+        mapping field names as needed.
+        
+        Args:
+            feature_name: Name of the legacy feature.
+            plugin_id: Target plugin identifier.
+            
+        Returns:
+            True if migration was performed.
+        """
+        feature_config = self.get_feature(feature_name)
+        if not feature_config:
+            logger.warning(f"Feature '{feature_name}' not found for migration")
+            return False
+        
+        # Copy to plugins section
+        return self.set_plugin_config(plugin_id, feature_config)
 
 
 # Global instance getter

@@ -7,7 +7,8 @@ on:
     branches: [ main, develop ]
 
 jobs:
-  test:
+  test-platform:
+    name: Platform Tests
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -46,8 +47,25 @@ jobs:
         find src -name "*.py" -exec python -m py_compile {} \;
         echo "✅ All Python files compile successfully"
     
-    - name: Run pytest
-      run: pytest tests/ -v
+    - name: Run platform tests with coverage
+      run: |
+        # Run tests with coverage, explicitly omitting legacy code
+        coverage run --source=src --omit='src/data_sources/*,src/formatters/*,src/main.py,src/system/*,src/text_to_board.py,src/plugins/testing.py' -m pytest tests/ -v
+        coverage xml
+        coverage report -m
+      env:
+        BOARD_READ_WRITE_KEY: test_key
+        WEATHER_API_KEY: test_key
+    
+    - name: Upload platform coverage
+      uses: codecov/codecov-action@v4
+      with:
+        files: coverage.xml
+        flags: platform
+        name: platform-coverage
+        fail_ci_if_error: false
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     
     - name: Test basic functionality
       run: |
@@ -60,11 +78,81 @@ jobs:
         print(f'✅ Config class has required attributes: {hasattr(Config, \"BOARD_READ_WRITE_KEY\")}')
         "
       env:
-        # Set minimal env vars for testing (without real API keys)
         BOARD_READ_WRITE_KEY: test_key
         WEATHER_API_KEY: test_key
 
+  test-plugins:
+    name: Plugin Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+    
+    - name: Validate plugin integrity
+      run: |
+        echo "Validating plugin manifests and uniqueness..."
+        python scripts/validate_plugins.py --verbose
+        echo "✅ All plugins validated successfully"
+    
+    - name: Discover plugins with tests
+      id: discover
+      run: |
+        echo "Discovering plugins with tests..."
+        plugins=$(find plugins -maxdepth 2 -type d -name "tests" | sed 's|/tests||' | sed 's|plugins/||' | grep -v "^_" || true)
+        if [ -z "$plugins" ]; then
+          echo "No plugins with tests found"
+          echo "has_plugins=false" >> $GITHUB_OUTPUT
+        else
+          echo "Found plugins with tests:"
+          echo "$plugins"
+          echo "has_plugins=true" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Run plugin tests with coverage
+      if: steps.discover.outputs.has_plugins == 'true'
+      run: |
+        python scripts/run_plugin_tests.py --verbose
+      env:
+        BOARD_READ_WRITE_KEY: test_key
+        WEATHER_API_KEY: test_key
+    
+    - name: Generate plugin coverage report
+      if: steps.discover.outputs.has_plugins == 'true'
+      run: |
+        # Run combined coverage for all plugins (no fail-under, just for reporting)
+        pytest plugins/*/tests/ -v --cov=plugins --cov-report=xml:coverage-plugins.xml --cov-report=term-missing || true
+      env:
+        BOARD_READ_WRITE_KEY: test_key
+        WEATHER_API_KEY: test_key
+    
+    - name: Upload plugin coverage
+      if: steps.discover.outputs.has_plugins == 'true'
+      uses: codecov/codecov-action@v4
+      with:
+        files: coverage-plugins.xml
+        flags: plugins
+        name: plugin-coverage
+        fail_ci_if_error: false
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
   test-ui:
+    name: UI Tests
     runs-on: ubuntu-latest
     
     steps:
@@ -74,7 +162,6 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20'
-        # Disable cache to avoid issues with optional dependencies
         cache: 'npm'
         cache-dependency-path: web/package-lock.json
     
@@ -82,9 +169,7 @@ jobs:
       working-directory: web
       run: |
         # Fix npm bug with optional dependencies (https://github.com/npm/cli/issues/4828)
-        # Error message recommends: "npm i again after removing both package-lock.json and node_modules directory"
         rm -rf node_modules package-lock.json
-        # Regenerate package-lock.json and install all dependencies including optional ones
         npm install
         # Verify rollup Linux binary is installed
         test -d node_modules/@rollup/rollup-linux-x64-gnu || (echo "❌ Rollup Linux binary not installed" && exit 1)
@@ -94,6 +179,7 @@ jobs:
       run: npm run test:run
 
   build:
+    name: Build Verification
     runs-on: ubuntu-latest
     
     steps:
@@ -118,4 +204,19 @@ jobs:
         test -f src/main.py || (echo "❌ src/main.py missing" && exit 1)
         test -f src/config.py || (echo "❌ src/config.py missing" && exit 1)
         echo "✅ Package structure is valid"
-
+    
+    - name: Verify plugin structure
+      run: |
+        echo "Checking plugin structure..."
+        test -d plugins || (echo "❌ plugins directory missing" && exit 1)
+        # Verify each plugin has required files
+        for plugin in plugins/*/; do
+          plugin_name=$(basename "$plugin")
+          if [ "$plugin_name" != "_template" ] && [ -d "$plugin" ]; then
+            echo "Checking plugin: $plugin_name"
+            test -f "$plugin/__init__.py" || (echo "❌ $plugin_name/__init__.py missing" && exit 1)
+            test -f "$plugin/manifest.json" || (echo "❌ $plugin_name/manifest.json missing" && exit 1)
+            echo "  ✅ $plugin_name structure valid"
+          fi
+        done
+        echo "✅ All plugin structures valid"

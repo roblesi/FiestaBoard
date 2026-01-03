@@ -21,7 +21,7 @@ import type {
   LogEntry,
   GeneralConfig,
   SilenceStatus,
-  FeatureConfigResponse,
+  PluginDetailsResponse,
 } from "@/lib/api";
 
 const API_BASE = "http://localhost:8000";
@@ -277,14 +277,33 @@ export const mockSilenceStatus: SilenceStatus = {
   next_change_utc: "2025-12-27T04:00:00+00:00",
 };
 
-// Feature config mock for silence_schedule
-export const mockSilenceScheduleConfig: FeatureConfigResponse = {
-  feature: "silence_schedule",
+// Plugin config mock for silence_schedule
+export const mockSilenceSchedulePlugin: PluginDetailsResponse = {
+  id: "silence_schedule",
+  name: "Silence Schedule",
+  version: "1.0.0",
+  description: "Configure quiet hours when the board won't update",
+  author: "FiestaBoard",
+  icon: "moon",
+  category: "utility",
+  enabled: true,
   config: {
     enabled: false,
     start_time: "04:00+00:00",
     end_time: "15:00+00:00",
   },
+  settings_schema: {
+    type: "object",
+    properties: {
+      enabled: { type: "boolean" },
+      start_time: { type: "string" },
+      end_time: { type: "string" },
+    },
+  },
+  variables: {},
+  max_lengths: {},
+  env_vars: [],
+  documentation: "",
 };
 
 // Store for tracking request bodies in tests
@@ -681,26 +700,38 @@ export const handlers = [
     });
   }),
 
-  // Feature config endpoints
-  http.get(`${API_BASE}/config/features/:featureName`, ({ params }) => {
-    const { featureName } = params;
-    if (featureName === "silence_schedule") {
-      return HttpResponse.json(mockSilenceScheduleConfig);
+  // Plugin config endpoints
+  http.get(`${API_BASE}/plugins/:pluginId`, ({ params }) => {
+    const { pluginId } = params;
+    if (pluginId === "silence_schedule") {
+      return HttpResponse.json(mockSilenceSchedulePlugin);
     }
-    // Return generic config for other features
+    // Return generic plugin response for other plugins
     return HttpResponse.json({
-      feature: featureName,
+      id: pluginId,
+      name: String(pluginId),
+      version: "1.0.0",
+      description: "",
+      author: "Unknown",
+      icon: "puzzle",
+      category: "utility",
+      enabled: false,
       config: {},
+      settings_schema: {},
+      variables: {},
+      max_lengths: {},
+      env_vars: [],
+      documentation: "",
     });
   }),
 
-  http.put(`${API_BASE}/config/features/:featureName`, async ({ request, params }) => {
-    const { featureName } = params;
-    const body = await request.json() as Record<string, unknown>;
+  http.post(`${API_BASE}/plugins/:pluginId/config`, async ({ request, params }) => {
+    const { pluginId } = params;
+    const body = await request.json() as { config: Record<string, unknown> };
     return HttpResponse.json({
       status: "success",
-      feature: featureName,
-      config: body,
+      plugin_id: pluginId,
+      config: body.config,
     });
   }),
 

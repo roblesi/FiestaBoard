@@ -1,0 +1,66 @@
+{
+  "id": "my_plugin",
+  "name": "My Plugin Name",
+  "version": "1.0.0",
+  "description": "A brief description of what this plugin does.",
+  "author": "Your Name",
+  "icon": "puzzle",
+  "category": "utility",
+  "repository": "https://github.com/YourUsername/your-repo",
+  "documentation": "README.md",
+  "settings_schema": {
+    "type": "object",
+    "properties": {
+      "api_key": {
+        "type": "string",
+        "title": "API Key",
+        "description": "Your API key for the service.",
+        "ui:widget": "password"
+      },
+      "refresh_seconds": {
+        "type": "integer",
+        "title": "Refresh Interval (seconds)",
+        "description": "How often to fetch new data.",
+        "default": 300,
+        "minimum": 60
+      },
+      "enabled": {
+        "type": "boolean",
+        "title": "Enabled",
+        "default": false
+      }
+    },
+    "required": ["api_key"]
+  },
+  "env_vars": [
+    {
+      "name": "MY_PLUGIN_API_KEY",
+      "required": false,
+      "description": "API key (can also be set in UI)"
+    }
+  ],
+  "variables": {
+    "simple": ["value", "status", "formatted"],
+    "arrays": {
+      "items": {
+        "label_field": "name",
+        "item_fields": ["name", "value", "status"]
+      }
+    }
+  },
+  "max_lengths": {
+    "value": 10,
+    "status": 15,
+    "formatted": 22,
+    "items.*.name": 10,
+    "items.*.value": 8,
+    "items.*.status": 12
+  },
+  "color_rules_schema": {
+    "status": {
+      "type": "threshold",
+      "description": "Color based on status value"
+    }
+  }
+}
+

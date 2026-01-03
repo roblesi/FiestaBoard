@@ -24,6 +24,9 @@ RUN pip install --no-cache-dir fastapi uvicorn[standard]
 # Copy application code
 COPY src/ ./src/
 
+# Copy plugins
+COPY plugins/ ./plugins/
+
 # Copy test files (for running tests in container)
 COPY tests/ ./tests/
 

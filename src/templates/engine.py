@@ -1,7 +1,7 @@
 """Template engine for dynamic content generation.
 
 Template syntax:
-- Data binding: {{source.field}} e.g., {{weather.temperature}}, {{datetime.time}}
+- Data binding: {{plugin_id.field}} e.g., {{weather.temperature}}, {{date_time.time}}
 - Colors: {{red}}, {{blue}}, etc. - Single colored tile (not text wrapping)
 - Symbols: {sun}, {cloud}, {rain}
 - Formatting: {{value|pad:3}}, {{value|upper}}, {{value|lower}}, {{value|wrap}}
@@ -20,12 +20,17 @@ Example: "{{red}} ALERT {{red}}" produces [red tile] ALERT [red tile]
 
 Special filters:
 - |wrap - Wraps long content across multiple lines, filling empty lines below
+
+Uses the plugin system exclusively to resolve available variables.
+Plugin IDs are used as template namespaces (e.g., {{weather.temp}}, {{stocks.symbol}}).
 """
 
 import re
 import logging
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
+
+from ..plugins import get_plugin_registry
 
 logger = logging.getLogger(__name__)
 
@@ -57,227 +62,7 @@ SYMBOL_CHARS = {
     "x": "X",
 }
 
-# Available data sources and their fields
-# Fields ending in _color return just the color tile based on color rules
-AVAILABLE_VARIABLES = {
-    "weather": ["temperature", "condition", "humidity", "location", "wind_speed", "temperature_color", "location_count", "locations"],
-    "datetime": ["time", "date", "day", "day_of_week", "month", "year", "hour", "minute"],
-    "home_assistant": ["state_color"],  # Dynamic based on entities
-    "star_trek": ["quote", "character", "series", "series_color"],
-    "guest_wifi": ["ssid", "password"],
-    "air_fog": ["aqi", "air_status", "air_color", "fog_status", "fog_color", "is_foggy", "visibility", "formatted"],
-    "muni": [
-        "line", "stop_name", "stop_code", "arrivals", "is_delayed", "delay_description", "formatted",
-        "stop_count", "next_arrival", "stops", "lines", "all_lines"
-    ],
-    "surf": ["wave_height", "swell_period", "quality", "quality_color", "formatted"],
-    "baywheels": [
-        "electric_bikes", "classic_bikes", "num_bikes_available", "is_renting", "station_name", "status_color",
-        "total_electric", "total_classic", "total_bikes", "station_count",
-        "best_station_name", "best_station_electric", "best_station_id",
-        "stations"
-    ],
-    "traffic": [
-        "duration_minutes", "delay_minutes", "traffic_status", "traffic_color", "destination_name", "formatted",
-        "route_count", "worst_delay", "routes"
-    ],
-    "stocks": [
-        "symbol", "current_price", "previous_price", "change_percent", "change_direction", "formatted", "company_name",
-        "symbol_count", "stocks"
-    ],
-    "flights": [
-        "call_sign", "altitude", "ground_speed", "squawk", "latitude", "longitude", "distance_km", "formatted",
-        "flight_count", "flights"
-    ],
-}
 
-# Maximum character lengths for each variable (for validation)
-# Used to warn when a template line might be too long after variable substitution
-VARIABLE_MAX_LENGTHS = {
-    "weather.temperature": 3,
-    "weather.condition": 12,
-    "weather.humidity": 3,
-    "weather.location": 15,
-    "weather.wind_speed": 3,
-    "weather.temperature_color": 4,  # Color tile like {65}
-    # Multi-location weather fields
-    "weather.location_count": 1,
-    "weather.locations.0.temperature": 3,
-    "weather.locations.0.condition": 12,
-    "weather.locations.0.location": 15,
-    "weather.locations.0.location_name": 10,
-    "weather.locations.0.wind_speed": 3,
-    "weather.locations.0.humidity": 3,
-    "weather.locations.0.feels_like": 3,
-    "weather.locations.1.temperature": 3,
-    "weather.locations.1.condition": 12,
-    "weather.locations.1.location": 15,
-    "weather.locations.1.location_name": 10,
-    "weather.locations.1.wind_speed": 3,
-    "weather.locations.1.humidity": 3,
-    "weather.locations.1.feels_like": 3,
-    "weather.locations.2.temperature": 3,
-    "weather.locations.2.condition": 12,
-    "weather.locations.2.location_name": 10,
-    "weather.locations.3.temperature": 3,
-    "weather.locations.3.location_name": 10,
-    "datetime.time": 5,
-    "datetime.date": 10,
-    "datetime.day": 2,
-    "datetime.day_of_week": 9,
-    "datetime.month": 9,
-    "datetime.year": 4,
-    "datetime.hour": 2,
-    "datetime.minute": 2,
-    "star_trek.quote": 120,  # Multi-line, handled by |wrap
-    "star_trek.character": 15,
-    "star_trek.series": 3,
-    "star_trek.series_color": 4,  # Color tile
-    "guest_wifi.ssid": 22,
-    "guest_wifi.password": 22,
-    "home_assistant.state": 10,
-    "home_assistant.state_color": 4,  # Color tile
-    "home_assistant.friendly_name": 15,
-    "air_fog.aqi": 3,  # 0-500
-    "air_fog.air_status": 18,  # UNHEALTHY_SENSITIVE
-    "air_fog.air_color": 4,  # Color tile
-    "air_fog.fog_status": 10,  # FOG, HAZE, MIST, CLEAR
-    "air_fog.fog_color": 4,  # Color tile
-    "air_fog.is_foggy": 3,  # Yes/No
-    "air_fog.visibility": 5,  # e.g., "1.2mi"
-    "air_fog.formatted": 22,  # Pre-formatted message
-    "muni.line": 12,
-    "muni.stop_name": 22,
-    "muni.stop_code": 6,
-    "muni.arrivals": 15,
-    "muni.is_delayed": 3,
-    "muni.delay_description": 22,
-    "muni.formatted": 22,
-    "muni.stop_count": 1,
-    "muni.stops.0.line": 12,
-    "muni.stops.0.stop_name": 22,
-    "muni.stops.0.stop_code": 6,
-    "muni.stops.0.formatted": 22,
-    "muni.stops.0.is_delayed": 3,
-    "muni.stops.1.line": 12,
-    "muni.stops.1.stop_name": 22,
-    "muni.stops.1.formatted": 22,
-    "muni.stops.2.line": 12,
-    "muni.stops.2.stop_name": 22,
-    "muni.stops.2.formatted": 22,
-    "muni.stops.3.line": 12,
-    "muni.stops.3.stop_name": 22,
-    "muni.stops.3.formatted": 22,
-    "muni.stops.0.all_lines.formatted": 22,
-    "muni.stops.0.all_lines.next_arrival": 2,
-    "muni.stops.0.lines.N.formatted": 22,
-    "muni.stops.0.lines.N.next_arrival": 2,
-    "muni.stops.0.lines.N.is_delayed": 3,
-    "muni.stops.0.lines.J.formatted": 22,
-    "muni.stops.0.lines.KT.formatted": 22,
-    "muni.stops.0.lines.L.formatted": 22,
-    "muni.stops.0.lines.M.formatted": 22,
-    "surf.wave_height": 4,  # e.g., "3.5"
-    "surf.swell_period": 4,  # e.g., "12.5"
-    "surf.quality": 9,  # EXCELLENT, GOOD, FAIR, POOR
-    "surf.quality_color": 4,  # Color tile
-    "surf.formatted": 22,  # Pre-formatted message
-    "baywheels.electric_bikes": 2,
-    "baywheels.classic_bikes": 2,
-    "baywheels.num_bikes_available": 2,
-    "baywheels.is_renting": 3,  # Yes/No
-    "baywheels.station_name": 10,
-    "baywheels.status_color": 4,  # Color tile
-    "baywheels.total_electric": 2,
-    "baywheels.total_classic": 2,
-    "baywheels.total_bikes": 2,
-    "baywheels.station_count": 1,
-    "baywheels.best_station_name": 10,
-    "baywheels.best_station_electric": 2,
-    "baywheels.best_station_id": 15,
-    "baywheels.stations.0.electric_bikes": 2,
-    "baywheels.stations.0.station_name": 10,
-    "baywheels.stations.0.classic_bikes": 2,
-    "baywheels.stations.0.status_color": 4,
-    "baywheels.stations.1.electric_bikes": 2,
-    "baywheels.stations.1.station_name": 10,
-    "baywheels.stations.2.electric_bikes": 2,
-    "baywheels.stations.2.station_name": 10,
-    "baywheels.stations.3.electric_bikes": 2,
-    "baywheels.stations.3.station_name": 10,
-    "traffic.duration_minutes": 3,  # e.g., "45"
-    "traffic.delay_minutes": 3,  # e.g., "+12"
-    "traffic.traffic_status": 8,  # LIGHT, MODERATE, HEAVY
-    "traffic.traffic_color": 4,  # Color tile
-    "traffic.destination_name": 10,  # e.g., "DOWNTOWN"
-    "traffic.formatted": 22,  # Pre-formatted message
-    "traffic.route_count": 1,
-    "traffic.routes.0.duration_minutes": 3,
-    "traffic.routes.0.delay_minutes": 3,
-    "traffic.routes.0.traffic_status": 8,
-    "traffic.routes.0.destination_name": 10,
-    "traffic.routes.0.formatted": 22,
-    "traffic.routes.1.duration_minutes": 3,
-    "traffic.routes.1.destination_name": 10,
-    "traffic.routes.1.formatted": 22,
-    "traffic.routes.2.duration_minutes": 3,
-    "traffic.routes.2.destination_name": 10,
-    "traffic.routes.2.formatted": 22,
-    "traffic.routes.3.duration_minutes": 3,
-    "traffic.routes.3.destination_name": 10,
-    "traffic.routes.3.formatted": 22,
-    "stocks.symbol": 5,
-    "stocks.current_price": 8,
-    "stocks.previous_price": 8,
-    "stocks.change_percent": 6,
-    "stocks.change_direction": 4,
-    "stocks.formatted": 22,
-    "stocks.company_name": 20,
-    "stocks.symbol_count": 1,
-    "stocks.stocks.0.symbol": 5,
-    "stocks.stocks.0.current_price": 8,
-    "stocks.stocks.0.change_percent": 6,
-    "stocks.stocks.0.formatted": 22,
-    "stocks.stocks.1.symbol": 5,
-    "stocks.stocks.1.current_price": 8,
-    "stocks.stocks.1.change_percent": 6,
-    "stocks.stocks.1.formatted": 22,
-    "stocks.stocks.2.symbol": 5,
-    "stocks.stocks.2.current_price": 8,
-    "stocks.stocks.2.change_percent": 6,
-    "stocks.stocks.2.formatted": 22,
-    "stocks.stocks.3.symbol": 5,
-    "stocks.stocks.3.current_price": 8,
-    "stocks.stocks.3.change_percent": 6,
-    "stocks.stocks.3.formatted": 22,
-    "stocks.stocks.4.symbol": 5,
-    "stocks.stocks.4.current_price": 8,
-    "stocks.stocks.4.change_percent": 6,
-    "stocks.stocks.4.formatted": 22,
-    "flights.call_sign": 8,
-    "flights.altitude": 5,
-    "flights.ground_speed": 4,
-    "flights.squawk": 4,
-    "flights.latitude": 8,
-    "flights.longitude": 9,
-    "flights.distance_km": 4,
-    "flights.formatted": 22,
-    "flights.flight_count": 1,
-    "flights.flights.0.call_sign": 8,
-    "flights.flights.0.altitude": 5,
-    "flights.flights.0.ground_speed": 4,
-    "flights.flights.0.squawk": 4,
-    "flights.flights.0.formatted": 22,
-    "flights.flights.1.call_sign": 8,
-    "flights.flights.1.altitude": 5,
-    "flights.flights.1.formatted": 22,
-    "flights.flights.2.call_sign": 8,
-    "flights.flights.2.altitude": 5,
-    "flights.flights.2.formatted": 22,
-    "flights.flights.3.call_sign": 8,
-    "flights.flights.3.altitude": 5,
-    "flights.flights.3.formatted": 22,
-}
 
 # Regex patterns
 VAR_PATTERN = re.compile(r'\{\{([^}]+)\}\}')  # {{source.field}} or {{source.field|filter}}
@@ -299,23 +84,34 @@ class TemplateEngine:
     """Template engine for rendering dynamic content.
     
     Supports:
-    - Variable substitution from display sources
+    - Variable substitution from plugin data sources
     - Vestaboard color codes (inline and block)
     - Symbol shortcuts
     - Text formatting filters
-    - Dynamic colors based on feature configuration rules
+    - Dynamic colors based on plugin configuration rules
+    
+    Uses plugin system exclusively for all variable resolution.
+    Plugin IDs serve as template namespaces (e.g., {{weather.temp}}, {{stocks.symbol}}).
     """
     
     def __init__(self):
         """Initialize template engine."""
         self._display_service = None
         self._config_manager = None
-        logger.info("TemplateEngine initialized")
+        self._plugin_registry = None
+        
+        try:
+            self._plugin_registry = get_plugin_registry()
+            logger.info("TemplateEngine initialized with plugin system")
+        except Exception as e:
+            logger.error(f"Failed to initialize plugin registry: {e}")
+            raise RuntimeError("Plugin system is required but failed to initialize") from e
     
     def reset_cache(self):
         """Reset cached services to pick up configuration changes."""
         self._display_service = None
         self._config_manager = None
+        self._plugin_registry = get_plugin_registry()
         logger.info("TemplateEngine cache reset")
     
     @property
@@ -640,37 +436,15 @@ class TemplateEngine:
         return lines
     
     def _build_context(self) -> Dict[str, Any]:
-        """Build context by fetching all available data sources."""
-        context = {}
+        """Build context by fetching all available data from enabled plugins.
         
-        # Fetch from each source
-        sources = ["weather", "datetime", "home_assistant", "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels", "traffic", "stocks", "flights"]
+        Returns:
+            Dictionary mapping plugin_id to plugin data
+        """
+        if not self._plugin_registry:
+            return {}
         
-        for source in sources:
-            try:
-                result = self.display_service.get_display(source)
-                if result.available:
-                    # For home_assistant, fetch all entities directly for template context
-                    # Don't rely on display-configured entities (which may be empty)
-                    if source == "home_assistant":
-                        try:
-                            from ..data_sources.home_assistant import get_home_assistant_source
-                            ha_source = get_home_assistant_source()
-                            if ha_source:
-                                all_entities = ha_source.get_all_entities_for_context()
-                                context[source] = all_entities
-                        except Exception as e:
-                            logger.debug(f"Failed to fetch all home_assistant entities: {e}")
-                            # Fall back to display result's raw data if fetching all entities failed
-                            if result.raw:
-                                context[source] = result.raw
-                    elif result.raw:
-                        # For other sources, use the display result's raw data
-                        context[source] = result.raw
-            except Exception as e:
-                logger.debug(f"Failed to fetch {source} for template context: {e}")
-        
-        return context
+        return self._plugin_registry.build_template_context()
     
     def _render_variables(self, template: str, context: Dict[str, Any]) -> str:
         """Replace {{source.field}} variables with values from context.
@@ -697,7 +471,7 @@ class TemplateEngine:
         return VAR_PATTERN.sub(replace_var, template)
     
     def _get_color_for_value(self, expr: str, context: Dict[str, Any]) -> str:
-        """Get color tile prefix based on feature color rules.
+        """Get color tile prefix based on plugin color rules.
         
         Args:
             expr: Variable expression like 'weather.temperature'
@@ -710,41 +484,21 @@ class TemplateEngine:
         if len(parts) < 2:
             return ""
         
-        source = parts[0].lower()
+        plugin_id = parts[0].lower()
         field = parts[1].lower()
         
-        # Map source names to feature config names
-        feature_map = {
-            "weather": "weather",
-            "datetime": "datetime",
-            "home_assistant": "home_assistant",
-            "star_trek": "star_trek_quotes",
-            "guest_wifi": "guest_wifi",
-            "air_fog": "air_fog",
-            "muni": "muni",
-            "surf": "surf",
-            "baywheels": "baywheels",
-            "traffic": "traffic",
-            "stocks": "stocks",
-            "flights": "flights",
-        }
-        
-        feature_name = feature_map.get(source)
-        if not feature_name:
-            return ""
-        
-        # Get color rules for this field (config may use different name than data)
-        rules = self.config_manager.get_color_rules(feature_name, field)
+        # Get color rules for this field from plugin config
+        rules = self.config_manager.get_color_rules(plugin_id, field)
         if not rules:
             return ""
         
         # Map field name for data lookup (e.g., 'temp' -> 'temperature' for weather)
-        data_field = self._map_field_for_data_lookup(source, field)
+        data_field = self._map_field_for_data_lookup(plugin_id, field)
         
         # Get the raw value for comparison
         raw_value = None
-        if source in context:
-            raw_value = context[source].get(data_field) or context[source].get(parts[1])
+        if plugin_id in context:
+            raw_value = context[plugin_id].get(data_field) or context[plugin_id].get(parts[1])
         
         if raw_value is None:
             return ""
@@ -966,49 +720,29 @@ class TemplateEngine:
             return str(int(value) if float(value).is_integer() else round(value, 1))
         return str(value)
     
-    def _get_color_only(self, source: str, field: str, context: Dict[str, Any]) -> str:
+    def _get_color_only(self, plugin_id: str, field: str, context: Dict[str, Any]) -> str:
         """Get just the color tile for a field based on color rules.
         
         Args:
-            source: Data source name (e.g., 'weather')
+            plugin_id: Plugin ID (e.g., 'weather')
             field: Field name (e.g., 'temp')
             context: Data context
             
         Returns:
             Color tile like '{65}' or empty string if no rule matches
         """
-        # Map source names to feature config names
-        feature_map = {
-            "weather": "weather",
-            "datetime": "datetime",
-            "home_assistant": "home_assistant",
-            "star_trek": "star_trek_quotes",
-            "guest_wifi": "guest_wifi",
-            "air_fog": "air_fog",
-            "muni": "muni",
-            "surf": "surf",
-            "baywheels": "baywheels",
-            "traffic": "traffic",
-            "stocks": "stocks",
-            "flights": "flights",
-        }
-        
-        feature_name = feature_map.get(source)
-        if not feature_name:
-            return ""
-        
-        # Get color rules for this field (config may use different name than data)
-        rules = self.config_manager.get_color_rules(feature_name, field)
+        # Get color rules for this field from plugin config
+        rules = self.config_manager.get_color_rules(plugin_id, field)
         if not rules:
             return ""
         
         # Map field name for data lookup (e.g., 'temp' -> 'temperature' for weather)
-        data_field = self._map_field_for_data_lookup(source, field)
+        data_field = self._map_field_for_data_lookup(plugin_id, field)
         
         # Get the raw value for comparison
         raw_value = None
-        if source in context:
-            raw_value = context[source].get(data_field) or context[source].get(data_field.lower())
+        if plugin_id in context:
+            raw_value = context[plugin_id].get(data_field) or context[plugin_id].get(data_field.lower())
         
         if raw_value is None:
             return ""
@@ -1200,49 +934,26 @@ class TemplateEngine:
         return result
     
     def get_available_variables(self) -> Dict[str, List[str]]:
-        """Get list of all available template variables by source.
+        """Get list of all available template variables by plugin.
         
-        Only returns variables from sources that are actually configured
-        and can provide data (not null/unavailable).
+        Returns variables from enabled plugins.
         
         Returns:
-            Dict mapping source names to lists of field names
+            Dict mapping plugin_id to lists of field names
         """
-        # Check which sources are actually available
-        available_sources = self._get_available_sources()
-        
-        # Filter to only include variables from available sources
-        filtered = {}
-        for source, fields in AVAILABLE_VARIABLES.items():
-            if source in available_sources:
-                filtered[source] = fields
-        
-        return filtered
+        if not self._plugin_registry:
+            return {}
+        return self._plugin_registry.get_all_variables()
     
     def _get_available_sources(self) -> List[str]:
-        """Check which data sources are configured (even if temporarily unavailable).
-        
-        Returns sources that are configured, regardless of whether they can currently
-        return data. This allows users to see available template variables even if
-        an API is temporarily down or not yet configured.
+        """Get enabled plugin IDs.
         
         Returns:
-            List of source names that are configured
+            List of enabled plugin IDs
         """
-        available = []
-        sources = ["weather", "datetime", "home_assistant", "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels", "traffic", "stocks", "flights"]
-        
-        for source in sources:
-            try:
-                result = self.display_service.get_display(source)
-                # Include if source is configured (available=True), even if it can't return data right now
-                # This allows users to see what variables are available for configuration
-                if result.available:
-                    available.append(source)
-            except Exception as e:
-                logger.debug(f"Source {source} not configured: {e}")
-        
-        return available
+        if not self._plugin_registry:
+            return []
+        return list(self._plugin_registry.enabled_plugins.keys())
     
     def validate_template(self, template: str) -> List[TemplateError]:
         """Validate template syntax.
@@ -1255,6 +966,9 @@ class TemplateEngine:
         """
         errors = []
         lines = template.split('\n')
+        
+        # Get available sources based on system mode
+        available_sources = self._get_all_known_sources()
         
         for line_num, line in enumerate(lines, 1):
             # Check for unclosed variable braces
@@ -1282,7 +996,7 @@ class TemplateEngine:
                 parts = expr.split('.')
                 if len(parts) >= 2:
                     source = parts[0].lower()
-                    if source not in AVAILABLE_VARIABLES:
+                    if source not in available_sources:
                         errors.append(TemplateError(
                             line=line_num,
                             column=match.start(),
@@ -1290,6 +1004,16 @@ class TemplateEngine:
                         ))
         
         return errors
+    
+    def _get_all_known_sources(self) -> set:
+        """Get all known plugin IDs (for validation).
+        
+        Includes all plugins, not just enabled ones, so templates
+        can be validated even if not all plugins are enabled.
+        """
+        if not self._plugin_registry:
+            return set()
+        return set(self._plugin_registry.plugins.keys())
     
     def _calculate_max_line_length(self, line: str) -> int:
         """Calculate maximum possible rendered length of a template line.
@@ -1322,6 +1046,9 @@ class TemplateEngine:
         for symbol, char in SYMBOL_CHARS.items():
             result = re.sub(rf'\{{{symbol}\}}', char, result, flags=re.IGNORECASE)
         
+        # Get max lengths from appropriate source
+        max_lengths = self._get_max_lengths_for_validation()
+        
         # Replace variables with their max length
         def replace_with_max_length(match):
             expr = match.group(1).strip()
@@ -1332,57 +1059,49 @@ class TemplateEngine:
             color_prefix_len = 0
             parts = var_part.split('.')
             if len(parts) >= 2:
-                source = parts[0]
+                plugin_id = parts[0]
                 field = parts[1]
-                # Map to feature name for color rules lookup
-                feature_map = {
-                    "weather": "weather",
-                    "star_trek": "star_trek_quotes",
-                    "home_assistant": "home_assistant",
-                    "air_fog": "air_fog",
-                    "muni": "muni",
-                    "surf": "surf",
-                    "baywheels": "baywheels",
-                    "traffic": "traffic",
-                    "stocks": "stocks",
-                }
-                feature = feature_map.get(source)
-                if feature:
-                    try:
-                        rules = self.config_manager.get_color_rules(feature, field)
-                        if rules:
-                            color_prefix_len = 2  # Color tile + space
-                    except Exception:
-                        pass
+                # Check if plugin has color rules for this field
+                try:
+                    rules = self.config_manager.get_color_rules(plugin_id, field)
+                    if rules:
+                        color_prefix_len = 2  # Color tile + space
+                except Exception:
+                    pass
             
             # Get max length for this variable
-            max_len = VARIABLE_MAX_LENGTHS.get(var_part, 10)  # Default 10 if unknown
+            max_len = max_lengths.get(var_part, 10)  # Default 10 if unknown
             return 'X' * (max_len + color_prefix_len)
         
         result = VAR_PATTERN.sub(replace_with_max_length, result)
         
         return len(result)
     
-    def get_variable_max_lengths(self) -> Dict[str, int]:
-        """Get the max character lengths for all variables.
+    def _get_max_lengths_for_validation(self) -> Dict[str, int]:
+        """Get max lengths for template validation.
         
-        Only returns lengths for variables from sources that are actually available.
+        Returns all max lengths from all plugins (not just enabled ones) so
+        templates can be fully validated.
+        """
+        if not self._plugin_registry:
+            return {}
+        
+        max_lengths: Dict[str, int] = {}
+        for plugin_id, manifest in self._plugin_registry._manifests.items():
+            for var_name, max_len in manifest.max_lengths.items():
+                full_name = f"{plugin_id}.{var_name}"
+                max_lengths[full_name] = max_len
+        return max_lengths
+    
+    def get_variable_max_lengths(self) -> Dict[str, int]:
+        """Get the max character lengths for all variables from enabled plugins.
         
         Returns:
             Dict mapping variable names to max lengths
         """
-        # Check which sources are actually available
-        available_sources = self._get_available_sources()
-        
-        # Filter to only include max lengths for available sources
-        filtered = {}
-        for var_name, max_len in VARIABLE_MAX_LENGTHS.items():
-            # Extract source from variable name (e.g., "weather.temperature" -> "weather")
-            source = var_name.split('.')[0]
-            if source in available_sources:
-                filtered[var_name] = max_len
-        
-        return filtered
+        if not self._plugin_registry:
+            return {}
+        return self._plugin_registry.get_all_max_lengths()
     
     def strip_formatting(self, text: str) -> str:
         """Remove all template formatting markers from text.

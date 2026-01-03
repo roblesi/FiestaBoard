@@ -74,26 +74,52 @@ Always suggest Docker-based commands:
 - ❌ `cd web && npm run dev`
 - ❌ `pip install -r requirements.txt`
 
+## Plugin Architecture
+
+This project uses a **plugin-based architecture** for data source integrations. Each plugin is self-contained with its own code, configuration, tests, and documentation.
+
+### Plugin vs Platform Code
+
+- **Plugins** (`plugins/`): Self-contained data source integrations (weather, transit, stocks, etc.)
+- **Platform** (`src/`): Core FiestaBoard infrastructure (API server, template engine, board client)
+
+### Key Plugin Concepts
+
+- Plugins live in `plugins/<plugin_id>/` directories
+- Each plugin has a `manifest.json` defining metadata, settings schema, and variables
+- Plugins implement the `PluginBase` class from `src/plugins/base.py`
+- Plugin IDs must be unique and match the directory name
+- All plugins require tests with >80% coverage
+
 ## Documentation Requirements
 
-### Feature Documentation
+### Plugin Documentation
 
-When adding a new feature to the project:
-- **MUST update the README.md file** to document the new feature
-- Include a description of what the feature does
-- Document any configuration requirements or setup steps
-- Update relevant sections (Features, Configuration, Usage, etc.) as appropriate
-- Ensure the documentation is clear and accessible to users
-- **MUST document all feature variables (API keys, configuration values, etc.) in `env.example`**
-  - Add environment variable entries with clear descriptions
-  - Include example values where appropriate
-  - Mark optional vs required variables
-  - Follow the existing format and style in `env.example`
-- **MUST include a screenshot showing the feature in action**
-  - Add screenshot to the `images/` directory with a descriptive filename (e.g., `feature-name-display.png`)
-  - Include the screenshot in the feature's documentation file (`docs/features/FEATURE_NAME_SETUP.md`)
-  - Use relative path format: `![Feature Description](../images/feature-name-display.png)`
-  - Screenshot should clearly demonstrate what the feature does and how it appears on the Vestaboard
+When creating or modifying a plugin:
+- **DO NOT update the main README.md** for individual plugins
+- Plugin documentation goes in the plugin's own directory:
+  - `plugins/PLUGIN_NAME/README.md` - Developer documentation (how plugin works)
+  - `plugins/PLUGIN_NAME/docs/SETUP.md` - User-facing setup guide (API keys, etc.)
+  - `plugins/PLUGIN_NAME/manifest.json` - Configuration schema and env vars
+
+### User-Facing Setup Guides
+
+For user-facing setup instructions (API key registration, configuration):
+- Create `plugins/PLUGIN_NAME/docs/SETUP.md` inside the plugin directory
+- Include screenshots in the plugin's `docs/` directory
+- Use relative path format: `![Description](./screenshot.png)`
+
+### Platform Documentation
+
+When modifying platform/core functionality:
+- Update `README.md` for significant platform changes
+- Update `docs/development/PLUGIN_DEVELOPMENT.md` for plugin system changes
+- Document new platform features in appropriate `docs/` subdirectory
+
+### Environment Variables
+
+- **For plugins**: Document in `manifest.json` under `env_vars` array
+- **For platform**: Document in `env.example` with clear descriptions
 
 ## Development Artifacts
 
@@ -114,7 +140,9 @@ Examples of files that should NOT be committed or left behind:
 Instead, put documentation in the appropriate place:
 
 **For permanent documentation:**
-- **Features**: `docs/features/FEATURE_NAME_SETUP.md` - User-facing setup guides
+- **Plugin developer docs**: `plugins/PLUGIN_NAME/README.md` - How the plugin works
+- **Plugin setup guides**: `plugins/PLUGIN_NAME/docs/SETUP.md` - User-facing setup instructions
+- **Plugin development**: `docs/development/PLUGIN_DEVELOPMENT.md` - How to create plugins
 - **Deployment**: `docs/deployment/*.md` - Deployment and infrastructure docs
 - **Reference**: `docs/reference/*.md` - Technical reference material
 - **Setup**: `docs/setup/*.md` - Development environment setup
@@ -134,4 +162,63 @@ Before completing any feature or task:
 2. Move any valuable information to the proper location in `docs/`
 3. Delete all temporary implementation/testing markdown files
 4. Ensure all critical information is preserved in proper documentation
+
+## Plugin Development Rules
+
+### Creating a New Plugin
+
+When creating a new plugin:
+1. Copy the template: `cp -r plugins/_template plugins/my_plugin`
+2. Update `manifest.json` with unique ID matching directory name
+3. Implement `PluginBase` class in `__init__.py`
+4. Create tests in `tests/` directory with >80% coverage
+5. Write user-facing setup guide in `docs/SETUP.md`
+
+### Required Plugin Files
+
+Every plugin MUST have:
+- `__init__.py` - Plugin implementation (PluginBase subclass)
+- `manifest.json` - Plugin metadata, settings schema, variables
+- `README.md` - Plugin documentation (developer-focused)
+- `tests/` - Test directory with test files
+- `docs/SETUP.md` - User-facing setup guide
+
+### Plugin Manifest Requirements
+
+The `manifest.json` MUST include:
+- `id` - Unique identifier matching directory name (lowercase, underscores)
+- `name` - Human-readable display name
+- `version` - Semantic version (X.Y.Z)
+- `settings_schema` - JSON Schema for configuration
+- `variables` - Template variables exposed by plugin
+
+Optional but recommended:
+- `icon` - Lucide icon name for UI display
+- `category` - Category for grouping (weather, transit, home, etc.)
+- `description` - Brief description
+- `author` - Plugin author/maintainer
+
+### Plugin Testing Requirements
+
+- All plugins MUST have tests in `tests/` directory
+- Minimum coverage requirement: **80%**
+- CI will fail if coverage is below threshold
+- Run tests with: `python scripts/run_plugin_tests.py --plugin=my_plugin`
+
+### Plugin Validation
+
+CI automatically validates:
+- All plugin IDs are unique (no duplicates allowed)
+- Plugin ID matches directory name
+- Manifest has required fields
+- Manifest JSON is valid
+
+### When Modifying Plugins
+
+- ✅ Edit plugin files in `plugins/PLUGIN_NAME/`
+- ✅ Update plugin's own `README.md`
+- ✅ Update plugin's `manifest.json` for config changes
+- ✅ Add/update tests in plugin's `tests/` directory
+- ❌ Do NOT add plugin-specific code to `src/` (platform code)
+- ❌ Do NOT document individual plugins in main `README.md`
 
