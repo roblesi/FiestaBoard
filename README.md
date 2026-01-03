@@ -1,4 +1,4 @@
-# FiestaBoard 🎉
+# FiestaBoard <img src="fiesta-icon.png" alt="FiestaBoard" width="32" height="32" style="vertical-align: middle;">
 
 **Turn your split-flap display into a living dashboard.** FiestaBoard transforms your iconic split-flap display into a real-time information hub—track your morning commute, monitor the markets, check surf conditions, or display Star Trek wisdom. All beautifully formatted, endlessly customizable, and running in Docker with zero hassle.
 
@@ -372,7 +372,7 @@ See deployment guides for detailed instructions.
 
 ## License
 
-MIT
+MIT License - see [LICENSE](./LICENSE) file for details.
 
 ## Screenshots
 
