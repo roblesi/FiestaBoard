@@ -220,12 +220,12 @@ export const mockLogEntries: LogEntry[] = [
     timestamp: "2025-12-25T10:00:01",
     level: "INFO",
     logger: "src.main",
-    message: "Initializing Vestaboard Display Service...",
+    message: "Initializing FiestaBoard Display Service...",
   },
   {
     timestamp: "2025-12-25T10:00:02",
     level: "DEBUG",
-    logger: "src.vestaboard_client",
+    logger: "src.board_client",
     message: "Connecting to board at 192.168.1.100",
   },
   {
@@ -330,7 +330,7 @@ export const handlers = [
   http.post(`${API_BASE}/publish-preview`, () => {
     return HttpResponse.json({
       status: "success",
-      message: "Preview published to Vestaboard successfully",
+      message: "Preview published to board successfully",
     });
   }),
 

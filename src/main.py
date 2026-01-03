@@ -281,6 +281,8 @@ def main():
     service.run()
 
 
+# Aliases for the display service class
+FiestaBoardDisplayService = DisplayService
 # Backward compatibility alias
 VestaboardDisplayService = DisplayService
 
