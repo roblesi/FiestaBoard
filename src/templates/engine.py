@@ -85,6 +85,10 @@ AVAILABLE_VARIABLES = {
         "symbol", "current_price", "previous_price", "change_percent", "change_direction", "formatted", "company_name",
         "symbol_count", "stocks"
     ],
+    "flights": [
+        "call_sign", "altitude", "ground_speed", "squawk", "latitude", "longitude", "distance_km", "formatted",
+        "flight_count", "flights"
+    ],
 }
 
 # Maximum character lengths for each variable (for validation)
@@ -250,6 +254,29 @@ VARIABLE_MAX_LENGTHS = {
     "stocks.stocks.4.current_price": 8,
     "stocks.stocks.4.change_percent": 6,
     "stocks.stocks.4.formatted": 22,
+    "flights.call_sign": 8,
+    "flights.altitude": 5,
+    "flights.ground_speed": 4,
+    "flights.squawk": 4,
+    "flights.latitude": 8,
+    "flights.longitude": 9,
+    "flights.distance_km": 4,
+    "flights.formatted": 22,
+    "flights.flight_count": 1,
+    "flights.flights.0.call_sign": 8,
+    "flights.flights.0.altitude": 5,
+    "flights.flights.0.ground_speed": 4,
+    "flights.flights.0.squawk": 4,
+    "flights.flights.0.formatted": 22,
+    "flights.flights.1.call_sign": 8,
+    "flights.flights.1.altitude": 5,
+    "flights.flights.1.formatted": 22,
+    "flights.flights.2.call_sign": 8,
+    "flights.flights.2.altitude": 5,
+    "flights.flights.2.formatted": 22,
+    "flights.flights.3.call_sign": 8,
+    "flights.flights.3.altitude": 5,
+    "flights.flights.3.formatted": 22,
 }
 
 # Regex patterns
@@ -617,7 +644,7 @@ class TemplateEngine:
         context = {}
         
         # Fetch from each source
-        sources = ["weather", "datetime", "home_assistant", "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels", "traffic", "stocks"]
+        sources = ["weather", "datetime", "home_assistant", "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels", "traffic", "stocks", "flights"]
         
         for source in sources:
             try:
@@ -699,6 +726,7 @@ class TemplateEngine:
             "baywheels": "baywheels",
             "traffic": "traffic",
             "stocks": "stocks",
+            "flights": "flights",
         }
         
         feature_name = feature_map.get(source)
@@ -962,6 +990,7 @@ class TemplateEngine:
             "baywheels": "baywheels",
             "traffic": "traffic",
             "stocks": "stocks",
+            "flights": "flights",
         }
         
         feature_name = feature_map.get(source)
@@ -1201,7 +1230,7 @@ class TemplateEngine:
             List of source names that are configured
         """
         available = []
-        sources = ["weather", "datetime", "home_assistant", "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels", "traffic", "stocks"]
+        sources = ["weather", "datetime", "home_assistant", "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels", "traffic", "stocks", "flights"]
         
         for source in sources:
             try:

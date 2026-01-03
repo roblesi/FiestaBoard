@@ -19,6 +19,7 @@ from ..data_sources.surf import get_surf_source
 from ..data_sources.baywheels import get_baywheels_source
 from ..data_sources.traffic import get_traffic_source
 from ..data_sources.stocks import get_stocks_source
+from ..data_sources.flights import get_flights_source
 from ..formatters.message_formatter import get_message_formatter
 
 logger = logging.getLogger(__name__)
@@ -37,6 +38,7 @@ DISPLAY_TYPES = [
     "baywheels",
     "traffic",
     "stocks",
+    "flights",
 ]
 
 
@@ -74,6 +76,7 @@ class DisplayService:
         self.baywheels_source = get_baywheels_source()
         self.traffic_source = get_traffic_source()
         self.stocks_source = get_stocks_source()
+        self.flights_source = get_flights_source()
         
         logger.info("DisplayService initialized")
     
@@ -147,6 +150,11 @@ class DisplayService:
                 "available": self.stocks_source is not None and Config.STOCKS_ENABLED,
                 "description": "US stock market prices and percentage changes",
             },
+            {
+                "type": "flights",
+                "available": self.flights_source is not None and Config.FLIGHTS_ENABLED,
+                "description": "Nearby aircraft with call signs, altitude, and speed",
+            },
         ]
         return displays
     
@@ -193,6 +201,8 @@ class DisplayService:
                 return self._get_traffic()
             elif display_type == "stocks":
                 return self._get_stocks()
+            elif display_type == "flights":
+                return self._get_flights()
             else:
                 return DisplayResult(
                     display_type=display_type,
@@ -810,6 +820,76 @@ class DisplayService:
         formatted = self.formatter.format_stocks(raw_data)
         return DisplayResult(
             display_type="stocks",
+            formatted=formatted,
+            raw=raw_data,
+            available=True
+        )
+    
+    def _get_flights(self) -> DisplayResult:
+        """Get nearby flights display."""
+        # If Flights is enabled but not configured (no API key), mark as unavailable
+        if not Config.FLIGHTS_ENABLED:
+            return DisplayResult(
+                display_type="flights",
+                formatted="",
+                raw={},
+                available=False,
+                error="Flights disabled"
+            )
+        
+        # If enabled but no source (no API key), mark as unavailable
+        if not self.flights_source:
+            return DisplayResult(
+                display_type="flights",
+                formatted="",
+                raw={},
+                available=False,
+                error="Flight tracking API key not configured"
+            )
+        
+        # Feature is enabled and has API key - mark as available even if no data yet
+        # This allows template variables to show in the UI before data is fetched
+        
+        # Get data for all nearby flights
+        flights = self.flights_source.fetch_nearby_flights()
+        
+        if not flights:
+            # No flights found or failed to fetch - still mark as available
+            return DisplayResult(
+                display_type="flights",
+                formatted="Flights: No aircraft nearby",
+                raw={"flights": []},
+                available=True,
+                error="No flights found nearby"
+            )
+        
+        # Build raw data with all template variables
+        raw_data = {
+            "flights": flights,
+            "flight_count": len(flights),
+        }
+        
+        # For backward compatibility, also include first flight data at top level
+        if flights:
+            first_flight = flights[0]
+            raw_data["call_sign"] = first_flight.get("call_sign", "")
+            raw_data["altitude"] = first_flight.get("altitude", 0)
+            raw_data["ground_speed"] = first_flight.get("ground_speed", 0)
+            raw_data["squawk"] = first_flight.get("squawk", "")
+            raw_data["latitude"] = first_flight.get("latitude", 0.0)
+            raw_data["longitude"] = first_flight.get("longitude", 0.0)
+            raw_data["distance_km"] = first_flight.get("distance_km", 0.0)
+            raw_data["formatted"] = first_flight.get("formatted", "")
+        
+        # Format the display - show header with flight count
+        header = f"NEARBY AIRCRAFT ({len(flights)})"
+        formatted_lines = [header]
+        for flight in flights:
+            formatted_lines.append(flight.get("formatted", ""))
+        formatted = "\n".join(formatted_lines)
+        
+        return DisplayResult(
+            display_type="flights",
             formatted=formatted,
             raw=raw_data,
             available=True

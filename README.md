@@ -1,6 +1,6 @@
 # Vestaboard Display Service
 
-A Python service that runs in Docker to display dynamic information on your Vestaboard, including weather, date/time, house status, Star Trek quotes, stock prices, surf conditions, air quality monitoring, transit arrivals, traffic conditions, and guest WiFi credentials.
+A Python service that runs in Docker to display dynamic information on your Vestaboard, including weather, date/time, house status, Star Trek quotes, stock prices, surf conditions, air quality monitoring, transit arrivals, traffic conditions, flight tracking, and guest WiFi credentials.
 
 ## 🚀 TLDR - Quick Start
 
@@ -55,6 +55,7 @@ docker-compose down
 - 📈 **Stocks**: Monitor stock prices and percentage changes for up to 5 symbols with color-coded indicators
 - 🌊 **Surf Conditions**: Live surf reports with wave height, swell period, wind conditions, and quality ratings
 - 💨 **Air Quality & Fog**: Monitor air quality (AQI) and fog conditions with intelligent alerts for SF fog and wildfire smoke
+- ✈️ **Flight Tracking**: Display nearby aircraft with call signs, altitude, ground speed, and squawk codes
 - 🌙 **Silence Schedule**: Configure a time window when the Vestaboard won't send updates (e.g., 8pm-7am)
 
 
@@ -191,6 +192,19 @@ All configuration is done via environment variables in `.env`:
   - Options: `1 Day`, `5 Days`, `1 Month`, `3 Months`, `6 Months`, `1 Year`, `2 Years`, `5 Years`, `ALL`
 - `STOCKS_REFRESH_SECONDS`: How often to fetch stock data (default: `300` = 5 minutes)
 - `FINNHUB_API_KEY`: Optional - enables better symbol search/autocomplete (get free key from [finnhub.io](https://finnhub.io/))
+
+#### Flight Tracking
+- `FLIGHTS_ENABLED`: Enable flight tracking (default: `false`)
+- `AVIATIONSTACK_API_KEY`: Your aviationstack API key (required - get free key from [aviationstack.com](https://aviationstack.com/))
+  - ⚠️ **Free tier: only 100 requests/month** - use high refresh interval or upgrade to paid plan
+- `FLIGHTS_LATITUDE`: Your location latitude for monitoring (default: `37.7749` - San Francisco)
+- `FLIGHTS_LONGITUDE`: Your location longitude for monitoring (default: `-122.4194` - San Francisco)
+- `FLIGHTS_RADIUS_KM`: Search radius in kilometers (default: `50`)
+- `FLIGHTS_MAX_COUNT`: Maximum number of flights to display (default: `4`, max: `4`)
+- `FLIGHTS_REFRESH_SECONDS`: How often to fetch flight data (default: `28800` = 8 hours to stay within free tier)
+  - Recommended: `28800` (8 hours, 90 req/month), `43200` (12 hours, 60 req/month), or `86400` (daily, 30 req/month)
+
+See [FLIGHTS_SETUP.md](./docs/features/FLIGHTS_SETUP.md) for detailed setup instructions.
 
 #### Silence Schedule
 - `SILENCE_SCHEDULE_ENABLED`: Enable silence schedule (default: `false`)

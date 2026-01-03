@@ -12,8 +12,8 @@ class TestDisplayTypes:
     
     def test_all_display_types_defined(self):
         """Test that all expected display types are defined."""
-        expected = ["weather", "datetime", "weather_datetime", "home_assistant", 
-                    "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels", "traffic"]
+        expected = ["weather", "datetime", "weather_datetime", "home_assistant",
+                    "star_trek", "guest_wifi", "air_fog", "muni", "surf", "baywheels", "traffic", "stocks", "flights"]
         assert DISPLAY_TYPES == expected
 
 
@@ -51,7 +51,7 @@ class TestDisplayService:
         """Test listing available displays."""
         displays = service.get_available_displays()
         
-        assert len(displays) == 12
+        assert len(displays) == 13
         display_types = [d["type"] for d in displays]
         assert "weather" in display_types
         assert "datetime" in display_types

@@ -435,6 +435,16 @@ export interface StockSymbolValidation {
   error?: string;
 }
 
+export interface FlightsFeatureConfig {
+  enabled: boolean;
+  api_key: string;  // aviationstack API key
+  latitude: number;  // Location latitude for monitoring
+  longitude: number;  // Location longitude for monitoring
+  radius_km: number;  // Search radius in kilometers
+  max_count: number;  // Maximum flights to display (1-4)
+  refresh_seconds: number;  // Update interval
+}
+
 export interface FeaturesConfig {
   weather: WeatherFeatureConfig;
   datetime: DateTimeFeatureConfig;
@@ -448,6 +458,7 @@ export interface FeaturesConfig {
   traffic: TrafficFeatureConfig;
   silence_schedule: SilenceScheduleFeatureConfig;
   stocks: StocksFeatureConfig;
+  flights: FlightsFeatureConfig;
 }
 
 export interface GeneralConfig {
@@ -529,6 +540,8 @@ export type FeatureName =
   | "surf"
   | "traffic"
   | "air_fog"
+  | "stocks"
+  | "flights"
   | "silence_schedule";
 
 export interface VersionResponse {
