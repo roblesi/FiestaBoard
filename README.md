@@ -396,6 +396,13 @@ The board can display various screens:
 - [OpenWeatherMap](https://openweathermap.org/api)
 - [Home Assistant REST API](https://developers.home-assistant.io/docs/api/rest/)
 
+## Support the Project
+
+FiestaBoard is free and open source. If you find it useful and want to support continued development, consider buying me a coffee! ☕
+
+<a href="https://www.buymeacoffee.com/fiestaboard" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
+
+Your support helps maintain the project, add new features, and keep the documentation up to date. Every coffee is appreciated! 🙏
 
 ---
 Made with ❤️ in San Francisco.
