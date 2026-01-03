@@ -372,7 +372,7 @@ See deployment guides for detailed instructions.
 
 ## License
 
-MIT
+MIT License - see [LICENSE](./LICENSE) file for details.
 
 ## Screenshots
 
