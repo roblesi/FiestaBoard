@@ -237,9 +237,11 @@ class TestTrafficSource:
         """Test initialization with address strings."""
         source = TrafficSource(
             api_key="test_key",
-            origin="123 Main St, San Francisco, CA",
-            destination="456 Market St, San Francisco, CA",
-            destination_name="OFFICE"
+            routes=[{
+                "origin": "123 Main St, San Francisco, CA",
+                "destination": "456 Market St, San Francisco, CA",
+                "destination_name": "OFFICE"
+            }]
         )
         assert source.origin == "123 Main St, San Francisco, CA"
         assert source.destination == "456 Market St, San Francisco, CA"
@@ -249,20 +251,22 @@ class TestTrafficSource:
         """Test default destination name is DOWNTOWN."""
         source = TrafficSource(
             api_key="test_key",
-            origin="Origin",
-            destination="Dest"
+            routes=[{
+                "origin": "Origin",
+                "destination": "Dest"
+            }]
         )
         assert source.destination_name == "DOWNTOWN"
     
     def test_build_waypoint_address(self):
         """Test building waypoint from address."""
-        source = TrafficSource("key", "origin", "dest")
+        source = TrafficSource("test_key", routes=[{"origin": "A", "destination": "B"}])
         waypoint = source._build_waypoint("123 Main St, City, ST")
         assert waypoint == {"address": "123 Main St, City, ST"}
     
     def test_build_waypoint_latlng(self):
         """Test building waypoint from lat,lng."""
-        source = TrafficSource("key", "origin", "dest")
+        source = TrafficSource("test_key", routes=[{"origin": "A", "destination": "B"}])
         waypoint = source._build_waypoint("37.7749, -122.4194")
         assert "location" in waypoint
         assert waypoint["location"]["latLng"]["latitude"] == 37.7749
@@ -270,7 +274,7 @@ class TestTrafficSource:
     
     def test_build_waypoint_latlng_no_space(self):
         """Test building waypoint from lat,lng without spaces."""
-        source = TrafficSource("key", "origin", "dest")
+        source = TrafficSource("test_key", routes=[{"origin": "A", "destination": "B"}])
         waypoint = source._build_waypoint("37.7749,-122.4194")
         assert "location" in waypoint
         assert waypoint["location"]["latLng"]["latitude"] == 37.7749
@@ -291,9 +295,11 @@ class TestTrafficSource:
         
         source = TrafficSource(
             api_key="test_key",
-            origin="Home",
-            destination="Work",
-            destination_name="WORK"
+            routes=[{
+                "origin": "Home",
+                "destination": "Work",
+                "destination_name": "WORK"
+            }]
         )
         result = source.fetch_traffic_data()
         
@@ -323,7 +329,7 @@ class TestTrafficSource:
         }
         mock_post.return_value = mock_response
         
-        source = TrafficSource("key", "A", "B", "DOWNTOWN")
+        source = TrafficSource("test_key", routes=[{"origin": "A", "destination": "B", "destination_name": "DOWNTOWN"}])
         result = source.fetch_traffic_data()
         
         assert result["traffic_index"] == 1.0
@@ -345,7 +351,7 @@ class TestTrafficSource:
         }
         mock_post.return_value = mock_response
         
-        source = TrafficSource("key", "A", "B", "AIRPORT")
+        source = TrafficSource("test_key", routes=[{"origin": "A", "destination": "B", "destination_name": "AIRPORT"}])
         result = source.fetch_traffic_data()
         
         assert result["traffic_index"] == 2.0
@@ -358,7 +364,7 @@ class TestTrafficSource:
         """Test handling of API errors."""
         mock_post.side_effect = Exception("Network error")
         
-        source = TrafficSource("key", "A", "B")
+        source = TrafficSource("test_key", routes=[{"origin": "A", "destination": "B"}])
         result = source.fetch_traffic_data()
         
         assert result is None
@@ -371,7 +377,7 @@ class TestTrafficSource:
         mock_response.json.return_value = {"routes": []}
         mock_post.return_value = mock_response
         
-        source = TrafficSource("key", "A", "B")
+        source = TrafficSource("test_key", routes=[{"origin": "A", "destination": "B"}])
         result = source.fetch_traffic_data()
         
         assert result is None
@@ -390,7 +396,7 @@ class TestTrafficSource:
         }
         mock_post.return_value = mock_response
         
-        source = TrafficSource("key", "A", "B")
+        source = TrafficSource("test_key", routes=[{"origin": "A", "destination": "B"}])
         result = source.fetch_traffic_data()
         
         assert result is not None

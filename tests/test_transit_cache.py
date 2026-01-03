@@ -3,8 +3,41 @@
 import pytest
 import time
 import json
+import threading
 from unittest.mock import Mock, patch, MagicMock
 from src.data_sources.transit_cache import TransitCache, get_transit_cache
+
+
+@pytest.fixture(autouse=True)
+def reset_transit_cache():
+    """Reset TransitCache singleton before each test to ensure test isolation."""
+    # Import the module-level variable
+    import src.data_sources.transit_cache as transit_cache_module
+    
+    # Stop any running threads
+    if TransitCache._instance is not None:
+        cache = TransitCache._instance
+        if hasattr(cache, '_stop_event'):
+            cache._stop_event.set()
+        if hasattr(cache, '_refresh_thread') and cache._refresh_thread:
+            cache._refresh_thread.join(timeout=1)
+    
+    # Reset both class-level and module-level singletons
+    TransitCache._instance = None
+    TransitCache._lock = threading.Lock()
+    transit_cache_module._cache_instance = None
+    
+    yield
+    
+    # Cleanup after test
+    if TransitCache._instance is not None:
+        cache = TransitCache._instance
+        if hasattr(cache, '_stop_event'):
+            cache._stop_event.set()
+        if hasattr(cache, '_refresh_thread') and cache._refresh_thread:
+            cache._refresh_thread.join(timeout=1)
+        TransitCache._instance = None
+        transit_cache_module._cache_instance = None
 
 
 @pytest.fixture
