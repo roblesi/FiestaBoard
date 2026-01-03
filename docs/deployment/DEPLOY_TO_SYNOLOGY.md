@@ -3,8 +3,8 @@
 ## Overview
 
 This project now includes **two Docker containers**:
-1. **API Service** (`vestaboard-api`) - REST API for controlling the Vestaboard display (port 8000)
-2. **Web UI** (`vestaboard-ui`) - Web interface for monitoring and control (port 8080)
+1. **API Service** (`fiestaboard-api`) - REST API for controlling the board display (port 8000)
+2. **Web UI** (`fiestaboard-ui`) - Web interface for monitoring and control (port 8080)
 
 Both services can be deployed to your Synology NAS using Docker Container Manager.
 
@@ -26,15 +26,15 @@ git commit -m "MVP ready for deployment"
 git push
 
 # On Synology, clone/pull
-git clone <your-repo> /volume1/docker/vestaboard
+git clone <your-repo> /volume1/docker/fiestaboard
 # or
-cd /volume1/docker/vestaboard && git pull
+cd /volume1/docker/fiestaboard && git pull
 ```
 
 **Option B: SCP/SFTP**
 ```bash
 # From your Mac
-scp -r /Users/roblesi/Dev/Vesta user@synology-ip:/volume1/docker/vestaboard
+scp -r /path/to/FiestaBoard user@synology-ip:/volume1/docker/fiestaboard
 ```
 
 **Option C: Synology File Station**
@@ -46,13 +46,13 @@ Copy your `.env` file to Synology, or create it with:
 
 ```bash
 # On Synology
-cd /volume1/docker/vestaboard
+cd /volume1/docker/fiestaboard
 nano .env
 ```
 
 Make sure it contains:
 ```bash
-VB_READ_WRITE_KEY=your_vestaboard_read_write_key_here
+BOARD_READ_WRITE_KEY=your_board_read_write_key_here
 WEATHER_API_KEY=your_weather_api_key_here
 WEATHER_PROVIDER=weatherapi
 WEATHER_LOCATION=San Francisco, CA
@@ -78,13 +78,13 @@ If this works, you're ready to deploy!
 This will build and start both the API and Web UI services:
 
 ```bash
-cd /volume1/docker/vestaboard
+cd /volume1/docker/fiestaboard
 docker-compose up -d --build
 ```
 
 This creates two containers:
-- `vestaboard-api` - API service on port 8000
-- `vestaboard-ui` - Web UI on port 8080
+- `fiestaboard-api` - API service on port 8000
+- `fiestaboard-ui` - Web UI on port 8080
 
 **Via Synology Container Manager:**
 
@@ -116,10 +116,10 @@ Once running, you can access:
 docker-compose logs -f
 
 # View API logs only
-docker-compose logs -f vestaboard-api
+docker-compose logs -f fiestaboard-api
 
 # View UI logs only
-docker-compose logs -f vestaboard-ui
+docker-compose logs -f fiestaboard-ui
 ```
 
 You should see API logs like:
@@ -145,14 +145,14 @@ curl -X POST http://<synology-ip>:8000/start
 
 **Via Command Line:**
 ```bash
-docker exec vestaboard-api python -c "from src.api_server import app; import uvicorn; uvicorn.run(app, host='0.0.0.0', port=8000)"
+docker exec fiestaboard-api python -c "from src.api_server import app; import uvicorn; uvicorn.run(app, host='0.0.0.0', port=8000)"
 ```
 
 Once started, you should see logs indicating the service is running and updating the display.
 
-### 8. Verify Vestaboard Display
+### 8. Verify Board Display
 
-Check your Vestaboard - it should be showing:
+Check your board - it should be showing:
 - Weather information
 - Date and time
 - Home Assistant status (if enabled)
@@ -169,7 +169,7 @@ The API service provides the following endpoints:
 - `POST /start` - Start the background display service
 - `POST /stop` - Stop the background display service
 - `POST /refresh` - Manually refresh the display
-- `POST /send-message` - Send a custom message to Vestaboard
+- `POST /send-message` - Send a custom message to board
 
 Example: Send a custom message
 ```bash
@@ -205,13 +205,13 @@ curl -X POST http://<synology-ip>:8000/send-message \
    ```bash
    docker-compose logs
    # or for specific service
-   docker logs vestaboard-api
-   docker logs vestaboard-ui
+   docker logs fiestaboard-api
+   docker logs fiestaboard-ui
    ```
 
 2. **Verify .env file:**
    ```bash
-   cat .env | grep -E "(VB_|WEATHER_)"
+   cat .env | grep -E "(BOARD_|WEATHER_)"
    ```
 
 3. **Check Docker is running:**
@@ -236,7 +236,7 @@ curl -X POST http://<synology-ip>:8000/send-message \
 
 **Check logs for errors:**
    ```bash
-   docker logs vestaboard-display | grep -i "apple\|music"
+   docker logs fiestaboard-api | grep -i "error"
    ```
 
 ## Monitoring
@@ -247,10 +247,10 @@ curl -X POST http://<synology-ip>:8000/send-message \
 docker-compose logs -f
 
 # API service only
-docker-compose logs -f vestaboard-api
+docker-compose logs -f fiestaboard-api
 
 # UI service only
-docker-compose logs -f vestaboard-ui
+docker-compose logs -f fiestaboard-ui
 ```
 
 ### Check Service Status
@@ -271,8 +271,8 @@ curl http://<synology-ip>:8000/status
 docker-compose restart
 
 # Restart specific service
-docker-compose restart vestaboard-api
-docker-compose restart vestaboard-ui
+docker-compose restart fiestaboard-api
+docker-compose restart fiestaboard-ui
 
 # Full restart (stop and start)
 docker-compose down
@@ -295,26 +295,26 @@ docker-compose down
 │           Synology NAS (Docker)                 │
 │                                                 │
 │  ┌──────────────────┐  ┌──────────────────┐   │
-│  │  vestaboard-api   │  │  vestaboard-ui   │   │
-│  │  (Port 8000)     │  │  (Port 8080)      │   │
-│  │                  │  │                   │   │
-│  │  FastAPI Server  │  │  Nginx + HTML    │   │
+│  │  fiestaboard-api │  │  fiestaboard-ui  │   │
+│  │  (Port 8000)     │  │  (Port 8080)     │   │
+│  │                  │  │                  │   │
+│  │  FastAPI Server  │  │  Nginx + Next.js │   │
 │  │  - REST API      │  │  - Web Interface │   │
 │  │  - Service Ctrl  │  │  - Status Monitor│   │
 │  └────────┬─────────┘  └─────────┬────────┘   │
-│           │                      │             │
-│           └──────────┬───────────┘             │
-│                      │                         │
-│           ┌──────────▼──────────┐              │
-│           │  VestaboardService  │              │
-│           │  (Background Task)  │              │
-│           └──────────┬──────────┘              │
-└──────────────────────┼─────────────────────────┘
+│           │                      │            │
+│           └──────────┬───────────┘            │
+│                      │                        │
+│           ┌──────────▼──────────┐             │
+│           │  DisplayService     │             │
+│           │  (Background Task)  │             │
+│           └──────────┬──────────┘             │
+└──────────────────────┼────────────────────────┘
                        │
                        │ HTTP API
                        ▼
               ┌─────────────────┐
-              │   Vestaboard     │
+              │   Board          │
               │   Read/Write API │
               └─────────────────┘
 ```

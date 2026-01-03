@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     
     // In Docker, try service name first, then localhost
     const apiEndpoints = [
-      'http://vestaboard-api:8000/api/runtime-config',  // Docker service name
+      'http://fiestaboard-api:8000/api/runtime-config',  // Docker service name
       `http://${hostname}:6969/api/runtime-config`,      // External access
       'http://localhost:6969/api/runtime-config',        // Local dev
       'http://localhost:8000/api/runtime-config',        // Alternative port

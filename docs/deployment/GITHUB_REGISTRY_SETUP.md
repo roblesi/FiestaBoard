@@ -53,7 +53,7 @@ GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxx
 SYNOLOGY_HOST=192.168.x.x
 SYNOLOGY_USER=your-username
 SYNOLOGY_SSH_PORT=22
-SYNOLOGY_DEPLOY_DIR=~/vestaboard
+SYNOLOGY_DEPLOY_DIR=~/fiestaboard
 
 # Optional: Runtime API URL (if accessing from different network)
 VESTA_API_URL=http://192.168.x.x:6969
@@ -95,7 +95,7 @@ This is the easiest way to update after the initial deployment:
 
 1. Open **Container Manager** on your Synology
 2. Go to **Container** tab
-3. Select both `vestaboard-api` and `vestaboard-ui` containers
+3. Select both `fiestaboard-api` and `fiestaboard-ui` containers
 4. Click **Action** → **Stop**
 5. After stopped, click **Action** → **Update**
 6. Wait for images to download
@@ -108,7 +108,7 @@ Done! Your containers are now running the latest version.
 SSH into your Synology and run:
 
 ```bash
-cd ~/vestaboard
+cd ~/fiestaboard
 sudo docker-compose pull
 sudo docker-compose down
 sudo docker-compose up -d
@@ -131,8 +131,8 @@ This pulls the latest images and restarts containers.
 ### Image Locations
 
 After merging to `main`, GitHub Actions automatically builds and publishes:
-- **API:** `ghcr.io/roblesi/vesta-api:latest`
-- **UI:** `ghcr.io/roblesi/vesta-ui:latest`
+- **API:** `ghcr.io/roblesi/fiestaboard-api:latest`
+- **UI:** `ghcr.io/roblesi/fiestaboard-ui:latest`
 
 ### Configuration Files
 
@@ -170,7 +170,7 @@ VESTA_API_URL=http://192.168.1.100:6969
 1. Check that changes were pushed to `main` branch
 2. Verify GitHub Actions workflow completed successfully (check Actions tab)
 3. Wait 5-10 minutes for build to complete
-4. Try pulling manually: `sudo docker pull ghcr.io/roblesi/vesta-api:latest`
+4. Try pulling manually: `sudo docker pull ghcr.io/roblesi/fiestaboard-api:latest`
 
 ### Authentication Failed
 
@@ -188,7 +188,7 @@ VESTA_API_URL=http://192.168.1.100:6969
 **Solution:**
 1. Check API container is running: `sudo docker-compose ps`
 2. Verify `VESTA_API_URL` is set correctly in `.env`
-3. Check API logs: `sudo docker-compose logs vestaboard-api`
+3. Check API logs: `sudo docker-compose logs fiestaboard-api`
 
 ### Container Won't Start
 
@@ -208,14 +208,14 @@ VESTA_API_URL=http://192.168.1.100:6969
 If a new version has issues, you can rollback to a specific version:
 
 ```bash
-cd ~/vestaboard
+cd ~/fiestaboard
 
 # Stop current version
 sudo docker-compose down
 
 # Pull specific version by version number
-sudo docker pull ghcr.io/roblesi/vesta-api:1.0.1
-sudo docker pull ghcr.io/roblesi/vesta-ui:1.0.1
+sudo docker pull ghcr.io/roblesi/fiestaboard-api:1.0.1
+sudo docker pull ghcr.io/roblesi/fiestaboard-ui:1.0.1
 
 # Update docker-compose.yml to use specific version tags
 # Change image tags from :latest to :1.0.1
@@ -233,7 +233,7 @@ sudo docker-compose logs
 sudo docker-compose logs -f
 
 # View specific container
-sudo docker-compose logs vestaboard-api
+sudo docker-compose logs fiestaboard-api
 
 # Last 100 lines
 sudo docker-compose logs --tail=100
@@ -249,7 +249,7 @@ sudo docker-compose ps
 sudo docker stats
 
 # Inspect container details
-sudo docker inspect vestaboard-api
+sudo docker inspect fiestaboard-api
 ```
 
 ---

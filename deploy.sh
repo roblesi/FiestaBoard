@@ -50,7 +50,7 @@ load_env_var() {
 SYNOLOGY_HOST=$(load_env_var "SYNOLOGY_HOST" "192.168.0.2")
 SYNOLOGY_USER=$(load_env_var "SYNOLOGY_USER" "jeffredod")
 SYNOLOGY_SSH_PORT=$(load_env_var "SYNOLOGY_SSH_PORT" "22")
-SYNOLOGY_DEPLOY_DIR=$(load_env_var "SYNOLOGY_DEPLOY_DIR" "~/vestaboard")
+SYNOLOGY_DEPLOY_DIR=$(load_env_var "SYNOLOGY_DEPLOY_DIR" "~/fiestaboard")
 
 # GitHub Container Registry
 GITHUB_USER="roblesi"
