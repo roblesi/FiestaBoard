@@ -1,4 +1,4 @@
 """Vestaboard Display Service - Main package."""
 
-__version__ = "1.6.11"
+__version__ = "1.7.0"
 
