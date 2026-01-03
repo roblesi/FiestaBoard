@@ -1,4 +1,4 @@
-"""Vestaboard Display Service - Main package."""
+"""FiestaBoard Display Service - Main package."""
 
 __version__ = "1.7.1"
 

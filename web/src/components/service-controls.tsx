@@ -67,7 +67,7 @@ export function ServiceControls() {
         <p className="text-[10px] text-muted-foreground">
           {devMode 
             ? "Preview mode: Web UI displays content but nothing is sent to the physical board"
-            : "Live mode: Content is automatically sent to the physical Vestaboard"}
+            : "Live mode: Content is automatically sent to the physical board"}
         </p>
       </CardContent>
     </Card>

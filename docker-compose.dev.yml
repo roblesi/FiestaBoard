@@ -1,17 +1,17 @@
 services:
   # API Service (same as production)
-  vestaboard-api:
+  fiestaboard-api:
     build:
       context: .
       dockerfile: Dockerfile.api
-    container_name: vestaboard-api-dev
+    container_name: fiestaboard-api-dev
     env_file:
       - .env
     ports:
       - "6969:8000"
     environment:
       - PRODUCTION=false
-      - VESTA_API_URL=http://localhost:6969
+      - FIESTA_API_URL=http://localhost:6969
     volumes:
       # Persist data (including config and logs) to local filesystem
       - ./data:/app/data
@@ -25,9 +25,9 @@ services:
         max-file: "3"
 
   # Web UI - Development mode with HMR and HTTP/2
-  vestaboard-ui-dev:
+  fiestaboard-ui-dev:
     image: node:20-alpine
-    container_name: vestaboard-ui-dev
+    container_name: fiestaboard-ui-dev
     working_dir: /app
     volumes:
       - ./web:/app
@@ -41,7 +41,7 @@ services:
       - WATCHPACK_POLLING=true  # Enable polling for file changes in Docker
     command: sh /start-dev-ui.sh
     depends_on:
-      - vestaboard-api
+      - fiestaboard-api
     logging:
       driver: "json-file"
       options:
@@ -49,13 +49,13 @@ services:
         max-file: "3"
 
   # Storybook - Component development and testing
-  vestaboard-storybook:
+  fiestaboard-storybook:
     image: node:20-alpine
-    container_name: vestaboard-storybook
+    container_name: fiestaboard-storybook
     working_dir: /app
     volumes:
       - ./web:/app
-      - vestaboard-storybook-node-modules:/app/node_modules
+      - fiestaboard-storybook-node-modules:/app/node_modules
     ports:
       - "6006:6006"
     environment:
@@ -68,4 +68,4 @@ services:
         max-file: "3"
 
 volumes:
-  vestaboard-storybook-node-modules:
+  fiestaboard-storybook-node-modules:

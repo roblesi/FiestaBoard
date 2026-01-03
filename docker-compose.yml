@@ -1,12 +1,12 @@
 version: '3.8'
 
 services:
-  # API Service - REST API for controlling the Vestaboard display
-  vestaboard-api:
+  # API Service - REST API for controlling the FiestaBoard display
+  fiestaboard-api:
     build:
       context: .
       dockerfile: Dockerfile.api
-    container_name: vestaboard-api
+    container_name: fiestaboard-api
     env_file:
       - .env
     environment:
@@ -30,16 +30,16 @@ services:
       start_period: 5s
 
   # Web UI - Monitoring and control interface
-  vestaboard-ui:
+  fiestaboard-ui:
     build:
       context: .
       dockerfile: Dockerfile.ui
-    container_name: vestaboard-ui
+    container_name: fiestaboard-ui
     restart: unless-stopped
     ports:
       - "8080:80"
     depends_on:
-      - vestaboard-api
+      - fiestaboard-api
     logging:
       driver: "json-file"
       options:
@@ -54,11 +54,11 @@ services:
 
   # Legacy service (optional - kept for backward compatibility)
   # Uncomment if you want to run the original scheduled service instead of API
-  # vestaboard-display:
+  # fiestaboard-display:
   #   build:
   #     context: .
   #     dockerfile: Dockerfile
-  #   container_name: vestaboard-display
+  #   container_name: fiestaboard-display
   #   env_file:
   #     - .env
   #   restart: unless-stopped
@@ -67,4 +67,3 @@ services:
   #     options:
   #       max-size: "10m"
   #       max-file: "3"
-

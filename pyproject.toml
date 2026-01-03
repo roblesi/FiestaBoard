@@ -3,16 +3,16 @@ requires = ["setuptools>=65.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "vesta"
+name = "fiestaboard"
 dynamic = ["version"]
-description = "Vestaboard Display Service - Home hub for your FiestaBoard display"
+description = "FiestaBoard Display Service - Home hub for your split-flap display"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
-    {name = "Vesta Contributors"}
+    {name = "FiestaBoard Contributors"}
 ]
-keywords = ["vestaboard", "display", "home-automation", "api"]
+keywords = ["fiestaboard", "display", "home-automation", "api", "split-flap"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -41,9 +41,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/roblesi/vesta"
-Repository = "https://github.com/roblesi/vesta"
-Issues = "https://github.com/roblesi/vesta/issues"
+Homepage = "https://github.com/roblesi/fiestaboard"
+Repository = "https://github.com/roblesi/fiestaboard"
+Issues = "https://github.com/roblesi/fiestaboard/issues"
 
 [tool.setuptools.dynamic]
 version = {attr = "src.__version__"}
@@ -104,4 +104,3 @@ extend-exclude = '''
   | node_modules
 )/
 '''
-

@@ -1,7 +1,7 @@
 "use client";
 
 import { FeatureSettings } from "@/components/feature-settings";
-import { VestaboardSettings } from "@/components/feature-settings/vestaboard-settings";
+import { BoardSettings } from "@/components/feature-settings/board-settings";
 import { GeneralSettings } from "@/components/general-settings";
 
 export default function SettingsPage() {
@@ -13,7 +13,7 @@ export default function SettingsPage() {
             Settings
           </h1>
           <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-            Configure your Vestaboard service and integrations
+            Configure your FiestaBoard service and integrations
           </p>
         </div>
 
@@ -24,17 +24,17 @@ export default function SettingsPage() {
             <GeneralSettings />
           </section>
 
-          {/* Vestaboard Connection */}
+          {/* Board Connection */}
           <section>
-            <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Vestaboard Connection</h2>
-            <VestaboardSettings />
+            <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Board Connection</h2>
+            <BoardSettings />
           </section>
 
           {/* Feature Configuration */}
           <section>
             <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Features</h2>
             <p className="text-sm text-muted-foreground mb-4">
-              Enable and configure data sources for your Vestaboard display. 
+              Enable and configure data sources for your board display. 
               Click a feature to expand its settings.
             </p>
             <FeatureSettings />

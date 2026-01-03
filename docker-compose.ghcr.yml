@@ -1,10 +1,10 @@
 version: '3.8'
 
 services:
-  # API Service - REST API for controlling the Vestaboard display
-  vestaboard-api:
-    image: ghcr.io/roblesi/vesta-api:latest
-    container_name: vestaboard-api
+  # API Service - REST API for controlling the FiestaBoard display
+  fiestaboard-api:
+    image: ghcr.io/roblesi/fiestaboard-api:latest
+    container_name: fiestaboard-api
     env_file:
       - .env
     environment:
@@ -29,20 +29,20 @@ services:
       start_period: 5s
 
   # Web UI - Monitoring and control interface
-  vestaboard-ui:
-    image: ghcr.io/roblesi/vesta-ui:latest
-    container_name: vestaboard-ui
+  fiestaboard-ui:
+    image: ghcr.io/roblesi/fiestaboard-ui:latest
+    container_name: fiestaboard-ui
     restart: unless-stopped
     pull_policy: always
     ports:
       - "4420:3000"
     environment:
-      # VESTA_API_URL is used by the UI to fetch runtime config
+      # FIESTA_API_URL is used by the UI to fetch runtime config
       # Set this to your API's external URL (e.g., http://your-nas-ip:6969)
       # If not set, the UI will default to same-origin requests
-      - VESTA_API_URL=${VESTA_API_URL:-}
+      - FIESTA_API_URL=${FIESTA_API_URL:-}
     depends_on:
-      - vestaboard-api
+      - fiestaboard-api
     logging:
       driver: "json-file"
       options:
@@ -54,6 +54,3 @@ services:
       timeout: 3s
       retries: 3
       start_period: 5s
-
-
-

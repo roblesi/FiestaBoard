@@ -18,7 +18,7 @@ const OUTPUT_OPTIONS = [
   {
     value: "board" as const,
     label: "Board Only",
-    description: "Send directly to Vestaboard",
+    description: "Send directly to board",
     icon: Zap,
   },
   {

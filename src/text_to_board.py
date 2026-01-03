@@ -1,14 +1,14 @@
-"""Convert formatted text strings to Vestaboard character arrays.
+"""Convert formatted text strings to board character arrays.
 
 This module handles conversion of text (with color markers) into the 6x22
-character code arrays that Vestaboard requires.
+character code arrays that the board requires.
 """
 
 import re
 import logging
 from typing import List, Optional
 
-from .vestaboard_chars import VestaboardChars
+from .board_chars import BoardChars
 
 logger = logging.getLogger(__name__)
 
@@ -39,10 +39,10 @@ COLOR_MARKER_PATTERN = re.compile(
 
 def text_to_board_array(text: str, use_color_tiles: bool = True) -> List[List[int]]:
     """
-    Convert formatted text to 6x22 Vestaboard character array.
+    Convert formatted text to 6x22 board character array.
     
     Color markers like {red} or {67} produce ONE solid color tile at that position.
-    They do NOT color subsequent text - Vestaboard doesn't support colored text.
+    They do NOT color subsequent text - the board doesn't support colored text.
     
     Example: "Temp: {green} 62°F" produces:
     - "TEMP: " as regular text
@@ -59,7 +59,7 @@ def text_to_board_array(text: str, use_color_tiles: bool = True) -> List[List[in
         6x22 array of character codes (0-71)
     """
     # Initialize empty board (all spaces)
-    board = [[VestaboardChars.SPACE] * 22 for _ in range(6)]
+    board = [[BoardChars.SPACE] * 22 for _ in range(6)]
     
     # Split into lines (max 6)
     lines = text.split('\n')[:6]
@@ -102,12 +102,12 @@ def text_to_board_array(text: str, use_color_tiles: bool = True) -> List[List[in
             char = line[pos].upper()
             
             # Convert character to code
-            char_code = VestaboardChars.get_char_code(char)
+            char_code = BoardChars.get_char_code(char)
             if char_code is not None:
                 board[row_idx][col_idx] = char_code
             else:
                 # Unknown character - use space
-                board[row_idx][col_idx] = VestaboardChars.SPACE
+                board[row_idx][col_idx] = BoardChars.SPACE
             
             col_idx += 1
             pos += 1

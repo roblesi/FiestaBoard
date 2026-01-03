@@ -1052,13 +1052,13 @@ export function FeatureCard({
                       <input
                         type={showSecrets[field.key] ? "text" : "password"}
                         value={
-                          formData[field.key] === "***" && !showSecrets[field.key]
+                          formData[field.key] === "***"
                             ? ""
                             : ((formData[field.key] as string) ?? "")
                         }
                         onChange={(e) => handleChange(field.key, e.target.value)}
                         placeholder={
-                          hasSecretValue(field.key) && !showSecrets[field.key]
+                          hasSecretValue(field.key)
                             ? "••••••••••• (value set)"
                             : field.placeholder
                         }
@@ -1075,6 +1075,8 @@ export function FeatureCard({
                           }))
                         }
                         className="h-9 w-9 p-0"
+                        disabled={formData[field.key] === "***"}
+                        title={formData[field.key] === "***" ? "Cannot reveal server-stored values" : "Toggle visibility"}
                       >
                         {showSecrets[field.key] ? (
                           <EyeOff className="h-4 w-4" />

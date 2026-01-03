@@ -1,4 +1,4 @@
-"""Configuration file manager for Vestaboard Display Service.
+"""Configuration file manager for FiestaBoard Display Service.
 
 Manages reading and writing configuration to a JSON file with validation
 and thread-safe file operations.
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 # Default configuration schema
 DEFAULT_CONFIG: Dict[str, Any] = {
-    "vestaboard": {
+    "board": {
         "api_mode": "local",
         "local_api_key": "",
         "cloud_key": "",
@@ -321,24 +321,193 @@ class ConfigManager:
         """Apply environment variable overrides to config.
         
         Only sets values if they're empty in config (allows env vars to provide defaults).
+        Environment variables take precedence for initial setup but UI changes are preserved.
         """
-        # Ensure features structure exists
+        changed = False
+        
+        # Ensure structures exist
+        if "board" not in self._config:
+            self._config["board"] = {}
         if "features" not in self._config:
             self._config["features"] = {}
-        if "stocks" not in self._config["features"]:
-            self._config["features"]["stocks"] = {}
+        if "general" not in self._config:
+            self._config["general"] = {}
         
-        # Load environment variables
-        finnhub_api_key = os.getenv("FINNHUB_API_KEY", "").strip()
+        # Helper to safely get/create feature config
+        def get_feature(name: str) -> dict:
+            if name not in self._config["features"]:
+                self._config["features"][name] = {}
+            return self._config["features"][name]
         
-        # Apply to stocks config if not already set
-        if finnhub_api_key:
-            stocks_config = self._config["features"]["stocks"]
-            if not stocks_config.get("finnhub_api_key"):
-                stocks_config["finnhub_api_key"] = finnhub_api_key
-                logger.info("Applied FINNHUB_API_KEY from environment variable")
-                with self._file_lock:
-                    self._save_internal()
+        # Helper to apply string env var
+        def apply_str(config: dict, key: str, env_var: str, alt_env_var: str = None) -> bool:
+            value = os.getenv(env_var, "").strip()
+            if not value and alt_env_var:
+                value = os.getenv(alt_env_var, "").strip()
+            if value and not config.get(key):
+                config[key] = value
+                logger.info(f"Applied {env_var} from environment variable")
+                return True
+            return False
+        
+        # Helper to apply int env var
+        def apply_int(config: dict, key: str, env_var: str, alt_env_var: str = None) -> bool:
+            value = os.getenv(env_var, "").strip()
+            if not value and alt_env_var:
+                value = os.getenv(alt_env_var, "").strip()
+            if value and config.get(key) is None:
+                try:
+                    config[key] = int(value)
+                    logger.info(f"Applied {env_var} from environment variable")
+                    return True
+                except ValueError:
+                    logger.warning(f"Invalid {env_var} value: {value}")
+            return False
+        
+        # Helper to apply float env var
+        def apply_float(config: dict, key: str, env_var: str) -> bool:
+            value = os.getenv(env_var, "").strip()
+            if value and config.get(key) is None:
+                try:
+                    config[key] = float(value)
+                    logger.info(f"Applied {env_var} from environment variable")
+                    return True
+                except ValueError:
+                    logger.warning(f"Invalid {env_var} value: {value}")
+            return False
+        
+        # Helper to apply bool env var
+        # Note: For booleans, we apply env var if set, since defaults are False
+        # This allows env vars to enable features on first run
+        def apply_bool(config: dict, key: str, env_var: str) -> bool:
+            value = os.getenv(env_var, "").strip().lower()
+            if value:
+                new_value = value in ("true", "1", "yes")
+                if config.get(key) != new_value:
+                    config[key] = new_value
+                    logger.info(f"Applied {env_var} from environment variable")
+                    return True
+            return False
+        
+        board_config = self._config["board"]
+        general_config = self._config["general"]
+        
+        # ==================== Board Configuration ====================
+        changed |= apply_str(board_config, "api_mode", "BOARD_API_MODE", "VB_API_MODE")
+        changed |= apply_str(board_config, "local_api_key", "BOARD_LOCAL_API_KEY", "VB_LOCAL_API_KEY")
+        changed |= apply_str(board_config, "host", "BOARD_HOST", "VB_HOST")
+        changed |= apply_str(board_config, "cloud_key", "BOARD_READ_WRITE_KEY", "VB_READ_WRITE_KEY")
+        changed |= apply_str(board_config, "transition_strategy", "BOARD_TRANSITION_STRATEGY", "VB_TRANSITION_STRATEGY")
+        changed |= apply_int(board_config, "transition_interval_ms", "BOARD_TRANSITION_INTERVAL_MS", "VB_TRANSITION_INTERVAL_MS")
+        changed |= apply_int(board_config, "transition_step_size", "BOARD_TRANSITION_STEP_SIZE", "VB_TRANSITION_STEP_SIZE")
+        
+        # ==================== General Configuration ====================
+        changed |= apply_str(general_config, "timezone", "TIMEZONE")
+        changed |= apply_int(general_config, "refresh_interval_seconds", "REFRESH_INTERVAL_SECONDS")
+        changed |= apply_str(general_config, "output_target", "OUTPUT_TARGET")
+        
+        # Silence schedule
+        changed |= apply_bool(general_config, "silence_schedule_enabled", "SILENCE_SCHEDULE_ENABLED")
+        changed |= apply_str(general_config, "silence_schedule_start_time", "SILENCE_SCHEDULE_START_TIME")
+        changed |= apply_str(general_config, "silence_schedule_end_time", "SILENCE_SCHEDULE_END_TIME")
+        
+        # ==================== Weather Feature ====================
+        weather = get_feature("weather")
+        changed |= apply_str(weather, "api_key", "WEATHER_API_KEY")
+        changed |= apply_str(weather, "provider", "WEATHER_PROVIDER")
+        changed |= apply_str(weather, "location", "WEATHER_LOCATION")
+        
+        # ==================== Guest WiFi Feature ====================
+        guest_wifi = get_feature("guest_wifi")
+        changed |= apply_bool(guest_wifi, "enabled", "GUEST_WIFI_ENABLED")
+        changed |= apply_str(guest_wifi, "ssid", "GUEST_WIFI_SSID")
+        changed |= apply_str(guest_wifi, "password", "GUEST_WIFI_PASSWORD")
+        changed |= apply_int(guest_wifi, "refresh_seconds", "GUEST_WIFI_REFRESH_SECONDS")
+        
+        # ==================== Home Assistant Feature ====================
+        home_assistant = get_feature("home_assistant")
+        changed |= apply_bool(home_assistant, "enabled", "HOME_ASSISTANT_ENABLED")
+        changed |= apply_str(home_assistant, "base_url", "HOME_ASSISTANT_BASE_URL")
+        changed |= apply_str(home_assistant, "access_token", "HOME_ASSISTANT_ACCESS_TOKEN")
+        changed |= apply_int(home_assistant, "timeout", "HOME_ASSISTANT_TIMEOUT")
+        changed |= apply_int(home_assistant, "refresh_seconds", "HOME_ASSISTANT_REFRESH_SECONDS")
+        # Handle entities JSON
+        entities_str = os.getenv("HOME_ASSISTANT_ENTITIES", "").strip()
+        if entities_str and not home_assistant.get("entities"):
+            try:
+                import json
+                home_assistant["entities"] = json.loads(entities_str)
+                logger.info("Applied HOME_ASSISTANT_ENTITIES from environment variable")
+                changed = True
+            except json.JSONDecodeError:
+                logger.warning(f"Invalid HOME_ASSISTANT_ENTITIES JSON: {entities_str}")
+        
+        # ==================== Star Trek Quotes Feature ====================
+        star_trek = get_feature("star_trek_quotes")
+        changed |= apply_bool(star_trek, "enabled", "STAR_TREK_QUOTES_ENABLED")
+        changed |= apply_str(star_trek, "ratio", "STAR_TREK_QUOTES_RATIO")
+        
+        # ==================== Muni Feature ====================
+        muni = get_feature("muni")
+        changed |= apply_bool(muni, "enabled", "MUNI_ENABLED")
+        changed |= apply_str(muni, "api_key", "MUNI_API_KEY")
+        changed |= apply_int(muni, "refresh_seconds", "MUNI_REFRESH_SECONDS")
+        
+        # ==================== Traffic Feature ====================
+        traffic = get_feature("traffic")
+        changed |= apply_bool(traffic, "enabled", "TRAFFIC_ENABLED")
+        changed |= apply_str(traffic, "api_key", "GOOGLE_ROUTES_API_KEY")
+        changed |= apply_int(traffic, "refresh_seconds", "TRAFFIC_REFRESH_SECONDS")
+        
+        # ==================== Bay Wheels Feature ====================
+        baywheels = get_feature("baywheels")
+        changed |= apply_bool(baywheels, "enabled", "BAYWHEELS_ENABLED")
+        changed |= apply_int(baywheels, "refresh_seconds", "BAYWHEELS_REFRESH_SECONDS")
+        
+        # ==================== Surf Feature ====================
+        surf = get_feature("surf")
+        changed |= apply_bool(surf, "enabled", "SURF_ENABLED")
+        changed |= apply_float(surf, "latitude", "SURF_LATITUDE")
+        changed |= apply_float(surf, "longitude", "SURF_LONGITUDE")
+        changed |= apply_int(surf, "refresh_seconds", "SURF_REFRESH_SECONDS")
+        
+        # ==================== Air/Fog Feature ====================
+        air_fog = get_feature("air_fog")
+        changed |= apply_bool(air_fog, "enabled", "AIR_FOG_ENABLED")
+        changed |= apply_str(air_fog, "purpleair_api_key", "PURPLEAIR_API_KEY")
+        changed |= apply_str(air_fog, "purpleair_sensor_id", "PURPLEAIR_SENSOR_ID")
+        changed |= apply_str(air_fog, "openweathermap_api_key", "OPENWEATHERMAP_API_KEY")
+        changed |= apply_float(air_fog, "latitude", "AIR_FOG_LATITUDE")
+        changed |= apply_float(air_fog, "longitude", "AIR_FOG_LONGITUDE")
+        changed |= apply_int(air_fog, "refresh_seconds", "AIR_FOG_REFRESH_SECONDS")
+        
+        # ==================== Stocks Feature ====================
+        stocks = get_feature("stocks")
+        changed |= apply_bool(stocks, "enabled", "STOCKS_ENABLED")
+        changed |= apply_str(stocks, "finnhub_api_key", "FINNHUB_API_KEY")
+        changed |= apply_str(stocks, "time_window", "STOCKS_TIME_WINDOW")
+        changed |= apply_int(stocks, "refresh_seconds", "STOCKS_REFRESH_SECONDS")
+        # Handle symbols as comma-separated list
+        symbols_str = os.getenv("STOCKS_SYMBOLS", "").strip()
+        if symbols_str and not stocks.get("symbols"):
+            stocks["symbols"] = [s.strip() for s in symbols_str.split(",") if s.strip()]
+            logger.info("Applied STOCKS_SYMBOLS from environment variable")
+            changed = True
+        
+        # ==================== Flights Feature ====================
+        flights = get_feature("flights")
+        changed |= apply_bool(flights, "enabled", "FLIGHTS_ENABLED")
+        changed |= apply_str(flights, "api_key", "AVIATIONSTACK_API_KEY")
+        changed |= apply_float(flights, "latitude", "FLIGHTS_LATITUDE")
+        changed |= apply_float(flights, "longitude", "FLIGHTS_LONGITUDE")
+        changed |= apply_int(flights, "radius_km", "FLIGHTS_RADIUS_KM")
+        changed |= apply_int(flights, "max_count", "FLIGHTS_MAX_COUNT")
+        changed |= apply_int(flights, "refresh_seconds", "FLIGHTS_REFRESH_SECONDS")
+        
+        # Save if any changes were made
+        if changed:
+            with self._file_lock:
+                self._save_internal()
     
     def reload(self) -> None:
         """Reload configuration from file."""
@@ -372,32 +541,43 @@ class ConfigManager:
             return [self._mask_sensitive(item, path) for item in obj]
         return obj
 
-    def get_vestaboard(self) -> Dict[str, Any]:
-        """Get Vestaboard configuration."""
+    def get_board(self) -> Dict[str, Any]:
+        """Get board configuration."""
         with self._file_lock:
-            return self._deep_copy(self._config.get("vestaboard", {}))
+            # Support both old "vestaboard" and new "board" keys for migration
+            config = self._config.get("board") or self._config.get("vestaboard", {})
+            return self._deep_copy(config)
 
-    def set_vestaboard(self, settings: Dict[str, Any]) -> None:
-        """Update Vestaboard configuration.
+    def set_board(self, settings: Dict[str, Any]) -> None:
+        """Update board configuration.
         
         Args:
-            settings: Partial Vestaboard settings to update.
+            settings: Partial board settings to update.
         """
         with self._file_lock:
-            if "vestaboard" not in self._config:
-                self._config["vestaboard"] = {}
+            if "board" not in self._config:
+                self._config["board"] = {}
             
             # Only update provided fields
             for key, value in settings.items():
-                if key in DEFAULT_CONFIG["vestaboard"]:
+                if key in DEFAULT_CONFIG["board"]:
                     # IMPORTANT: Don't overwrite real values with masked placeholders
                     if key in SENSITIVE_FIELDS and value == "***":
-                        logger.debug(f"Preserving existing value for masked field: vestaboard.{key}")
+                        logger.debug(f"Preserving existing value for masked field: board.{key}")
                         continue
-                    self._config["vestaboard"][key] = value
+                    self._config["board"][key] = value
             
             self._save_internal()
-        logger.info("Vestaboard settings updated")
+        logger.info("Board settings updated")
+
+    # Backward compatibility aliases
+    def get_vestaboard(self) -> Dict[str, Any]:
+        """Backward compatibility alias for get_board()."""
+        return self.get_board()
+
+    def set_vestaboard(self, settings: Dict[str, Any]) -> None:
+        """Backward compatibility alias for set_board()."""
+        self.set_board(settings)
 
     def get_feature(self, feature_name: str) -> Optional[Dict[str, Any]]:
         """Get configuration for a specific feature.
@@ -535,18 +715,18 @@ class ConfigManager:
         errors = []
         config = self.get_all()
         
-        # Validate Vestaboard settings
-        vb = config.get("vestaboard", {})
-        api_mode = vb.get("api_mode", "local")
+        # Validate board settings (support both old and new key names)
+        board = config.get("board") or config.get("vestaboard", {})
+        api_mode = board.get("api_mode", "local")
         
         if api_mode == "cloud":
-            if not vb.get("cloud_key"):
-                errors.append("Vestaboard cloud_key is required when api_mode is 'cloud'")
+            if not board.get("cloud_key"):
+                errors.append("Board cloud_key is required when api_mode is 'cloud'")
         else:
-            if not vb.get("local_api_key"):
-                errors.append("Vestaboard local_api_key is required when api_mode is 'local'")
-            if not vb.get("host"):
-                errors.append("Vestaboard host is required when api_mode is 'local'")
+            if not board.get("local_api_key"):
+                errors.append("Board local_api_key is required when api_mode is 'local'")
+            if not board.get("host"):
+                errors.append("Board host is required when api_mode is 'local'")
         
         # Validate features that are enabled
         features = config.get("features", {})

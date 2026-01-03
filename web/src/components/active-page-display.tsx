@@ -14,7 +14,7 @@ import type { SilenceStatus } from "@/lib/api";
 import { api } from "@/lib/api";
 import { PageGridSelector } from "@/components/page-grid-selector";
 
-// Parse a line into tokens (same logic as VestaboardDisplay)
+// Parse a line into tokens (same logic as BoardDisplay)
 type Token = { type: "char"; value: string } | { type: "color"; code: string };
 
 function parseLine(line: string): Token[] {
@@ -42,7 +42,7 @@ function parseLine(line: string): Token[] {
       }
     }
     
-    // Convert to uppercase since Vestaboard only supports uppercase letters
+    // Convert to uppercase since board only supports uppercase letters
     tokens.push({ type: "char", value: line[i].toUpperCase() });
     i++;
   }
@@ -63,7 +63,7 @@ function tokensToString(tokens: Token[]): string {
 function addSnoozingIndicator(content: string): string {
   const lines = content.split('\n');
   
-  // Ensure we have exactly 6 lines (Vestaboard rows)
+  // Ensure we have exactly 6 lines (board rows)
   while (lines.length < 6) {
     lines.push("");
   }
@@ -274,7 +274,7 @@ export function ActivePageDisplay() {
         </CardHeader>
         
         <CardContent className="flex justify-center overflow-x-hidden px-2">
-          {/* Vestaboard Frame */}
+          {/* Board Frame */}
           <VestaboardDisplay 
             message={displayMessage} 
             isLoading={isLoadingPreview || (!!activePageId && !previewData)}
@@ -303,7 +303,7 @@ export function ActivePageDisplay() {
           <SheetHeader>
             <SheetTitle>Select Page</SheetTitle>
             <SheetDescription>
-              Choose which page to display on your Vestaboard
+              Choose which page to display on your board
             </SheetDescription>
           </SheetHeader>
           

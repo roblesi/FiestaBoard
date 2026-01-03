@@ -1,6 +1,6 @@
-"""Message formatting for Vestaboard display.
+"""Message formatting for board display.
 
-Vestaboard supports:
+The board supports:
 - Characters: A-Z, 0-9, and limited punctuation (codes 0-62)
 - Color tiles: Red, Orange, Yellow, Green, Blue, Violet, White, Black (codes 63-70)
 
@@ -10,13 +10,13 @@ Use them as decorative indicators followed by a space, e.g., "{green} SSID: netw
 
 import logging
 from typing import Optional, Dict, List
-from ..vestaboard_chars import get_weather_symbol
+from ..board_chars import get_weather_symbol
 
 logger = logging.getLogger(__name__)
 
 
 class MessageFormatter:
-    """Formats data for Vestaboard 6x22 character grid."""
+    """Formats data for board 6x22 character grid."""
     
     MAX_ROWS = 6
     MAX_COLS = 22

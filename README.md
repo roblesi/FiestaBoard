@@ -1,6 +1,6 @@
 # FiestaBoard 🎉
 
-**Turn your Vestaboard into a living dashboard.** FiestaBoard transforms your iconic split-flap display into a real-time information hub—track your morning commute, monitor the markets, check surf conditions, or display Star Trek wisdom. All beautifully formatted, endlessly customizable, and running in Docker with zero hassle.
+**Turn your split-flap display into a living dashboard.** FiestaBoard transforms your iconic split-flap display into a real-time information hub—track your morning commute, monitor the markets, check surf conditions, or display Star Trek wisdom. All beautifully formatted, endlessly customizable, and running in Docker with zero hassle.
 
 Built for San Francisco life, but works anywhere.
 
@@ -11,7 +11,7 @@ Built for San Francisco life, but works anywhere.
 ```bash
 # 1. Create .env file with your API keys
 cp env.example .env
-# Edit .env and add: VB_READ_WRITE_KEY and WEATHER_API_KEY
+# Edit .env and add: BOARD_READ_WRITE_KEY and WEATHER_API_KEY
 
 # 2. Run it! (first time builds images)
 docker-compose up --build
@@ -32,7 +32,7 @@ That's it! 🎉
 **To start the display service:**
 1. Open http://localhost:8080 in your browser
 2. Click "▶ Start Service" button
-3. Your Vestaboard will start updating!
+3. Your board will start updating!
 
 **To stop:**
 ```bash
@@ -75,7 +75,7 @@ docker-compose down
 ### Prerequisites
 
 - Docker and Docker Compose installed
-- Vestaboard Read/Write API key
+- Board Read/Write API key
 - Weather API key (WeatherAPI.com recommended)
 - (Optional) Home Assistant server with access token
 
@@ -85,7 +85,7 @@ If you're using GitHub Codespaces:
 
 1. **Add Codespaces secrets** to your repository:
    - Go to **Settings** → **Secrets and variables** → **Codespaces**
-   - Add `VB_READ_WRITE_KEY` (your Vestaboard API key)
+   - Add `BOARD_READ_WRITE_KEY` (your board API key)
    - Add `WEATHER_API_KEY` (your Weather API key)
 
 2. **Launch a Codespace** from your repository
@@ -109,7 +109,7 @@ See [CODESPACES_SETUP.md](./docs/setup/CODESPACES_SETUP.md) for detailed instruc
 3. **Edit `.env` and add your API keys**:
    ```bash
    # Required
-   VB_READ_WRITE_KEY=your_vestaboard_key_here
+   BOARD_READ_WRITE_KEY=your_board_key_here
    WEATHER_API_KEY=your_weather_api_key_here
    WEATHER_PROVIDER=weatherapi
    WEATHER_LOCATION=San Francisco, CA
@@ -141,7 +141,7 @@ See [CODESPACES_SETUP.md](./docs/setup/CODESPACES_SETUP.md) for detailed instruc
 6. **Start the display service**:
    - Open http://localhost:8080 in your browser
    - Click "▶ Start Service" button
-   - Your Vestaboard will begin updating!
+   - Your board will begin updating!
 
 7. **View logs**:
    ```bash
@@ -161,7 +161,7 @@ All configuration is done via environment variables in `.env`:
 
 ### Required
 
-- `VB_READ_WRITE_KEY`: Your Vestaboard Read/Write API key
+- `BOARD_READ_WRITE_KEY`: Your board Read/Write API key
 - `WEATHER_API_KEY`: Your weather API key
 
 ### Core Configuration
@@ -206,17 +206,17 @@ For detailed development workflows, see [LOCAL_DEVELOPMENT.md](./docs/setup/LOCA
 
 ## How It Works
 
-Select a page in the web UI and the service will keep it updated on your Vestaboard. Pages use templates with dynamic data sources like weather, time, and more. Create custom pages to display exactly what you want.
+Select a page in the web UI and the service will keep it updated on your board. Pages use templates with dynamic data sources like weather, time, and more. Create custom pages to display exactly what you want.
 
 ## Project Structure
 
 ```
-Vesta/
+FiestaBoard/
 ├── src/                            # Python API and display service
 │   ├── api_server.py               # FastAPI REST API
 │   ├── main.py                     # Display service core
 │   ├── config.py                   # Configuration management
-│   ├── vestaboard_client.py        # Vestaboard API client
+│   ├── board_client.py             # Board API client
 │   ├── data_sources/               # Data integrations
 │   └── formatters/                 # Message formatting
 ├── web/                            # Next.js web UI
@@ -237,7 +237,7 @@ Vesta/
 
 ## API Keys
 
-### Vestaboard
+### Board API
 
 1. Go to [web.vestaboard.com](https://web.vestaboard.com)
 2. Navigate to API section
@@ -274,7 +274,7 @@ See [LOCAL_DEVELOPMENT.md](./docs/setup/LOCAL_DEVELOPMENT.md) for detailed devel
 
 ### Production Deployment
 
-Vesta supports multiple deployment options:
+FiestaBoard supports multiple deployment options:
 
 - **[GitHub Container Registry](./docs/deployment/GITHUB_REGISTRY_SETUP.md)**: Recommended for production with automatic builds
 - **[Synology NAS](./docs/deployment/DEPLOY_TO_SYNOLOGY.md)**: One-click updates via Container Manager
@@ -294,7 +294,7 @@ See deployment guides for detailed instructions.
 
 - Verify your `.env` file exists and contains valid keys
 - Check that keys don't have extra spaces or quotes
-- For Vestaboard: Ensure Read/Write API is enabled in your account
+- For the board: Ensure Read/Write API is enabled in your account
 
 ### Weather API Errors
 
@@ -336,7 +336,7 @@ See deployment guides for detailed instructions.
 
 ### Reference
 - **[API Research](./docs/reference/API_RESEARCH.md)**: API integration details
-- **[Character Codes](./docs/reference/VESTABOARD_CHARACTER_CODES.md)**: Vestaboard character reference
+- **[Character Codes](./docs/reference/CHARACTER_CODES.md)**: Board character reference
 - **[Color Guide](./docs/reference/COLOR_GUIDE.md)**: Color coding reference
 
 ## Future Features
@@ -351,7 +351,7 @@ MIT
 
 ## Screenshots
 
-The Vestaboard can display various screens:
+The board can display various screens:
 
 - **Weather + DateTime**: Current conditions with temperature and text-based weather icons
 - **Home Assistant**: House status with green ([G]) and red ([R]) indicators
@@ -366,7 +366,7 @@ The Vestaboard can display various screens:
 
 ## External Resources
 
-- [Vestaboard API Docs](https://docs.vestaboard.com/docs/read-write-api/introduction)
+- [Board API Docs](https://docs.vestaboard.com/docs/read-write-api/introduction)
 - [WeatherAPI.com](https://www.weatherapi.com/)
 - [OpenWeatherMap](https://openweathermap.org/api)
 - [Home Assistant REST API](https://developers.home-assistant.io/docs/api/rest/)
