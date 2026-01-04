@@ -966,7 +966,7 @@ export function VariablePicker({
                 ))}
               </div>
               <div className="text-xs text-muted-foreground mt-2 space-y-1">
-                <p>Example: {"{{weather.temperature|upper}}"}</p>
+                <p>Example: {"{{weather.temperature|pad:3}}"}</p>
                 <p><strong>|wrap</strong>: Wraps long text across multiple lines. Leave consecutive empty lines below for text to flow into.</p>
               </div>
             </div>

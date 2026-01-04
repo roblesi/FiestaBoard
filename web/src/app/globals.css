@@ -577,6 +577,16 @@
   }
 }
 
+/* Prevent iOS Safari from zooming on input focus */
+/* iOS Safari zooms when input font-size is < 16px */
+@supports (-webkit-touch-callout: none) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 /* Respect reduced motion preferences */
 @media (prefers-reduced-motion: reduce) {
   *,

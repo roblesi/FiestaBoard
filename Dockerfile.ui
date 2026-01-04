@@ -50,6 +50,7 @@ RUN addgroup -g 1001 -S nodejs && \
 # The standalone output includes only production dependencies and necessary files
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Copy public directory including PWA service worker files (sw.js, workbox-*.js)
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 # Copy nginx configuration

@@ -33,9 +33,9 @@ describe("parseTemplate", () => {
   });
 
   it("parses a variable with a filter", () => {
-    const result = parseTemplate("{{weather.temperature|upper}}");
+    const result = parseTemplate("{{weather.temperature|pad:3}}");
     expect(result).toEqual([
-      { type: "variable", value: "{{weather.temperature|upper}}", display: "weather.temperature|upper" },
+      { type: "variable", value: "{{weather.temperature|pad:3}}", display: "weather.temperature|pad:3" },
     ]);
   });
 

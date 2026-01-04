@@ -2597,7 +2597,7 @@ async def get_template_variables():
             "black": 70,
         },
         "symbols": ["sun", "star", "cloud", "rain", "snow", "storm", "fog", "partly", "heart", "check", "x"],
-        "filters": ["pad:N", "upper", "lower", "truncate:N", "capitalize", "wrap"],
+        "filters": ["pad:N", "truncate:N", "wrap"],
         "formatting": {
             "fill_space": {
                 "syntax": "{{fill_space}}",

@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { NavigationSidebar } from "@/components/navigation-sidebar";
 import { ConfigLoader } from "@/components/config-loader";
 import { WizardProvider } from "@/components/wizard-provider";
+import { InstallPrompt } from "@/components/install-prompt";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -61,6 +62,7 @@ export default function RootLayout({
                 {children}
               </main>
               <Toaster />
+              <InstallPrompt />
             </WizardProvider>
           </ConfigLoader>
         </Providers>

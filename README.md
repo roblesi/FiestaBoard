@@ -306,14 +306,8 @@ See [LOCAL_DEVELOPMENT.md](./docs/setup/LOCAL_DEVELOPMENT.md) for detailed devel
 
 FiestaBoard supports multiple deployment options:
 
-- **[GitHub Container Registry](./docs/deployment/GITHUB_REGISTRY_SETUP.md)**: Recommended for production with automatic builds
-- **[Synology NAS](./docs/deployment/DEPLOY_TO_SYNOLOGY.md)**: One-click updates via Container Manager
 - **[Raspberry Pi](./docs/deployment/PI_BUILD_GUIDE.md)**: ARM-compatible builds
-
-**Quick Deploy to Synology:**
-```bash
-./deploy.sh
-```
+- **Docker Compose**: Use `docker-compose.yml` for production deployments
 
 See deployment guides for detailed instructions.
 
@@ -355,8 +349,6 @@ Each plugin includes its own documentation:
 See **[Plugin Development Guide](./docs/development/PLUGIN_DEVELOPMENT.md)** to create your own plugins.
 
 ### Deployment Guides
-- **[GitHub Container Registry](./docs/deployment/GITHUB_REGISTRY_SETUP.md)**: Production deployment with GHCR
-- **[Synology NAS](./docs/deployment/DEPLOY_TO_SYNOLOGY.md)**: Deploy to Synology
 - **[Raspberry Pi](./docs/deployment/PI_BUILD_GUIDE.md)**: Build on Raspberry Pi
 
 ### Reference

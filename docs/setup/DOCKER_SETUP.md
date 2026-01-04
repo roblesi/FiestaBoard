@@ -195,6 +195,6 @@ Both services use the same `.env` file. Key variables:
 
 ## Production Deployment
 
-For production deployment to Synology NAS, see [DEPLOY_TO_SYNOLOGY.md](../deployment/DEPLOY_TO_SYNOLOGY.md).
+For production deployment, use the standard `docker-compose.yml` file with proper environment variables configured.
 
 
