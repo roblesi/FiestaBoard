@@ -268,9 +268,15 @@ def get_service() -> Optional[DisplayService]:
     if _service is None:
         with _service_lock:
             if _service is None:
-                _service = DisplayService()
-                if not _service.initialize():
-                    logger.error("Failed to initialize service")
+                try:
+                    _service = DisplayService()
+                    if not _service.initialize():
+                        logger.warning("Service initialization failed - service can be started later when configuration is fixed")
+                        # Keep the service instance but mark it as uninitialized
+                        # This allows the /start endpoint to retry initialization
+                        return _service
+                except Exception as e:
+                    logger.error(f"Failed to create service: {e}", exc_info=True)
                     return None
     return _service
 
@@ -280,6 +286,13 @@ def run_service_background():
     global _service_running, _service
     service = get_service()
     if service:
+        # Check if service needs initialization (might have failed during startup)
+        if not service.vb_client:
+            logger.info("Service not fully initialized, attempting initialization...")
+            if not service.initialize():
+                logger.error("Service initialization failed - cannot start. Fix configuration and use /start endpoint to retry.")
+                return
+        
         _service_running = True
         try:
             logger.info("Starting background display service...")
@@ -310,11 +323,24 @@ async def startup_event():
     # Initialize and auto-start the service
     service = get_service()
     if service:
-        logger.info("Auto-starting background service...")
-        _service_thread = threading.Thread(target=run_service_background, daemon=True)
-        _service_thread.start()
-        time.sleep(0.5)  # Give it a moment to start
-        logger.info("Background service auto-started")
+        # Try to auto-start, but don't fail if it doesn't work
+        # The service can be started manually later via the /start endpoint
+        try:
+            logger.info("Auto-starting background service...")
+            _service_thread = threading.Thread(target=run_service_background, daemon=True)
+            _service_thread.start()
+            time.sleep(0.5)  # Give it a moment to start
+            
+            # Check if it actually started
+            if _service_running:
+                logger.info("Background service auto-started successfully")
+            else:
+                logger.warning("Background service failed to start - likely due to configuration issues. Use the /start endpoint or UI to start it manually after fixing configuration.")
+        except Exception as e:
+            logger.error(f"Failed to auto-start background service: {e}", exc_info=True)
+            logger.warning("Service can be started manually via /start endpoint after configuration is fixed")
+    else:
+        logger.warning("Service instance could not be created - check logs for initialization errors")
 
 
 @app.on_event("shutdown")
@@ -434,7 +460,7 @@ async def get_status():
 @app.post("/start")
 async def start_service(background_tasks: BackgroundTasks):
     """Start the background service."""
-    global _service_thread, _service_running
+    global _service_thread, _service_running, _service
     
     if _service_running:
         return {"status": "already_running", "message": "Service is already running"}
@@ -443,6 +469,17 @@ async def start_service(background_tasks: BackgroundTasks):
     if not service:
         raise HTTPException(status_code=503, detail="Service not initialized")
     
+    # Retry initialization if it failed before
+    # This allows the service to start after configuration is fixed
+    if not service.vb_client:
+        logger.info("Retrying service initialization...")
+        if not service.initialize():
+            raise HTTPException(
+                status_code=503, 
+                detail="Service initialization failed - check board configuration (API key, host, etc.)"
+            )
+        logger.info("Service initialization successful on retry")
+    
     # Start service in background thread
     _service_thread = threading.Thread(target=run_service_background, daemon=True)
     _service_thread.start()
@@ -450,7 +487,10 @@ async def start_service(background_tasks: BackgroundTasks):
     # Give it a moment to start
     time.sleep(0.5)
     
-    return {"status": "started", "message": "Service started successfully"}
+    if _service_running:
+        return {"status": "started", "message": "Service started successfully"}
+    else:
+        raise HTTPException(status_code=500, detail="Service failed to start - check logs for details")
 
 
 @app.post("/stop")
