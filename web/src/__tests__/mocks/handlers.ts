@@ -739,5 +739,43 @@ export const handlers = [
   http.get(`${API_BASE}/silence-status`, () => {
     return HttpResponse.json(mockSilenceStatus);
   }),
+
+  // Runtime config endpoint (Next.js API route, not API_BASE)
+  http.get("/api/runtime-config", () => {
+    return HttpResponse.json({
+      apiUrl: "http://localhost:8000"
+    });
+  }),
+
+  // Polling settings endpoints
+  http.get(`${API_BASE}/settings/polling`, () => {
+    return HttpResponse.json({
+      interval_seconds: 300
+    });
+  }),
+
+  http.put(`${API_BASE}/settings/polling`, async ({ request }) => {
+    const body = await request.json() as { interval_seconds: number };
+    return HttpResponse.json({
+      status: "success",
+      settings: { interval_seconds: body.interval_seconds },
+      requires_restart: false
+    });
+  }),
+
+  // Board settings endpoints
+  http.get(`${API_BASE}/settings/board`, () => {
+    return HttpResponse.json({
+      board_type: "black"
+    });
+  }),
+
+  http.put(`${API_BASE}/settings/board`, async ({ request }) => {
+    const body = await request.json() as { board_type: "black" | "white" | null };
+    return HttpResponse.json({
+      status: "success",
+      settings: { board_type: body.board_type }
+    });
+  }),
 ];
 

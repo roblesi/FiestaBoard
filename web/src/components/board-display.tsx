@@ -353,7 +353,7 @@ function FlipTile({
 
   return (
     <>
-      <style jsx>{`
+      <style>{`
         @keyframes flapRotate {
           0% {
             transform: rotateX(0deg);

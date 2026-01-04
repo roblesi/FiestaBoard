@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   localTimeToUTC,
   utcToLocalTime,
@@ -29,15 +29,19 @@ describe("timezone-utils", () => {
     });
 
     it("handles invalid time gracefully", () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const result = localTimeToUTC("invalid", "America/Los_Angeles");
       // Should return fallback value when parsing fails
       expect(result).toBe("00:00+00:00");
+      consoleSpy.mockRestore();
     });
 
     it("handles invalid timezone gracefully", () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const result = localTimeToUTC("20:00", "Invalid/Timezone");
       // Should return fallback value when timezone is invalid
       expect(result).toBe("00:00+00:00");
+      consoleSpy.mockRestore();
     });
   });
 
@@ -63,15 +67,19 @@ describe("timezone-utils", () => {
     });
 
     it("handles invalid UTC time gracefully", () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const result = utcToLocalTime("invalid", "America/Los_Angeles");
       // Should return fallback time value
       expect(result).toBe("00:00");
+      consoleSpy.mockRestore();
     });
 
     it("handles invalid timezone gracefully", () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const result = utcToLocalTime("04:00+00:00", "Invalid/Timezone");
       // Should return fallback time value
       expect(result).toBe("00:00");
+      consoleSpy.mockRestore();
     });
   });
 
@@ -95,11 +103,13 @@ describe("timezone-utils", () => {
     });
 
     it("handles invalid timestamp gracefully", () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const result = formatTimestampLocal(
         "invalid",
         "America/Los_Angeles"
       );
       expect(result).toBe("invalid");
+      consoleSpy.mockRestore();
     });
   });
 
@@ -138,8 +148,10 @@ describe("timezone-utils", () => {
     });
 
     it("handles invalid timezone gracefully", () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const result = getTimezoneAbbreviation("Invalid/Timezone");
       expect(result).toBe("Invalid/Timezone");
+      consoleSpy.mockRestore();
     });
   });
 
