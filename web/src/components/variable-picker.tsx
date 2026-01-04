@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, DragEvent } from "react";
+import { useState, DragEvent, useDeferredValue } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -269,22 +269,13 @@ export function VariablePicker({
     return "🟡";
   };
 
-  if (isLoading) {
-    return (
-      <Card>
-        <CardHeader className="px-4 sm:px-6">
-          <CardTitle className="text-base">Variables & Helpers</CardTitle>
-        </CardHeader>
-        <CardContent className="px-4 sm:px-6">
-          <Skeleton className="h-40 w-full" />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!templateVars) {
-    return null;
-  }
+  // Use deferred values for live data to reduce re-render priority
+  const deferredBaywheelsData = useDeferredValue(baywheelsData);
+  const deferredMuniData = useDeferredValue(muniData);
+  const deferredTrafficData = useDeferredValue(trafficData);
+  const deferredWeatherData = useDeferredValue(weatherData);
+  const deferredStocksData = useDeferredValue(stocksData);
+  const deferredFlightsData = useDeferredValue(flightsData);
 
   return (
     <>
@@ -292,17 +283,29 @@ export function VariablePicker({
       <CardHeader className="flex-shrink-0 px-4 sm:px-6 pb-2">
         <CardTitle className="text-base">Template Variables</CardTitle>
         <CardDescription className="text-xs sm:text-sm">
-          Tap to {onInsert ? "insert" : "copy"} or drag into template
+          {isLoading ? (
+            <Skeleton className="h-4 w-48" />
+          ) : (
+            <>Tap to {onInsert ? "insert" : "copy"} or drag into template</>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-1 min-h-0 flex flex-col overflow-y-auto px-4 sm:px-6 pt-0">
+        {isLoading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+        ) : !templateVars ? null : (
         <div className="space-y-1">
           {/* Data Variables - collapsible by category */}
           <div className="pb-2">
             <h4 className="text-sm font-semibold mb-2">Data Variables</h4>
             {Object.entries(templateVars.variables).map(([category, vars]) => {
               // Special handling for BayWheels with live station data
-              if (category === "baywheels" && baywheelsData?.stations && baywheelsData.stations.length > 0) {
+              if (category === "baywheels" && deferredBaywheelsData?.stations && deferredBaywheelsData.stations.length > 0) {
                 return (
                   <CollapsibleSection key={category} title={category} defaultOpen={false}>
                     <div className="space-y-3">
@@ -329,11 +332,11 @@ export function VariablePicker({
                       <div className="space-y-1.5">
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
                           <Bike className="h-3 w-3" />
-                          Stations ({baywheelsData.stations.length})
+                          Stations ({deferredBaywheelsData.stations.length})
                         </p>
                         <div className="max-h-[400px] overflow-y-auto pr-1">
                           <Accordion type="single" collapsible className="w-full">
-                            {baywheelsData.stations.map((station, index) => (
+                            {deferredBaywheelsData.stations.map((station, index) => (
                             <AccordionItem key={station.station_id} value={`station-${index}`} className="border-b-0">
                               <AccordionTrigger className="py-2 hover:no-underline">
                                 <div className="flex items-center gap-2 text-xs">
@@ -432,12 +435,12 @@ export function VariablePicker({
                       <div className="space-y-1.5">
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
                           <TrainFront className="h-3 w-3" />
-                          Stops {muniData?.stops ? `(${muniData.stops.length})` : "(None configured)"}
+                          Stops {deferredMuniData?.stops ? `(${deferredMuniData.stops.length})` : "(None configured)"}
                         </p>
-                        {muniData?.stops && muniData.stops.length > 0 ? (
+                        {deferredMuniData?.stops && deferredMuniData.stops.length > 0 ? (
                           <div className="max-h-[400px] overflow-y-auto pr-1">
                             <Accordion type="single" collapsible className="w-full">
-                              {muniData.stops.map((stop: any, index: number) => (
+                              {deferredMuniData.stops.map((stop: any, index: number) => (
                               <AccordionItem key={stop.stop_code || index} value={`stop-${index}`} className="border-b-0">
                                 <AccordionTrigger className="py-2 hover:no-underline">
                                   <div className="flex items-center gap-2 text-xs">
@@ -587,12 +590,12 @@ export function VariablePicker({
                       <div className="space-y-1.5">
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
                           <Car className="h-3 w-3" />
-                          Routes {trafficData?.routes ? `(${trafficData.routes.length})` : "(None configured)"}
+                          Routes {deferredTrafficData?.routes ? `(${deferredTrafficData.routes.length})` : "(None configured)"}
                         </p>
-                        {trafficData?.routes && trafficData.routes.length > 0 ? (
+                        {deferredTrafficData?.routes && deferredTrafficData.routes.length > 0 ? (
                           <div className="max-h-[400px] overflow-y-auto pr-1">
                             <Accordion type="single" collapsible className="w-full">
-                              {trafficData.routes.map((route: any, index: number) => (
+                              {deferredTrafficData.routes.map((route: any, index: number) => (
                               <AccordionItem key={index} value={`route-${index}`} className="border-b-0">
                                 <AccordionTrigger className="py-2 hover:no-underline">
                                   <div className="flex items-center gap-2 text-xs">
@@ -671,11 +674,11 @@ export function VariablePicker({
                       {/* Individual Locations */}
                       <div className="space-y-1.5">
                         <p className="text-xs text-muted-foreground">
-                          Locations {weatherData?.locations ? `(${weatherData.locations.length})` : "(1)"}
+                          Locations {deferredWeatherData?.locations ? `(${deferredWeatherData.locations.length})` : "(1)"}
                         </p>
-                        {weatherData?.locations && weatherData.locations.length > 0 ? (
+                        {deferredWeatherData?.locations && deferredWeatherData.locations.length > 0 ? (
                           <div className="space-y-2">
-                            {weatherData.locations.map((location: any, index: number) => (
+                            {deferredWeatherData.locations.map((location: any, index: number) => (
                               <div key={index} className="p-2 bg-muted/30 rounded-lg">
                                 <p className="text-xs font-medium mb-1.5">
                                   {location.location_name || `Location ${index}`} - {location.location || "Unknown"}
@@ -742,12 +745,12 @@ export function VariablePicker({
                       <div className="space-y-1.5">
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
                           <TrendingUp className="h-3 w-3" />
-                          Stocks {stocksData?.stocks ? `(${stocksData.stocks.length})` : "(None configured)"}
+                          Stocks {deferredStocksData?.stocks ? `(${deferredStocksData.stocks.length})` : "(None configured)"}
                         </p>
-                        {stocksData?.stocks && stocksData.stocks.length > 0 ? (
+                        {deferredStocksData?.stocks && deferredStocksData.stocks.length > 0 ? (
                           <div className="max-h-[400px] overflow-y-auto pr-1">
                             <Accordion type="single" collapsible className="w-full">
-                              {stocksData.stocks.map((stock: any, index: number) => (
+                              {deferredStocksData.stocks.map((stock: any, index: number) => (
                               <AccordionItem key={stock.symbol || index} value={`stock-${index}`} className="border-b-0">
                                 <AccordionTrigger className="py-2 hover:no-underline">
                                   <div className="flex items-center gap-2 text-xs">
@@ -826,12 +829,12 @@ export function VariablePicker({
                       {/* Individual Flights Accordion */}
                       <div className="space-y-1.5">
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          ✈️ Nearby Aircraft {flightsData?.flights ? `(${flightsData.flights.length})` : "(None detected)"}
+                          ✈️ Nearby Aircraft {deferredFlightsData?.flights ? `(${deferredFlightsData.flights.length})` : "(None detected)"}
                         </p>
-                        {flightsData?.flights && flightsData.flights.length > 0 ? (
+                        {deferredFlightsData?.flights && deferredFlightsData.flights.length > 0 ? (
                           <div className="max-h-[400px] overflow-y-auto pr-1">
                             <Accordion type="single" collapsible className="w-full">
-                              {flightsData.flights.map((flight: any, index: number) => (
+                              {deferredFlightsData.flights.map((flight: any, index: number) => (
                               <AccordionItem key={flight.call_sign || index} value={`flight-${index}`} className="border-b-0">
                                 <AccordionTrigger className="py-2 hover:no-underline">
                                   <div className="flex items-center gap-2 text-xs">
@@ -969,6 +972,7 @@ export function VariablePicker({
             </div>
           )}
         </div>
+        )}
       </CardContent>
     </Card>
       

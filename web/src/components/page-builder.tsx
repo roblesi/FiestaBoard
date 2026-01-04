@@ -752,22 +752,49 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
 
       {/* Mobile Variable Picker Sheet */}
       <Sheet open={showMobileVariablePicker} onOpenChange={setShowMobileVariablePicker}>
-        <SheetContent side="bottom" className="h-[70vh] p-0">
-          <SheetHeader className="px-4 py-3 border-b">
-            <SheetTitle>Template Variables</SheetTitle>
-            <SheetDescription>
-              Tap a variable to insert it at Line {(activeLineIndex ?? 0) + 1}
-            </SheetDescription>
+        <SheetContent 
+          side="bottom" 
+          className="h-[95vh] max-h-[95vh] p-0 flex flex-col overflow-hidden rounded-t-2xl [&>button]:hidden"
+        >
+          {/* Drag handle */}
+          <div className="flex-shrink-0 pt-3 pb-2 flex justify-center">
+            <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full" />
+          </div>
+          
+          <SheetHeader className="flex-shrink-0 px-4 py-2 border-b">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <SheetTitle>Template Variables</SheetTitle>
+                <SheetDescription className="text-xs mt-1">
+                  Tap a variable to insert it at Line {(activeLineIndex ?? 0) + 1}
+                </SheetDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 -mr-2"
+                onClick={() => setShowMobileVariablePicker(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </SheetHeader>
-          <div className="flex-1 overflow-y-auto p-4">
-            <VariablePicker 
-              onInsert={(text) => {
-                insertAtEnd(text);
-                setShowMobileVariablePicker(false);
-              }}
-              showColors={true}
-              showSymbols={false}
-            />
+          
+          {/* Scrollable content area */}
+          <div 
+            className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
+            <div className="p-4">
+              <VariablePicker 
+                onInsert={(text) => {
+                  insertAtEnd(text);
+                  setShowMobileVariablePicker(false);
+                }}
+                showColors={true}
+                showSymbols={false}
+              />
+            </div>
           </div>
         </SheetContent>
       </Sheet>

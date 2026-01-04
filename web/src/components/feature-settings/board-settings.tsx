@@ -7,14 +7,19 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Monitor, Eye, EyeOff, AlertCircle, Check } from "lucide-react";
+import { Monitor, Eye, EyeOff, AlertCircle, Check, Key, KeyRound, Loader2 } from "lucide-react";
 import { api, BoardConfig } from "@/lib/api";
+
+type LocalKeyMode = "api_key" | "enablement_token";
 
 export function BoardSettings() {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState<Partial<BoardConfig>>({});
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const [hasChanges, setHasChanges] = useState(false);
+  const [localKeyMode, setLocalKeyMode] = useState<LocalKeyMode>("api_key");
+  const [enablementToken, setEnablementToken] = useState("");
+  const [isEnabling, setIsEnabling] = useState(false);
 
   // Fetch current config
   const { data: configData, isLoading } = useQuery({
@@ -55,6 +60,36 @@ export function BoardSettings() {
   // Handle save
   const handleSave = () => {
     updateMutation.mutate(formData);
+  };
+
+  // Handle enablement token exchange
+  const handleEnableLocalApi = async () => {
+    if (!formData.host || !enablementToken) {
+      toast.error("Board host and enablement token are required");
+      return;
+    }
+
+    setIsEnabling(true);
+    try {
+      const result = await api.enableLocalApi({
+        host: formData.host,
+        enablement_token: enablementToken,
+      });
+
+      if (result.success && result.api_key) {
+        // Update the form with the retrieved API key
+        handleChange("local_api_key", result.api_key);
+        setEnablementToken("");
+        setLocalKeyMode("api_key");
+        toast.success("Local API enabled! API key retrieved and saved.");
+      } else {
+        toast.error(result.message || "Failed to enable local API");
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to enable local API");
+    } finally {
+      setIsEnabling(false);
+    }
   };
 
   // Auto-save when form data changes (debounced)
@@ -164,48 +199,7 @@ export function BoardSettings() {
         {/* Local API Fields */}
         {apiMode === "local" && (
           <>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium">
-                Local API Key <span className="text-destructive">*</span>
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type={showSecrets.local_api_key ? "text" : "password"}
-                  value={
-                    formData.local_api_key === "***"
-                      ? ""
-                      : (formData.local_api_key ?? "")
-                  }
-                  onChange={(e) => handleChange("local_api_key", e.target.value)}
-                  placeholder={hasLocalKey ? "••••••••••• (value set)" : "Enter your local API key"}
-                  className="flex-1 h-9 px-3 text-sm rounded-md border bg-background font-mono"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setShowSecrets((prev) => ({
-                      ...prev,
-                      local_api_key: !prev.local_api_key,
-                    }))
-                  }
-                  className="h-9 w-9 p-0"
-                  disabled={formData.local_api_key === "***"}
-                  title={formData.local_api_key === "***" ? "Cannot reveal server-stored values" : "Toggle visibility"}
-                >
-                  {showSecrets.local_api_key ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Found in your board app under Settings → Integrations → Local API
-              </p>
-            </div>
-
+            {/* Board Host - always needed for local */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium">
                 Board Host <span className="text-destructive">*</span>
@@ -221,6 +215,136 @@ export function BoardSettings() {
                 IP address or hostname of your board
               </p>
             </div>
+
+            {/* Local Key Mode Toggle */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium">Authentication Method</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setLocalKeyMode("api_key")}
+                  className={`flex items-center justify-center gap-1.5 p-2 rounded-md border text-xs transition-colors ${
+                    localKeyMode === "api_key"
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-muted hover:border-primary/50 text-muted-foreground"
+                  }`}
+                >
+                  <Key className="h-3.5 w-3.5" />
+                  <span>API Key</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLocalKeyMode("enablement_token")}
+                  className={`flex items-center justify-center gap-1.5 p-2 rounded-md border text-xs transition-colors ${
+                    localKeyMode === "enablement_token"
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-muted hover:border-primary/50 text-muted-foreground"
+                  }`}
+                >
+                  <KeyRound className="h-3.5 w-3.5" />
+                  <span>Enablement Token</span>
+                </button>
+              </div>
+            </div>
+
+            {localKeyMode === "api_key" ? (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium">
+                  Local API Key <span className="text-destructive">*</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type={showSecrets.local_api_key ? "text" : "password"}
+                    value={
+                      formData.local_api_key === "***"
+                        ? ""
+                        : (formData.local_api_key ?? "")
+                    }
+                    onChange={(e) => handleChange("local_api_key", e.target.value)}
+                    placeholder={hasLocalKey ? "••••••••••• (value set)" : "Enter your local API key"}
+                    className="flex-1 h-9 px-3 text-sm rounded-md border bg-background font-mono"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setShowSecrets((prev) => ({
+                        ...prev,
+                        local_api_key: !prev.local_api_key,
+                      }))
+                    }
+                    className="h-9 w-9 p-0"
+                    disabled={formData.local_api_key === "***"}
+                    title={formData.local_api_key === "***" ? "Cannot reveal server-stored values" : "Toggle visibility"}
+                  >
+                    {showSecrets.local_api_key ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Email support@vestaboard.com to request your Local API Key
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium">
+                    Enablement Token
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type={showSecrets.enablement_token ? "text" : "password"}
+                      value={enablementToken}
+                      onChange={(e) => setEnablementToken(e.target.value)}
+                      placeholder="Token from Vestaboard support"
+                      className="flex-1 h-9 px-3 text-sm rounded-md border bg-background font-mono"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setShowSecrets((prev) => ({
+                          ...prev,
+                          enablement_token: !prev.enablement_token,
+                        }))
+                      }
+                      className="h-9 w-9 p-0"
+                    >
+                      {showSecrets.enablement_token ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Email support@vestaboard.com for an enablement token
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleEnableLocalApi}
+                  disabled={!formData.host || !enablementToken || isEnabling}
+                  className="w-full"
+                >
+                  {isEnabling ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                      Enabling...
+                    </>
+                  ) : (
+                    "Get API Key from Board"
+                  )}
+                </Button>
+              </div>
+            )}
           </>
         )}
 

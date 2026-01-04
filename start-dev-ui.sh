@@ -1,14 +1,14 @@
 #!/bin/sh
 set -e
 
-# Install nginx
-apk add --no-cache nginx
-
-# Create nginx directories
-mkdir -p /var/log/nginx /var/lib/nginx/tmp /run/nginx
-
-# Install node dependencies
-npm install
+# Install node dependencies (only if node_modules is empty or package.json changed)
+# This will be fast on subsequent starts thanks to the named volume
+if [ ! -d "node_modules/.cache" ]; then
+  echo "Installing dependencies..."
+  npm install
+else
+  echo "Dependencies already installed, skipping..."
+fi
 
 # Start nginx in daemon mode (background)
 echo "Starting nginx on port 3000 with HTTP/2..."

@@ -2,11 +2,14 @@
 
 import { BoardSettings } from "@/components/feature-settings/board-settings";
 import { GeneralSettings } from "@/components/general-settings";
+import { useWizard } from "@/components/wizard-provider";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Puzzle } from "lucide-react";
+import { Puzzle, Wand2 } from "lucide-react";
 
 export default function SettingsPage() {
+  const { triggerWizard } = useWizard();
+
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
       <div className="container mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 max-w-full">
@@ -44,6 +47,18 @@ export default function SettingsPage() {
                 Manage Integrations
               </Button>
             </Link>
+          </section>
+
+          {/* Setup Wizard - at the bottom */}
+          <section className="pt-4 border-t">
+            <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Setup Wizard</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Re-run the setup wizard to reconfigure your board connection and basic settings.
+            </p>
+            <Button variant="outline" onClick={triggerWizard} className="gap-2">
+              <Wand2 className="h-4 w-4" />
+              Run Setup Wizard
+            </Button>
           </section>
         </div>
       </div>

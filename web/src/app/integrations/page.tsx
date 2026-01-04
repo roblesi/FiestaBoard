@@ -1313,7 +1313,7 @@ export default function IntegrationsPage() {
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
       <div className="container mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 max-w-full">
-        {/* Header */}
+        {/* Header - Always visible */}
         <div className="mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-3">
             <Puzzle className="h-7 w-7 text-primary" />
@@ -1324,21 +1324,34 @@ export default function IntegrationsPage() {
           </p>
         </div>
 
-        {/* Stats Bar */}
-        {data && (
-          <div className="flex gap-4 mb-6">
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Total:</span>
-              <Badge variant="outline">{data.total}</Badge>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Enabled:</span>
-              <Badge variant="default">{data.enabled_count}</Badge>
-            </div>
-          </div>
-        )}
+        {/* Stats Bar - Progressive loading */}
+        <div className="flex gap-4 mb-6">
+          {isLoading ? (
+            <>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Total:</span>
+                <Skeleton className="h-5 w-8" />
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Enabled:</span>
+                <Skeleton className="h-5 w-8" />
+              </div>
+            </>
+          ) : data ? (
+            <>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Total:</span>
+                <Badge variant="outline">{data.total}</Badge>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Enabled:</span>
+                <Badge variant="default">{data.enabled_count}</Badge>
+              </div>
+            </>
+          ) : null}
+        </div>
 
-        {/* Content */}
+        {/* Content - Progressive loading */}
         {isLoading ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[...Array(6)].map((_, i) => (

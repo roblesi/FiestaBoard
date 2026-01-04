@@ -30,14 +30,17 @@ services:
 
   # Web UI - Development mode with HMR and HTTP/2
   fiestaboard-ui-dev:
-    image: node:20-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.ui-dev
+    image: fiestaboard-ui-dev:latest
     container_name: fiestaboard-ui-dev
     working_dir: /app
     volumes:
       - ./web:/app
       - ./nginx-dev.conf:/etc/nginx/nginx.conf:ro
       - ./start-dev-ui.sh:/start-dev-ui.sh:ro
-      - /app/node_modules  # Anonymous volume to preserve node_modules
+      - fiestaboard-ui-node-modules:/app/node_modules  # Named volume to persist node_modules
     ports:
       - "3000:3000"
     environment:
@@ -72,4 +75,5 @@ services:
         max-file: "3"
 
 volumes:
+  fiestaboard-ui-node-modules:
   fiestaboard-storybook-node-modules:
