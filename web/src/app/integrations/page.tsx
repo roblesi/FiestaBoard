@@ -19,7 +19,7 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { SchemaForm } from "@/components/plugin-settings";
-import { VESTABOARD_COLORS, AVAILABLE_COLORS, VestaboardColorName } from "@/lib/vestaboard-colors";
+import { FIESTABOARD_COLORS, AVAILABLE_COLORS, FiestaboardColorName } from "@/lib/board-colors";
 import { toast } from "sonner";
 import {
   Cloud,
@@ -588,16 +588,16 @@ function getPluginIcon(iconName?: string): LucideIcon {
   return ICON_MAP[normalized] || Puzzle;
 }
 
-// Color display helpers - using Vestaboard's official colors
-const COLOR_DISPLAY: Record<VestaboardColorName, { bg: string; text: string; hex: string }> = {
-  red: { bg: "bg-vesta-red", text: "text-white", hex: VESTABOARD_COLORS.red },
-  orange: { bg: "bg-vesta-orange", text: "text-white", hex: VESTABOARD_COLORS.orange },
-  yellow: { bg: "bg-vesta-yellow", text: "text-black", hex: VESTABOARD_COLORS.yellow },
-  green: { bg: "bg-vesta-green", text: "text-white", hex: VESTABOARD_COLORS.green },
-  blue: { bg: "bg-vesta-blue", text: "text-white", hex: VESTABOARD_COLORS.blue },
-  violet: { bg: "bg-vesta-violet", text: "text-white", hex: VESTABOARD_COLORS.violet },
-  white: { bg: "bg-vesta-white border", text: "text-black", hex: VESTABOARD_COLORS.white },
-  black: { bg: "bg-vesta-black", text: "text-white", hex: VESTABOARD_COLORS.black },
+// Color display helpers - using board's official colors
+const COLOR_DISPLAY: Record<FiestaboardColorName, { bg: string; text: string; hex: string }> = {
+  red: { bg: "bg-fiesta-red", text: "text-white", hex: FIESTABOARD_COLORS.red },
+  orange: { bg: "bg-fiesta-orange", text: "text-white", hex: FIESTABOARD_COLORS.orange },
+  yellow: { bg: "bg-fiesta-yellow", text: "text-black", hex: FIESTABOARD_COLORS.yellow },
+  green: { bg: "bg-fiesta-green", text: "text-white", hex: FIESTABOARD_COLORS.green },
+  blue: { bg: "bg-fiesta-blue", text: "text-white", hex: FIESTABOARD_COLORS.blue },
+  violet: { bg: "bg-fiesta-violet", text: "text-white", hex: FIESTABOARD_COLORS.violet },
+  white: { bg: "bg-fiesta-white border", text: "text-black", hex: FIESTABOARD_COLORS.white },
+  black: { bg: "bg-fiesta-black", text: "text-white", hex: FIESTABOARD_COLORS.black },
 };
 
 // Available conditions for color rules
@@ -770,7 +770,7 @@ function ColorRulesEditor({
                 {/* Rules */}
                 <div className="divide-y">
                   {rules.map((rule, idx) => {
-                    const colorStyle = COLOR_DISPLAY[rule.color as VestaboardColorName] || { bg: "bg-gray-500", text: "text-white", hex: "#6b7280" };
+                    const colorStyle = COLOR_DISPLAY[rule.color as FiestaboardColorName] || { bg: "bg-gray-500", text: "text-white", hex: "#6b7280" };
                     return (
                       <div key={idx} className="px-3 py-2 flex items-center gap-2 text-xs">
                         {/* Reorder buttons */}

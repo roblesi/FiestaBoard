@@ -154,7 +154,7 @@ export function PageSelector({ onCreateNew, onEditPage }: PageSelectorProps) {
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            <div className="p-3 sm:p-4 font-mono text-xs sm:text-sm text-vesta-green leading-relaxed overflow-x-auto">
+            <div className="p-3 sm:p-4 font-mono text-xs sm:text-sm text-fiesta-green leading-relaxed overflow-x-auto">
               {previewData.lines.map((line, i) => (
                 <div key={i} className="min-h-6 flex items-start">
                   <span className="text-gray-600 w-4 text-right mr-3 text-xs">{i + 1}</span>

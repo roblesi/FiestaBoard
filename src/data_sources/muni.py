@@ -15,7 +15,7 @@ from .transit_cache import get_transit_cache
 logger = logging.getLogger(__name__)
 
 
-# Vestaboard color codes
+# Board color codes
 COLOR_RED = 63    # Delay indicator
 COLOR_ORANGE = 64  # Full occupancy indicator
 
@@ -72,7 +72,7 @@ class MuniSource:
                 "is_delayed": bool,        # Any vehicle delayed
                 "delay_description": str,  # Delay reason text
                 "formatted": str,          # Pre-formatted display string
-                "color_code": int,         # Vestaboard color code (63=red, 64=orange, 0=none)
+                "color_code": int,         # Board color code (63=red, 64=orange, 0=none)
             }
         """
         if not self.stop_codes:
@@ -402,7 +402,7 @@ class MuniSource:
     
     def _format_display(self, line: str, arrivals: List[Dict], is_delayed: bool) -> str:
         """
-        Format arrival data for Vestaboard display.
+        Format arrival data for board display.
         
         Format: "N-JUDAH: 4, 12, 19 MIN (DELAY)"
         

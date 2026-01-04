@@ -22,10 +22,10 @@ logger = logging.getLogger(__name__)
 PREVIEW_CACHE_TTL = 300
 
 
-# Default welcome page template (6 lines for Vestaboard)
+# Default welcome page template (6 lines for board)
 DEFAULT_PAGE_TEMPLATE = [
     "      Welcome to      ",
-    "      Vestaboard      ",
+    "     FiestaBoard      ",
     "                      ",
     "   Create a new page  ",
     "    to get started    ",

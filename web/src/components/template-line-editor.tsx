@@ -3,7 +3,7 @@
 import { useRef, useEffect, useCallback, useState, useLayoutEffect, KeyboardEvent, DragEvent } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { VESTABOARD_COLORS } from "@/lib/vestaboard-colors";
+import { FIESTABOARD_COLORS } from "@/lib/board-colors";
 
 // Segment types for parsed template
 export type SegmentType = "text" | "variable" | "color";
@@ -18,16 +18,16 @@ export interface Segment {
 // Special values: -1 = before all content, Infinity = after all content
 type CursorCharPosition = number;
 
-// Color name to CSS color mapping with contrast info - uses Vestaboard's official colors
+// Color name to CSS color mapping with contrast info - uses board's official colors
 const COLOR_MAP: Record<string, { bg: string; needsDarkX: boolean }> = {
-  red: { bg: VESTABOARD_COLORS.red, needsDarkX: false },
-  orange: { bg: VESTABOARD_COLORS.orange, needsDarkX: false },
-  yellow: { bg: VESTABOARD_COLORS.yellow, needsDarkX: true },
-  green: { bg: VESTABOARD_COLORS.green, needsDarkX: true },
-  blue: { bg: VESTABOARD_COLORS.blue, needsDarkX: false },
-  violet: { bg: VESTABOARD_COLORS.violet, needsDarkX: false },
-  white: { bg: VESTABOARD_COLORS.white, needsDarkX: true },
-  black: { bg: VESTABOARD_COLORS.black, needsDarkX: false },
+  red: { bg: FIESTABOARD_COLORS.red, needsDarkX: false },
+  orange: { bg: FIESTABOARD_COLORS.orange, needsDarkX: false },
+  yellow: { bg: FIESTABOARD_COLORS.yellow, needsDarkX: true },
+  green: { bg: FIESTABOARD_COLORS.green, needsDarkX: true },
+  blue: { bg: FIESTABOARD_COLORS.blue, needsDarkX: false },
+  violet: { bg: FIESTABOARD_COLORS.violet, needsDarkX: false },
+  white: { bg: FIESTABOARD_COLORS.white, needsDarkX: true },
+  black: { bg: FIESTABOARD_COLORS.black, needsDarkX: false },
 };
 
 // Known color names for parsing

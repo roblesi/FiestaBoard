@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useTransition, useRef, useDeferredValue, useCallback, useState } from "react";
-import { useActivePage, useSetActivePage, usePagePreview, usePages, useBoardSettings } from "@/hooks/use-vestaboard";
+import { useActivePage, useSetActivePage, usePagePreview, usePages, useBoardSettings } from "@/hooks/use-board";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Moon, ArrowLeftRight } from "lucide-react";
-import { VestaboardDisplay } from "@/components/vestaboard-display";
+import { BoardDisplay } from "@/components/board-display";
 import { useQuery } from "@tanstack/react-query";
 import type { SilenceStatus } from "@/lib/api";
 import { api } from "@/lib/api";
@@ -275,7 +275,7 @@ export function ActivePageDisplay() {
         
         <CardContent className="flex justify-center overflow-x-hidden px-2">
           {/* Board Frame */}
-          <VestaboardDisplay 
+          <BoardDisplay 
             message={displayMessage} 
             isLoading={isLoadingPreview || (!!activePageId && !previewData)}
             size="md"

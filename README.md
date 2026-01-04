@@ -105,24 +105,6 @@ FiestaBoard uses a **plugin architecture** - each feature is a self-contained pl
 - Weather API key (WeatherAPI.com recommended)
 - (Optional) Home Assistant server with access token
 
-### GitHub Codespaces (Recommended for Development)
-
-If you're using GitHub Codespaces:
-
-1. **Add Codespaces secrets** to your repository:
-   - Go to **Settings** → **Secrets and variables** → **Codespaces**
-   - Add `BOARD_READ_WRITE_KEY` (your board API key)
-   - Add `WEATHER_API_KEY` (your Weather API key)
-
-2. **Launch a Codespace** from your repository
-
-3. **Run the setup script**:
-   ```bash
-   ./scripts/codespaces_setup.sh
-   ```
-
-See [CODESPACES_SETUP.md](./docs/setup/CODESPACES_SETUP.md) for detailed instructions.
-
 ### Basic Setup
 
 1. **Clone or navigate to the project directory**
@@ -338,7 +320,6 @@ See deployment guides for detailed instructions.
 - **[Beginner's Guide](./docs/setup/BEGINNERS_GUIDE.md)**: Step-by-step setup for non-technical users
 - **[Local Development](./docs/setup/LOCAL_DEVELOPMENT.md)**: Development environment setup
 - **[Docker Setup](./docs/setup/DOCKER_SETUP.md)**: Docker configuration details
-- **[GitHub Codespaces](./docs/setup/CODESPACES_SETUP.md)**: Cloud development setup
 - **[Cloud API Setup](./docs/setup/CLOUD_API_SETUP.md)**: Production API configuration
 
 ### Plugin Documentation

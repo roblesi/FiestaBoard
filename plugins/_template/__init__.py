@@ -116,7 +116,7 @@ class MyPlugin(PluginBase):
         Format data for display on the board.
         
         This method creates a pre-formatted string that can be
-        displayed directly on the Vestaboard.
+        displayed directly on the board.
         
         Args:
             data: The fetched data

@@ -176,9 +176,9 @@ class SettingsService:
         # Fall back to env
         from ..config import Config
         return TransitionSettings(
-            strategy=Config.VB_TRANSITION_STRATEGY,
-            step_interval_ms=Config.VB_TRANSITION_INTERVAL_MS,
-            step_size=Config.VB_TRANSITION_STEP_SIZE
+            strategy=Config.FB_TRANSITION_STRATEGY,
+            step_interval_ms=Config.FB_TRANSITION_INTERVAL_MS,
+            step_size=Config.FB_TRANSITION_STEP_SIZE
         )
     
     def _load_output_settings(self) -> OutputSettings:

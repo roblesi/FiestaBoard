@@ -361,4 +361,4 @@ class BoardClient:
 
 
 # Backward compatibility aliases
-VestaboardClient = BoardClient
+FiestaboardClient = BoardClient

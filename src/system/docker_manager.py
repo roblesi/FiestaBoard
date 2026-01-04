@@ -42,14 +42,14 @@ class DockerManager:
         
         try:
             containers = self.client.containers.list(all=True)
-            vesta_containers = [c for c in containers if 'vestaboard' in c.name.lower()]
+            fiesta_containers = [c for c in containers if 'fiestaboard' in c.name.lower()]
             
             status = {
                 "containers": [],
                 "timestamp": datetime.utcnow().isoformat() + "Z"
             }
             
-            for container in vesta_containers:
+            for container in fiesta_containers:
                 container_info = {
                     "name": container.name,
                     "status": container.status,
@@ -86,13 +86,13 @@ class DockerManager:
             containers = self.client.containers.list()
             
             if service_name == "all":
-                target_containers = [c for c in containers if 'vestaboard' in c.name.lower()]
+                target_containers = [c for c in containers if 'fiestaboard' in c.name.lower()]
                 container_names = [c.name for c in target_containers]
             else:
                 # Map service names to container names
                 service_map = {
-                    "api": "vestaboard-api",
-                    "ui": "vestaboard-ui"
+                    "api": "fiestaboard-api",
+                    "ui": "fiestaboard-ui"
                 }
                 container_name = service_map.get(service_name)
                 if not container_name:
@@ -131,14 +131,14 @@ class DockerManager:
             
             # Get all FiestaBoard containers
             containers = self.client.containers.list(all=True)
-            vesta_containers = [c for c in containers if 'vestaboard' in c.name.lower()]
+            fiesta_containers = [c for c in containers if 'fiestaboard' in c.name.lower()]
             
-            if not vesta_containers:
+            if not fiesta_containers:
                 raise RuntimeError("No FiestaBoard containers found")
             
             # Pull latest images for each container
             images_pulled = []
-            for container in vesta_containers:
+            for container in fiesta_containers:
                 image_name = container.image.tags[0] if container.image.tags else None
                 if image_name:
                     logger.info(f"Pulling latest image: {image_name}")
@@ -151,7 +151,7 @@ class DockerManager:
             # Restart containers to use new images
             if images_pulled:
                 logger.info("Images pulled, restarting containers...")
-                for container in vesta_containers:
+                for container in fiesta_containers:
                     container.restart(timeout=10)
                 
                 return {
@@ -185,9 +185,9 @@ class DockerManager:
             
             # Map service names to container names
             service_map = {
-                "api": "vestaboard-api",
-                "ui": "vestaboard-ui",
-                "all": "vestaboard"  # Will match both
+                "api": "fiestaboard-api",
+                "ui": "fiestaboard-ui",
+                "all": "fiestaboard"  # Will match both
             }
             
             search_term = service_map.get(service_name, service_name)

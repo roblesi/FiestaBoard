@@ -31,11 +31,11 @@ export const BOARD_COLORS = {
 } as const;
 
 // Backward compatibility alias
-export const VESTABOARD_COLORS = BOARD_COLORS;
+export const FIESTABOARD_COLORS = BOARD_COLORS;
 
 // Type for board color names
 export type BoardColorName = keyof typeof BOARD_COLORS;
-export type VestaboardColorName = BoardColorName;
+export type FiestaboardColorName = BoardColorName;
 
 // Numeric code to color mapping (for board API)
 export const COLOR_CODE_MAP: Record<string, string> = {
@@ -97,7 +97,7 @@ export function getBoardColor(nameOrCode: string): string {
 }
 
 // Backward compatibility alias
-export const getVestaboardColor = getBoardColor;
+export const getFiestaboardColor = getBoardColor;
 
 // Helper function to check if a string is a valid color
 export function isValidBoardColor(value: string): boolean {
@@ -106,4 +106,4 @@ export function isValidBoardColor(value: string): boolean {
 }
 
 // Backward compatibility alias
-export const isValidVestaboardColor = isValidBoardColor;
+export const isValidFiestaboardColor = isValidBoardColor;

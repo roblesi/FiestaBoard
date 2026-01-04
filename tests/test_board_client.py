@@ -54,7 +54,7 @@ class TestBoardClientInit:
         assert client.host == "192.168.0.11"
         assert client.skip_unchanged is True
         assert client.base_url == "http://192.168.0.11:7000/local-api/message"
-        assert "X-Vestaboard-Local-Api-Key" in client.headers
+        assert "X-Vestaboard-Local-Api-Key" in client.headers  # Official board API header
         assert client.headers["X-Vestaboard-Local-Api-Key"] == "test_key"
     
     def test_init_with_hostname(self):

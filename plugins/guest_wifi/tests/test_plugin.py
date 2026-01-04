@@ -26,7 +26,7 @@ class TestGuestWifiPlugin:
     def test_ssid_formatting(self):
         """Test SSID is properly formatted for display."""
         ssid = "MyGuestWiFi"
-        # SSID should not exceed Vestaboard line width (22 chars)
+        # SSID should not exceed board line width (22 chars)
         assert len(ssid) <= 22
     
     def test_password_formatting(self):
@@ -77,7 +77,7 @@ class TestGuestWifiDisplay:
     
     def test_display_lines_count(self):
         """Test that display uses appropriate number of lines."""
-        # Vestaboard has 6 lines
+        # Board has 6 lines
         max_lines = 6
         
         # Guest WiFi typically needs:
@@ -93,7 +93,7 @@ class TestGuestWifiDisplay:
     
     def test_line_length_constraint(self):
         """Test that all content fits within line length."""
-        max_chars = 22  # Vestaboard line width
+        max_chars = 22  # Board line width
         
         ssid = "TestNetwork"
         password = "Pass123"

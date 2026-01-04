@@ -1,2 +1,2 @@
-"""Message formatting modules for Vestaboard display."""
+"""Message formatting modules for board display."""
 

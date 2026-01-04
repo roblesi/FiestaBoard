@@ -1,6 +1,6 @@
 """Guest WiFi plugin for FiestaBoard.
 
-Displays guest WiFi credentials on your Vestaboard.
+Displays guest WiFi credentials on your board.
 """
 
 from typing import Any, Dict, List, Optional

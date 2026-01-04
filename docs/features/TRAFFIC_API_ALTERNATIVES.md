@@ -320,5 +320,5 @@ System automatically falls back to Google if HERE fails.
 
 - **HERE Support:** https://developer.here.com/help
 - **Google Support:** https://console.cloud.google.com/support
-- **Vesta Issues:** https://github.com/your-repo/issues
+- **Fiesta Issues:** https://github.com/your-repo/issues
 

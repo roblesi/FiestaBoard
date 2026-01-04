@@ -4,7 +4,7 @@ Display entity states from your Home Assistant instance.
 
 ## Overview
 
-The Home Assistant plugin connects to your Home Assistant instance and allows you to display any entity state on your Vestaboard. It supports dynamic entity access, so you can reference any entity by its ID.
+The Home Assistant plugin connects to your Home Assistant instance and allows you to display any entity state on your board. It supports dynamic entity access, so you can reference any entity by its ID.
 
 ## Features
 

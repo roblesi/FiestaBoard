@@ -1,6 +1,6 @@
 # Star Trek Quotes Setup
 
-Display inspiring Star Trek quotes from The Next Generation (TNG), Voyager (VOY), and Deep Space Nine (DS9) on your Vestaboard.
+Display inspiring Star Trek quotes from The Next Generation (TNG), Voyager (VOY), and Deep Space Nine (DS9) on your board.
 
 ## Overview
 
@@ -139,7 +139,7 @@ The system includes a curated collection of memorable quotes:
 
 ## Using Star Trek Quotes
 
-To display Star Trek quotes on your Vestaboard:
+To display Star Trek quotes on your board:
 
 1. Enable the feature in your `.env` file
 2. Create a page in the web UI using the `{{star_trek.quote}}` template variable
@@ -201,7 +201,7 @@ STAR_TREK_QUOTES_RATIO=3:5:9
 
 ### Quotes Too Long
 
-Quotes are automatically truncated to fit the 6x22 Vestaboard display. Long quotes are split across multiple lines.
+Quotes are automatically truncated to fit the 6x22 board display. Long quotes are split across multiple lines.
 
 ## Adding Custom Quotes
 

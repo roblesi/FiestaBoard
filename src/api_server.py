@@ -704,8 +704,8 @@ async def get_board_config():
 
 
 # Backward compatibility endpoint
-@app.get("/config/vestaboard")
-async def get_vestaboard_config_compat():
+@app.get("/config/board")
+async def get_board_config_compat():
     """Backward compatibility endpoint. Use /config/board instead."""
     return await get_board_config()
 
@@ -746,8 +746,8 @@ async def update_board_config(request: dict):
 
 
 # Backward compatibility endpoint
-@app.put("/config/vestaboard")
-async def update_vestaboard_config_compat(request: dict):
+@app.put("/config/board")
+async def update_board_config_compat(request: dict):
     """Backward compatibility endpoint. Use /config/board instead."""
     return await update_board_config(request)
 
@@ -924,7 +924,7 @@ async def enable_local_api(request: EnablementTokenRequest):
     """
     Exchange a Local API Enablement Token for a Local API Key.
     
-    Users must email Vestaboard support to receive an enablement token.
+    Users must email board support to receive an enablement token.
     This endpoint POSTs to the board to exchange it for the actual API key.
     
     Example body:
@@ -2734,7 +2734,7 @@ async def get_runtime_config():
     """Return runtime configuration for UI."""
     # Allow override via environment variable, default to same origin
     # Support both old and new variable names for backward compatibility
-    api_url = os.getenv("FIESTA_API_URL", os.getenv("VESTA_API_URL", ""))
+    api_url = os.getenv("FIESTA_API_URL", "")
     return {
         "apiUrl": api_url
     }

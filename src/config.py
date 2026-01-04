@@ -99,37 +99,37 @@ class Config:
     # Backward compatibility aliases
     @classmethod
     @property
-    def VB_API_MODE(cls) -> str:
+    def FB_API_MODE(cls) -> str:
         return cls.BOARD_API_MODE
     
     @classmethod
     @property
-    def VB_LOCAL_API_KEY(cls) -> str:
+    def FB_LOCAL_API_KEY(cls) -> str:
         return cls.BOARD_LOCAL_API_KEY
     
     @classmethod
     @property
-    def VB_READ_WRITE_KEY(cls) -> str:
+    def FB_READ_WRITE_KEY(cls) -> str:
         return cls.BOARD_READ_WRITE_KEY
     
     @classmethod
     @property
-    def VB_HOST(cls) -> str:
+    def FB_HOST(cls) -> str:
         return cls.BOARD_HOST
     
     @classmethod
     @property
-    def VB_TRANSITION_STRATEGY(cls) -> Optional[str]:
+    def FB_TRANSITION_STRATEGY(cls) -> Optional[str]:
         return cls.BOARD_TRANSITION_STRATEGY
     
     @classmethod
     @property
-    def VB_TRANSITION_INTERVAL_MS(cls) -> Optional[int]:
+    def FB_TRANSITION_INTERVAL_MS(cls) -> Optional[int]:
         return cls.BOARD_TRANSITION_INTERVAL_MS
     
     @classmethod
     @property
-    def VB_TRANSITION_STEP_SIZE(cls) -> Optional[int]:
+    def FB_TRANSITION_STEP_SIZE(cls) -> Optional[int]:
         return cls.BOARD_TRANSITION_STEP_SIZE
     
     @classmethod
@@ -736,9 +736,9 @@ class Config:
     def get_transition_settings(cls) -> Dict:
         """Get current transition settings."""
         return {
-            "strategy": cls.VB_TRANSITION_STRATEGY,
-            "step_interval_ms": cls.VB_TRANSITION_INTERVAL_MS,
-            "step_size": cls.VB_TRANSITION_STEP_SIZE,
+            "strategy": cls.FB_TRANSITION_STRATEGY,
+            "step_interval_ms": cls.FB_TRANSITION_INTERVAL_MS,
+            "step_size": cls.FB_TRANSITION_STEP_SIZE,
         }
     
     @classmethod

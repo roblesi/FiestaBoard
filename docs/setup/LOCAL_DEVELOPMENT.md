@@ -1,6 +1,6 @@
 # Local Development Guide
 
-This guide explains how to develop the Vestaboard Display Service locally using Docker.
+This guide explains how to develop the FiestaBoard Display Service locally using Docker.
 
 ## Prerequisites
 
@@ -160,11 +160,11 @@ docker-compose -f docker-compose.dev.yml down
 docker-compose -f docker-compose.dev.yml up --build
 ```
 
-### API Can't Connect to Vestaboard
+### API Can't Connect to Board
 
 - Check `/status` endpoint for service status
 - Verify `.env` file has valid API keys
-- Check network connectivity to Vestaboard
+- Check network connectivity to board
 
 ### UI Can't Connect to API
 

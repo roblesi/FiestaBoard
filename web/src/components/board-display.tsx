@@ -22,7 +22,7 @@ const BOARD_CHARS = [
 ];
 
 // Backward compatibility alias
-const VESTABOARD_CHARS = BOARD_CHARS;
+const FIESTABOARD_CHARS = BOARD_CHARS;
 
 // Check if a character is a color tile
 const isColorTile = (char: string) => {
@@ -632,7 +632,7 @@ interface BoardDisplayProps {
 }
 
 // Backward compatibility alias
-interface VestaboardDisplayProps extends BoardDisplayProps {}
+interface FiestaboardDisplayProps extends BoardDisplayProps {}
 
 export const BoardDisplay = memo(function BoardDisplay({ message, isLoading = false, size = "md", className = "", boardType = "black" }: BoardDisplayProps) {
   // Memoize grid calculation to avoid recalculating on every render
@@ -752,5 +752,5 @@ export const BoardDisplay = memo(function BoardDisplay({ message, isLoading = fa
 });
 
 // Backward compatibility alias
-export const VestaboardDisplay = BoardDisplay;
+export const FiestaboardDisplay = BoardDisplay;
 

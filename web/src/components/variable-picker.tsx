@@ -10,19 +10,19 @@ import { api } from "@/lib/api";
 import { ChevronDown, Bike, TrainFront, Car, Home, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { VESTABOARD_COLORS } from "@/lib/vestaboard-colors";
+import { FIESTABOARD_COLORS } from "@/lib/board-colors";
 import { HomeAssistantEntityPicker } from "./home-assistant-entity-picker";
 
-// Color mapping with contrast info - uses Vestaboard's official colors
+// Color mapping with contrast info - uses board's official colors
 const COLOR_MAP: Record<string, { bg: string; needsDarkText: boolean }> = {
-  red: { bg: VESTABOARD_COLORS.red, needsDarkText: false },
-  orange: { bg: VESTABOARD_COLORS.orange, needsDarkText: false },
-  yellow: { bg: VESTABOARD_COLORS.yellow, needsDarkText: true },
-  green: { bg: VESTABOARD_COLORS.green, needsDarkText: true },
-  blue: { bg: VESTABOARD_COLORS.blue, needsDarkText: false },
-  violet: { bg: VESTABOARD_COLORS.violet, needsDarkText: false },
-  white: { bg: VESTABOARD_COLORS.white, needsDarkText: true },
-  black: { bg: VESTABOARD_COLORS.black, needsDarkText: false },
+  red: { bg: FIESTABOARD_COLORS.red, needsDarkText: false },
+  orange: { bg: FIESTABOARD_COLORS.orange, needsDarkText: false },
+  yellow: { bg: FIESTABOARD_COLORS.yellow, needsDarkText: true },
+  green: { bg: FIESTABOARD_COLORS.green, needsDarkText: true },
+  blue: { bg: FIESTABOARD_COLORS.blue, needsDarkText: false },
+  violet: { bg: FIESTABOARD_COLORS.violet, needsDarkText: false },
+  white: { bg: FIESTABOARD_COLORS.white, needsDarkText: true },
+  black: { bg: FIESTABOARD_COLORS.black, needsDarkText: false },
 };
 
 interface VariablePickerProps {

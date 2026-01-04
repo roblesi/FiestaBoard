@@ -388,7 +388,7 @@ class AirFogSource:
         return " | ".join(alerts) if alerts else None
     
     def _format_message(self, data: Dict) -> str:
-        """Format data for Vestaboard display."""
+        """Format data for board display."""
         parts = []
         
         if data.get("pm2_5_aqi"):

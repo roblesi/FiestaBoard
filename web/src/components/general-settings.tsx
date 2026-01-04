@@ -15,7 +15,7 @@ import { Settings, Clock, FlaskConical, Moon, RefreshCw, AlertCircle } from "luc
 import { api } from "@/lib/api";
 import { TimezonePicker } from "@/components/ui/timezone-picker";
 import { formatInTimeZone } from "date-fns-tz";
-import { useStatus, useToggleDevMode } from "@/hooks/use-vestaboard";
+import { useStatus, useToggleDevMode } from "@/hooks/use-board";
 import { utcToLocalTime, localTimeToUTC } from "@/lib/timezone-utils";
 
 export function GeneralSettings() {

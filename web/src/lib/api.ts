@@ -289,7 +289,7 @@ export interface BoardConfig {
 }
 
 // Backward compatibility alias
-export type VestaboardConfig = BoardConfig;
+export type FiestaboardConfig = BoardConfig;
 
 // Utility types for API helper endpoints (station finder, stop finder, etc.)
 export interface MuniStop {
@@ -363,7 +363,7 @@ export interface FullConfig {
   general: GeneralConfig;
   plugins: Record<string, Record<string, unknown>>;
   // Backward compatibility alias (in case API returns old key)
-  vestaboard?: BoardConfig;
+  board?: BoardConfig;
 }
 
 export interface ConfigValidationResponse {
@@ -678,9 +678,9 @@ export const api = {
       body: JSON.stringify(config),
     }),
   // Backward compatibility aliases
-  getVestaboardConfig: () =>
+  getFiestaboardConfig: () =>
     fetchApi<{ config: BoardConfig; api_modes: string[] }>("/config/board"),
-  updateVestaboardConfig: (config: Partial<BoardConfig>) =>
+  updateFiestaboardConfig: (config: Partial<BoardConfig>) =>
     fetchApi<{ status: string; config: BoardConfig }>("/config/board", {
       method: "PUT",
       body: JSON.stringify(config),

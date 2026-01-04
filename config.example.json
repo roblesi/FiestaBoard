@@ -1,5 +1,5 @@
 {
-  "vestaboard": {
+  "board": {
     "api_mode": "local",
     "local_api_key": "your-local-api-key",
     "cloud_key": "",

@@ -143,7 +143,7 @@ Access specific stocks using index (0-4):
 {{stocks.stocks.0.change_percent}}  # Percentage change (e.g., "+1.18%")
 {{stocks.stocks.0.change_amount}}   # Dollar change (e.g., "+1.75")
 {{stocks.stocks.0.color}}           # Color name (green/red/white)
-{{stocks.stocks.0.color_code}}      # Vestaboard color code (66/63/69)
+{{stocks.stocks.0.color_code}}      # Board color code (66/63/69)
 ```
 
 ### Metadata

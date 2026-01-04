@@ -83,7 +83,7 @@ class TestQuoteFormatting:
     """Tests for quote formatting."""
     
     def test_quote_fits_display(self):
-        """Test that quotes fit within Vestaboard constraints."""
+        """Test that quotes fit within board constraints."""
         max_line_length = 22
         max_lines = 6
         

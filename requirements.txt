@@ -19,6 +19,6 @@ httpx>=0.25.0
 yfinance>=0.2.0
 finnhub-python>=2.4.0
 
-# Optional: Vestaboard Python library (alternative to manual implementation)
-# vesta>=0.1.0
+# Optional: Board Python library (alternative to manual implementation)
+# fiesta>=0.1.0
 

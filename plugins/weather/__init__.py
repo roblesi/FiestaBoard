@@ -160,7 +160,7 @@ class WeatherPlugin(PluginBase):
         if not data:
             return None
         
-        # Format for Vestaboard (22 chars per line, 6 lines)
+        # Format for board (22 chars per line, 6 lines)
         temp = data.get("temperature", "??")
         condition = data.get("condition", "Unknown")[:12]
         feels = data.get("feels_like", "??")

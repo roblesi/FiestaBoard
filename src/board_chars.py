@@ -310,4 +310,4 @@ def get_weather_symbol(condition: str) -> Dict[str, any]:
 
 
 # Backward compatibility aliases
-VestaboardChars = BoardChars
+FiestaboardChars = BoardChars
