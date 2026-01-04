@@ -4,6 +4,7 @@ import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/sonner";
 import { NavigationSidebar } from "@/components/navigation-sidebar";
 import { ConfigLoader } from "@/components/config-loader";
+import { WizardProvider } from "@/components/wizard-provider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -54,11 +55,13 @@ export default function RootLayout({
       >
         <Providers>
           <ConfigLoader>
-            <NavigationSidebar />
-            <main className="min-h-screen pt-14 lg:pt-0 lg:pl-64 overflow-x-hidden w-full max-w-full">
-              {children}
-            </main>
-            <Toaster />
+            <WizardProvider>
+              <NavigationSidebar />
+              <main className="min-h-screen pt-14 lg:pt-0 lg:pl-64 overflow-x-hidden w-full max-w-full">
+                {children}
+              </main>
+              <Toaster />
+            </WizardProvider>
           </ConfigLoader>
         </Providers>
       </body>

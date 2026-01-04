@@ -48,6 +48,33 @@ class DisplayService:
         logger.info(f"Received signal {signum}, shutting down gracefully...")
         self.running = False
     
+    def reinitialize_board_client(self) -> bool:
+        """Reinitialize the board client with current config.
+        
+        Called when board configuration changes to ensure the service
+        uses the updated credentials.
+        
+        Returns:
+            True if successful, False otherwise
+        """
+        logger.info("Reinitializing board client with updated config...")
+        
+        try:
+            use_cloud = Config.BOARD_API_MODE.lower() == "cloud"
+            self.vb_client = BoardClient(
+                api_key=Config.get_board_api_key(),
+                host=Config.BOARD_HOST if not use_cloud else None,
+                use_cloud=use_cloud,
+                skip_unchanged=True
+            )
+            # Sync cache with current board state
+            self.vb_client.read_current_message(sync_cache=True)
+            logger.info("Board client reinitialized successfully")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to reinitialize board client: {e}")
+            return False
+    
     def initialize(self) -> bool:
         """Initialize all components."""
         logger.info("Initializing FiestaBoard Display Service...")

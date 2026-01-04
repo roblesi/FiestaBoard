@@ -588,6 +588,92 @@ async def get_config():
     return Config.get_summary()
 
 
+@app.post("/send-welcome-message")
+async def send_welcome_message():
+    """
+    Send a colorful welcome message to the board.
+    
+    Used by the setup wizard to confirm the board is working.
+    Sends "HIYA FROM FIESTABOARD" with colorful borders.
+    
+    Note: This creates a fresh BoardClient with current config values
+    to ensure any recent config changes (e.g., from the setup wizard) are used.
+    """
+    from .board_client import BoardClient
+    
+    global _dev_mode
+    
+    if _dev_mode:
+        logger.info("[DEV MODE] Would send welcome message (not actually sending)")
+        return {
+            "status": "success", 
+            "message": "Welcome message previewed (dev mode enabled - not sent to board)",
+            "dev_mode": True
+        }
+    
+    # Check silence mode
+    if Config.is_silence_mode_active():
+        logger.info("Silence mode is active - blocking welcome message to prevent wake-up")
+        return {
+            "status": "blocked",
+            "message": "Welcome message blocked during silence mode",
+            "silence_mode": True
+        }
+    
+    # Create a fresh board client with current config values
+    # This ensures any config changes from the setup wizard are used
+    try:
+        use_cloud = Config.BOARD_API_MODE.lower() == "cloud"
+        board_client = BoardClient(
+            api_key=Config.get_board_api_key(),
+            host=Config.BOARD_HOST if not use_cloud else None,
+            use_cloud=use_cloud,
+            skip_unchanged=False  # Always send the welcome message
+        )
+    except ValueError as e:
+        logger.error(f"Failed to create board client: {e}")
+        raise HTTPException(status_code=503, detail=f"Board not configured: {str(e)}")
+    
+    try:
+        # Colorful welcome template (matches pages.json welcome page)
+        welcome_template = [
+            "{{red}}{{red}}{{orange}}{{yellow}}{{orange}}{{red}}{{violet}}{{red}}{{orange}}{{yellow}}{{red}}{{orange}}{{violet}}{{yellow}}{{red}}{{orange}}{{red}}{{yellow}}{{violet}}{{orange}}{{red}}{{yellow}}",
+            "{{orange}}{{yellow}}{{red}}{{violet}}{{yellow}}{{orange}}{{red}}{{yellow}}{{violet}}{{orange}}{{yellow}}{{red}}{{orange}}{{violet}}{{yellow}}{{orange}}{{red}}{{violet}}{{yellow}}{{red}}{{orange}}{{red}}",
+            "HIYA FROM FIESTABOARD",
+            "{{violet}}{{orange}}{{yellow}}{{red}}{{orange}}{{violet}}{{yellow}}{{orange}}{{red}}{{yellow}}{{red}}{{violet}}{{orange}}{{yellow}}{{violet}}{{red}}{{orange}}{{yellow}}{{orange}}{{red}}{{violet}}{{orange}}",
+            "{{red}}{{yellow}}{{orange}}{{violet}}{{red}}{{orange}}{{red}}{{violet}}{{yellow}}{{orange}}{{violet}}{{red}}{{yellow}}{{red}}{{orange}}{{violet}}{{yellow}}{{red}}{{violet}}{{orange}}{{yellow}}{{red}}",
+            "{{orange}}{{violet}}{{red}}{{yellow}}{{violet}}{{red}}{{orange}}{{yellow}}{{red}}{{red}}{{orange}}{{yellow}}{{violet}}{{orange}}{{red}}{{yellow}}{{orange}}{{red}}{{yellow}}{{violet}}{{red}}{{orange}}"
+        ]
+        
+        # Convert template to board array
+        welcome_text = "\n".join(welcome_template)
+        board_array = text_to_board_array(welcome_text)
+        
+        settings_service = get_settings_service()
+        transition = settings_service.get_transition_settings()
+        
+        success, was_sent = board_client.send_characters(
+            board_array,
+            strategy=transition.strategy,
+            step_interval_ms=transition.step_interval_ms,
+            step_size=transition.step_size,
+            force=True  # Force send even if cached
+        )
+        
+        if success:
+            if was_sent:
+                logger.info("Welcome message sent to board")
+                return {"status": "success", "message": "Welcome message sent to your board!"}
+            else:
+                return {"status": "success", "message": "Welcome message unchanged", "skipped": True}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to send welcome message")
+            
+    except Exception as e:
+        logger.error(f"Error sending welcome message: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to send welcome message: {str(e)}")
+
+
 # =============================================================================
 # Configuration Management Endpoints
 # =============================================================================
@@ -644,6 +730,11 @@ async def update_board_config(request: dict):
     # Reload config in the Config class
     Config.reload()
     
+    # Reinitialize the board client with new config
+    service = get_service()
+    if service:
+        service.reinitialize_board_client()
+    
     # Get updated config (masked)
     updated = config_manager.get_board()
     masked = config_manager._mask_sensitive(updated)
@@ -666,15 +757,267 @@ async def validate_config():
     """
     Validate the current configuration.
     
-    Returns validation status and any errors found.
+    Returns validation status, first-run detection, and any errors found.
+    Used by the setup wizard to determine if onboarding is needed.
     """
     config_manager = get_config_manager()
     is_valid, errors = config_manager.validate()
     
+    # Get board config to check first-run state
+    board_config = config_manager.get_board()
+    api_mode = board_config.get("api_mode", "local")
+    
+    # Detect first-run: no API key configured for the selected mode
+    is_first_run = False
+    missing_fields = []
+    
+    if api_mode == "cloud":
+        if not board_config.get("cloud_key"):
+            is_first_run = True
+            missing_fields.append("board.cloud_key")
+    else:  # local mode
+        if not board_config.get("local_api_key"):
+            is_first_run = True
+            missing_fields.append("board.local_api_key")
+        if not board_config.get("host"):
+            is_first_run = True
+            missing_fields.append("board.host")
+    
     return {
         "valid": is_valid,
-        "errors": errors
+        "is_first_run": is_first_run,
+        "errors": errors,
+        "missing_fields": missing_fields
     }
+
+
+class BoardTestRequest(BaseModel):
+    """Request model for testing board connection."""
+    api_mode: str = "local"
+    local_api_key: Optional[str] = None
+    cloud_key: Optional[str] = None
+    host: Optional[str] = None
+
+
+@app.post("/config/board/test")
+async def test_board_connection(request: BoardTestRequest):
+    """
+    Test board connection with provided credentials without saving.
+    
+    Used by the setup wizard to validate credentials before saving.
+    
+    Example body for Local API:
+    {
+        "api_mode": "local",
+        "local_api_key": "your-local-api-key",
+        "host": "192.168.1.100"
+    }
+    
+    Example body for Cloud API:
+    {
+        "api_mode": "cloud",
+        "cloud_key": "your-read-write-key"
+    }
+    
+    Returns:
+        success: Whether the connection test passed
+        message: Human-readable status message
+        error: Detailed error message if failed
+    """
+    from .board_client import BoardClient
+    
+    api_mode = request.api_mode.lower()
+    
+    # Validate required fields based on mode
+    if api_mode == "cloud":
+        if not request.cloud_key:
+            return {
+                "success": False,
+                "message": "Cloud API key is required",
+                "error": "Missing cloud_key parameter"
+            }
+        api_key = request.cloud_key
+        use_cloud = True
+        host = None
+    else:  # local mode
+        if not request.local_api_key:
+            return {
+                "success": False,
+                "message": "Local API key is required",
+                "error": "Missing local_api_key parameter"
+            }
+        if not request.host:
+            return {
+                "success": False,
+                "message": "Board host/IP is required for Local API",
+                "error": "Missing host parameter"
+            }
+        api_key = request.local_api_key
+        use_cloud = False
+        host = request.host
+    
+    try:
+        # Create temporary client with provided credentials
+        client = BoardClient(
+            api_key=api_key,
+            host=host,
+            use_cloud=use_cloud,
+            skip_unchanged=False
+        )
+        
+        # Test the connection by reading current message
+        result = client.read_current_message()
+        
+        if result is not None:
+            logger.info(f"Board connection test successful ({api_mode} mode)")
+            return {
+                "success": True,
+                "message": "Successfully connected to your board!",
+                "api_mode": api_mode
+            }
+        else:
+            logger.warning(f"Board connection test failed - no response ({api_mode} mode)")
+            return {
+                "success": False,
+                "message": "Could not read from board - please check your credentials",
+                "error": "Board returned no data"
+            }
+            
+    except ValueError as e:
+        # Invalid configuration (missing required fields)
+        logger.warning(f"Board connection test failed - invalid config: {e}")
+        return {
+            "success": False,
+            "message": str(e),
+            "error": f"Configuration error: {str(e)}"
+        }
+    except Exception as e:
+        # Network or other errors
+        error_msg = str(e)
+        
+        # Provide user-friendly error messages
+        if "Connection refused" in error_msg or "Failed to establish" in error_msg:
+            friendly_msg = "Could not connect to board. Please check the IP address and ensure the board is on the same network."
+        elif "401" in error_msg or "403" in error_msg or "Unauthorized" in error_msg:
+            friendly_msg = "Invalid API key. Please check your credentials."
+        elif "timeout" in error_msg.lower():
+            friendly_msg = "Connection timed out. Please check the IP address and network connection."
+        else:
+            friendly_msg = f"Connection failed: {error_msg}"
+        
+        logger.error(f"Board connection test error: {e}")
+        return {
+            "success": False,
+            "message": friendly_msg,
+            "error": error_msg
+        }
+
+
+class EnablementTokenRequest(BaseModel):
+    """Request model for exchanging enablement token for API key."""
+    host: str
+    enablement_token: str
+
+
+@app.post("/config/board/enable-local-api")
+async def enable_local_api(request: EnablementTokenRequest):
+    """
+    Exchange a Local API Enablement Token for a Local API Key.
+    
+    Users must email Vestaboard support to receive an enablement token.
+    This endpoint POSTs to the board to exchange it for the actual API key.
+    
+    Example body:
+    {
+        "host": "192.168.1.100",
+        "enablement_token": "your-enablement-token-from-support"
+    }
+    
+    Returns:
+        success: Whether the exchange was successful
+        api_key: The local API key (if successful)
+        message: Human-readable status message
+    """
+    import requests as http_requests
+    
+    if not request.host:
+        return {
+            "success": False,
+            "message": "Board IP address is required",
+            "error": "Missing host parameter"
+        }
+    
+    if not request.enablement_token:
+        return {
+            "success": False,
+            "message": "Enablement token is required",
+            "error": "Missing enablement_token parameter"
+        }
+    
+    # Build the URL for the local enablement endpoint
+    url = f"http://{request.host}:7000/local-api/enablement"
+    headers = {
+        "X-Vestaboard-Local-Api-Enablement-Token": request.enablement_token
+    }
+    
+    try:
+        logger.info(f"Attempting to enable local API on {request.host}")
+        response = http_requests.post(url, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            api_key = data.get("apiKey")
+            
+            if api_key:
+                logger.info(f"Successfully enabled local API on {request.host}")
+                return {
+                    "success": True,
+                    "api_key": api_key,
+                    "message": "Local API enabled successfully! Your API key has been retrieved."
+                }
+            else:
+                logger.warning(f"Local API enablement response missing apiKey: {data}")
+                return {
+                    "success": False,
+                    "message": "Received response but no API key was provided",
+                    "error": f"Response: {data}"
+                }
+        elif response.status_code == 401 or response.status_code == 403:
+            logger.warning(f"Local API enablement failed - invalid token")
+            return {
+                "success": False,
+                "message": "Invalid enablement token. Please check the token and try again.",
+                "error": f"HTTP {response.status_code}: Unauthorized"
+            }
+        else:
+            logger.warning(f"Local API enablement failed - HTTP {response.status_code}")
+            return {
+                "success": False,
+                "message": f"Board returned an error (HTTP {response.status_code})",
+                "error": response.text
+            }
+            
+    except http_requests.exceptions.ConnectionError as e:
+        logger.error(f"Local API enablement connection error: {e}")
+        return {
+            "success": False,
+            "message": "Could not connect to board. Please check the IP address and ensure the board is on the same network.",
+            "error": str(e)
+        }
+    except http_requests.exceptions.Timeout as e:
+        logger.error(f"Local API enablement timeout: {e}")
+        return {
+            "success": False,
+            "message": "Connection timed out. Please check the IP address and try again.",
+            "error": str(e)
+        }
+    except Exception as e:
+        logger.error(f"Local API enablement error: {e}")
+        return {
+            "success": False,
+            "message": f"Failed to enable local API: {str(e)}",
+            "error": str(e)
+        }
 
 
 @app.get("/config/general")
