@@ -6,7 +6,7 @@ This project uses a **two-container architecture**:
 
 1. **API Service** (`fiestaboard-api`) - FastAPI REST API server
    - Port: `8000`
-   - Controls the Vestaboard display service
+   - Controls the FiestaBoard display service
    - Provides REST endpoints for monitoring and control
 
 2. **Web UI** (`fiestaboard-ui`) - Nginx web server with HTML/JS interface
@@ -80,7 +80,7 @@ docker run -d \
 **Note**: The background display service starts automatically when the container starts. There's no need to manually start/stop it.
 
 ### Display Control
-- `POST /send-message` - Send custom message to Vestaboard
+- `POST /send-message` - Send custom message to board
   ```json
   {
     "text": "Your message here"
@@ -188,7 +188,7 @@ curl -X POST http://localhost:8000/send-message \
 
 Both services use the same `.env` file. Key variables:
 
-- `VB_READ_WRITE_KEY` - Vestaboard API key (required)
+- `FB_READ_WRITE_KEY` - Board API key (required)
 - `WEATHER_API_KEY` - Weather API key (required)
 - `WEATHER_PROVIDER` - "weatherapi" or "openweathermap"
 - And more... (see `env.example`)

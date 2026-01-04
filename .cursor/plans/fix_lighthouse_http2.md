@@ -162,9 +162,9 @@ Update [`web/src/app/layout.tsx`](web/src/app/layout.tsx):
 4. **Publish to GHCR**:
    - After successful local testing, publish updated images
    - Both `vestaboard-api` and `vestaboard-ui` have changes
-   - Deploy to NAS using `/deploy-to-nas` command
+   - Deploy to production environment
    - Run final Lighthouse test on deployed instance
-   - Test system management features on NAS
+   - Test system management features in production
 
 ## Expected Results
 
@@ -384,7 +384,7 @@ All destructive operations require confirmation:
 18. Test all system management features
 19. Run Lighthouse tests
 20. Publish images to GHCR
-21. Deploy to NAS
+21. Deploy to production environment
 
 ## Security Considerations
 

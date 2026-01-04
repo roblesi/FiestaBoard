@@ -128,7 +128,7 @@ def format_board_array_preview(board: List[List[int]]) -> str:
     lines = []
     
     # Character code to character mapping (reverse lookup)
-    # Based on official Vestaboard character codes
+    # Based on official board character codes
     code_to_char = {
         0: ' ',  # Blank/space
     }

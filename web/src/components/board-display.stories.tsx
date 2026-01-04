@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { VestaboardDisplay } from "./vestaboard-display";
+import { BoardDisplay } from "./board-display";
 import { useState, useEffect } from "react";
 
 const meta = {
-  title: "Components/VestaboardDisplay",
-  component: VestaboardDisplay,
+  title: "Components/BoardDisplay",
+  component: BoardDisplay,
   parameters: {
     layout: "centered",
   },
@@ -22,16 +22,16 @@ const meta = {
     boardType: {
       control: "select",
       options: ["black", "white"],
-      description: "Type of Vestaboard (black or white)",
+      description: "Type of board (black or white)",
     },
   },
-} satisfies Meta<typeof VestaboardDisplay>;
+} satisfies Meta<typeof BoardDisplay>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
 // Sample messages for different scenarios
-const simpleMessage = "HELLO WORLD\nWELCOME TO\nVESTABOARD";
+const simpleMessage = "HELLO WORLD\nWELCOME TO\nFIESTABOARD";
 
 const coloredMessage = `{red}BRUSH YOUR TEETH!{/red}
 {blue}SPENCER{/blue}
@@ -169,7 +169,7 @@ export const LoadingTransition = () => {
 
   const testMessage = `{red}HELLO WORLD{/red}
 WELCOME TO
-VESTABOARD
+FIESTABOARD
 {blue}52{/blue}°F {yellow}62{/yellow}°F CLOUDY
 {63}{64}{65}{66}{67}{68} SPLIT FLAP {63}{64}{65}{66}{67}{68}`;
 
@@ -196,7 +196,7 @@ VESTABOARD
 
   return (
     <div className="flex flex-col items-center gap-6">
-      <VestaboardDisplay
+      <BoardDisplay
         message={message}
         isLoading={isLoading}
         size="md"

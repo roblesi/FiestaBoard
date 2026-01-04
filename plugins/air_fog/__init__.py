@@ -250,7 +250,7 @@ class AirFogPlugin(PluginBase):
         )
     
     def _color_to_code(self, color: str) -> int:
-        """Convert color name to Vestaboard code."""
+        """Convert color name to board code."""
         color_map = {
             "GREEN": 66,
             "YELLOW": 65,

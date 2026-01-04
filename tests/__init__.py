@@ -1,4 +1,4 @@
-# Tests for Vestaboard Display Service
+# Tests for FiestaBoard Display Service
 
 
 

@@ -85,7 +85,7 @@ class TemplateEngine:
     
     Supports:
     - Variable substitution from plugin data sources
-    - Vestaboard color codes (inline and block)
+    - Board color codes (inline and block)
     - Symbol shortcuts
     - Text formatting filters
     - Dynamic colors based on plugin configuration rules
@@ -855,7 +855,7 @@ class TemplateEngine:
         Args:
             text: Rendered text (may contain color markers)
             alignment: 'left', 'center', or 'right'
-            width: Target width (default 22 for Vestaboard)
+            width: Target width (default 22 for board)
             
         Returns:
             Text padded/aligned to the specified width
@@ -887,7 +887,7 @@ class TemplateEngine:
         
         Args:
             text: Rendered text with fill_space markers
-            width: Target width (default 22 for Vestaboard)
+            width: Target width (default 22 for board)
             
         Returns:
             Text with fill_space markers replaced by appropriate padding

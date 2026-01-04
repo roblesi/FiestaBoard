@@ -418,5 +418,5 @@ export function BoardSettings() {
 }
 
 // Backward compatibility alias
-export const VestaboardSettings = BoardSettings;
+export const FiestaboardSettings = BoardSettings;
 

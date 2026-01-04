@@ -449,7 +449,7 @@ class TestAirFogSource:
         assert result["air_status"] == "AIR: UNHEALTHY"
     
     def test_format_message(self):
-        """Test message formatting for Vestaboard."""
+        """Test message formatting for board."""
         source = AirFogSource()
         data = {
             "pm2_5_aqi": 75,

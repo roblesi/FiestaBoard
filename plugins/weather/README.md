@@ -4,7 +4,7 @@ Display current weather conditions with temperature, humidity, and wind speed.
 
 ## Overview
 
-The Weather plugin fetches real-time weather data from WeatherAPI.com or OpenWeatherMap and makes it available as template variables for your Vestaboard.
+The Weather plugin fetches real-time weather data from WeatherAPI.com or OpenWeatherMap and makes it available as template variables for your board.
 
 ## Features
 

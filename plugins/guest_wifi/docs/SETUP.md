@@ -1,6 +1,6 @@
 # Guest WiFi Display Setup
 
-This feature displays your guest WiFi credentials on the Vestaboard, making it easy for guests to connect. When enabled, it takes **highest priority** and overrides all other displays.
+This feature displays your guest WiFi credentials on the board, making it easy for guests to connect. When enabled, it takes **highest priority** and overrides all other displays.
 
 ## Quick Toggle
 
@@ -47,7 +47,7 @@ docker-compose restart
 
 ## Display Format
 
-When enabled, the Vestaboard will show:
+When enabled, the board will show:
 
 ```
 Guest WiFi
@@ -80,7 +80,7 @@ The display priority is:
    docker-compose restart
    ```
 
-3. Vestaboard immediately shows WiFi credentials
+3. Board immediately shows WiFi credentials
 
 ### When Guests Leave
 
@@ -95,7 +95,7 @@ The display priority is:
    docker-compose restart
    ```
 
-3. Vestaboard returns to normal display (weather, music, etc.)
+3. Board returns to normal display (weather, music, etc.)
 
 ## Quick Toggle Script
 
@@ -125,8 +125,8 @@ docker-compose restart
 
 ⚠️ **Important Security Notes:**
 
-1. **Password Visibility**: The password is displayed in plain text on the Vestaboard
-2. **Network Access**: Anyone who can see the Vestaboard can see the credentials
+1. **Password Visibility**: The password is displayed in plain text on the board
+2. **Network Access**: Anyone who can see the board can see the credentials
 3. **Best Practices**:
    - Use a separate guest network (recommended)
    - Change the guest WiFi password regularly

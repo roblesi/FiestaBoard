@@ -145,7 +145,7 @@ class TestWeatherFormatting:
     
     def test_condition_fits_display(self):
         """Test weather condition fits display width."""
-        max_chars = 22  # Vestaboard line width
+        max_chars = 22  # Board line width
         
         conditions = ["Sunny", "Partly cloudy", "Rain", "Heavy rain"]
         for cond in conditions:

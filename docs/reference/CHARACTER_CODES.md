@@ -125,13 +125,13 @@ codes = BoardChars.text_to_codes("HELLO")
 
 2. **No true icons**: The board doesn't support graphical icons, so we use creative character combinations.
 
-3. **Color support**: The board supports colors via VBML (Board Markup Language), which could be used to enhance weather displays (e.g., yellow for sunny, blue for rain).
+3. **Color support**: The board supports colors via FBML (Board Markup Language), which could be used to enhance weather displays (e.g., yellow for sunny, blue for rain).
 
 4. **Extensibility**: The `get_weather_symbol()` function can be extended to support more conditions or use different character combinations.
 
 ## Future Enhancements
 
-- **VBML Integration**: Add color support for weather conditions
+- **FBML Integration**: Add color support for weather conditions
 - **Custom Symbols**: Create multi-character patterns for more complex weather icons
 - **Character Code Verification**: Verify codes against official board documentation
 - **Extended Weather Conditions**: Add support for more specific conditions (drizzle, sleet, etc.)
@@ -139,4 +139,4 @@ codes = BoardChars.text_to_codes("HELLO")
 ## References
 
 - [Board Documentation](https://docs.vestaboard.com/)
-- [VBML Documentation](https://docs.vestaboard.com/docs/vbml)
+- [FBML Documentation](https://docs.vestaboard.com/docs/vbml)

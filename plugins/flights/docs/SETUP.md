@@ -238,7 +238,7 @@ Or for more frequent updates, consider upgrading to a paid aviationstack plan:
 
 - [aviationstack API Documentation](https://aviationstack.com/documentation)
 - [aviationstack Dashboard](https://aviationstack.com/dashboard)
-- [Vestaboard Template Guide](../reference/TEMPLATES.md) (if available)
+- [FiestaBoard Template Guide](../reference/TEMPLATES.md) (if available)
 
 ## Support
 

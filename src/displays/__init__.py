@@ -1,4 +1,4 @@
-"""Display sources module for Vestaboard."""
+"""Display sources module for FiestaBoard."""
 
 from .service import DisplayService, DisplayResult, reset_display_service, get_display_service
 

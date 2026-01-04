@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useCallback, useMemo, useState, memo } from "react";
-import { usePages, useBoardSettings } from "@/hooks/use-vestaboard";
+import { usePages, useBoardSettings } from "@/hooks/use-board";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LayoutTemplate } from "lucide-react";
-import { VestaboardDisplay } from "@/components/vestaboard-display";
+import { BoardDisplay } from "@/components/board-display";
 import type { Page, PagePreviewResponse, PagePreviewBatchResponse } from "@/lib/api";
 import { api } from "@/lib/api";
 
 // Cache key for batch previews in localStorage
-const BATCH_CACHE_KEY = "vestaboard_previews_batch";
+const BATCH_CACHE_KEY = "fiestaboard_previews_batch";
 
 // Type for cached preview data
 interface CachedPreviewData {
@@ -134,7 +134,7 @@ const PageButtonPreview = memo(function PageButtonPreview({
         WebkitMaskImage: 'linear-gradient(to right, black 60%, transparent 100%)'
       }}
     >
-      <VestaboardDisplay 
+      <BoardDisplay 
         message={preview?.message || null} 
         isLoading={isLoading}
         size="sm"

@@ -1,6 +1,6 @@
 # Home Assistant Integration Setup
 
-This guide will help you integrate your Home Assistant server to display house status on your Vestaboard.
+This guide will help you integrate your Home Assistant server to display house status on your board.
 
 ## Overview
 
@@ -22,7 +22,7 @@ The Home Assistant integration displays real-time status of your home's sensors 
 2. Go to your **profile** (click your username in the bottom left)
 3. Scroll down to **Long-lived access tokens**
 4. Click **Create Token**
-5. Give it a name (e.g., "Vestaboard Display")
+5. Give it a name (e.g., "FiestaBoard Display")
 6. **Copy the token** - you'll need it for configuration
 
 ⚠️ **Important**: The token is only shown once. Save it securely!
@@ -72,7 +72,7 @@ HOME_ASSISTANT_REFRESH_SECONDS=30
 - `HOME_ASSISTANT_ACCESS_TOKEN`: Your long-lived access token
 - `HOME_ASSISTANT_ENTITIES`: JSON array of entities to monitor
   - Each entity needs `entity_id` and `name`
-  - `name` is what will be displayed on Vestaboard
+  - `name` is what will be displayed on board
 - `HOME_ASSISTANT_TIMEOUT`: API request timeout (default: 5 seconds)
 - `HOME_ASSISTANT_REFRESH_SECONDS`: How often to check status (default: 30 seconds)
 
@@ -131,7 +131,7 @@ docker-compose logs -f | grep -i "home\|assistant"
 
 ## Display Format
 
-The Vestaboard will show:
+The board will show:
 
 ```
 House Status
@@ -288,7 +288,7 @@ HOME_ASSISTANT_REFRESH_SECONDS=30
 
 Once configured:
 - ✅ Monitor logs to verify connection
-- ✅ Check Vestaboard for house status display
+- ✅ Check board for house status display
 - ✅ Adjust entity list as needed
 - ✅ Fine-tune refresh rates
 

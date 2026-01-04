@@ -1,6 +1,6 @@
 # Guest WiFi Plugin
 
-Display guest WiFi credentials on your Vestaboard.
+Display guest WiFi credentials on your board.
 
 ## Overview
 

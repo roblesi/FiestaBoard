@@ -1,6 +1,6 @@
 "use client";
 
-import { useConfig } from "@/hooks/use-vestaboard";
+import { useConfig } from "@/hooks/use-board";
 import { useConfigOverrides, ServiceKey } from "@/hooks/use-config-overrides";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -138,7 +138,7 @@ export function ConfigDisplay() {
                   variant={enabled ? "default" : "secondary"}
                   className={`ml-auto shrink-0 text-[10px] px-1.5 py-0.5 transition-all ${
                     enabled 
-                      ? "bg-vesta-green hover:bg-vesta-green" 
+                      ? "bg-fiesta-green hover:bg-fiesta-green" 
                       : ""
                   }`}
                 >

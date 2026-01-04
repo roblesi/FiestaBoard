@@ -1,6 +1,6 @@
 # Date & Time Plugin
 
-Display current date and time on your Vestaboard.
+Display current date and time on your board.
 
 ## Overview
 

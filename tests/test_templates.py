@@ -186,7 +186,7 @@ class TestValidation:
     
     def test_line_too_long_warning(self, engine):
         """Test warning for lines over 22 chars."""
-        long_text = "This line is way too long for vestaboard"
+        long_text = "This line is way too long for board"
         errors = engine.validate_template(long_text)
         assert any("too long" in e.message.lower() for e in errors)
 

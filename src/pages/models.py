@@ -45,7 +45,7 @@ class Page(BaseModel):
     
     # For template pages: 6 lines of template text
     # Templates can include {{variable}} syntax for dynamic data
-    # and {color} syntax for Vestaboard colors
+    # and {color} syntax for board colors
     template: Optional[List[str]] = None
     
     # Rotation settings

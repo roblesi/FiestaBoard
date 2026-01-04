@@ -1,12 +1,12 @@
-# Vestaboard Cloud API Setup
+# Board Cloud API Setup
 
-This guide explains how to use the Vestaboard Cloud (Read/Write) API as an alternative to the Local API.
+This guide explains how to use the Board Cloud (Read/Write) API as an alternative to the Local API.
 
 ## When to Use Cloud API
 
 Use Cloud API when:
-- **Local API is not enabled** on your Vestaboard
-- You want to control your Vestaboard **from outside your local network**
+- **Local API is not enabled** on your board
+- You want to control your board **from outside your local network**
 - You're waiting for your Local API key to be generated
 - Local API transitions aren't needed
 
@@ -22,7 +22,7 @@ Use Cloud API when:
 ### 1. Get Your Read/Write API Key
 
 1. Go to https://web.vestaboard.com
-2. Sign in with your Vestaboard account
+2. Sign in with your board account
 3. Navigate to **Settings** → **API** (or **Developer** section)
 4. Enable the **Read/Write API**
 5. Copy your Read/Write API key
@@ -33,14 +33,14 @@ Add these lines to your `.env` file:
 
 ```bash
 # Switch to Cloud API mode
-VB_API_MODE=cloud
+FB_API_MODE=cloud
 
 # Add your Read/Write API key
-VB_READ_WRITE_KEY=your_read_write_key_here
+FB_READ_WRITE_KEY=your_read_write_key_here
 
 # You can leave these empty when using Cloud mode:
-# VB_LOCAL_API_KEY=
-# VB_HOST=
+# FB_LOCAL_API_KEY=
+# FB_HOST=
 ```
 
 ### 3. Test the Cloud API
@@ -58,7 +58,7 @@ curl http://localhost:8000/health
 docker-compose -f docker-compose.dev.yml logs -f fiestaboard-api
 ```
 
-If successful, the API should connect to your Vestaboard without errors.
+If successful, the API should connect to your board without errors.
 
 ### 4. Restart Your Docker Containers
 
@@ -73,26 +73,26 @@ Or use the Cursor command:
 
 ## Switching Between Local and Cloud
 
-You can easily switch between Local and Cloud API by changing `VB_API_MODE`:
+You can easily switch between Local and Cloud API by changing `FB_API_MODE`:
 
 **Local API** (faster, with transitions):
 ```bash
-VB_API_MODE=local
-VB_LOCAL_API_KEY=your_local_key
-VB_HOST=192.168.0.11
+FB_API_MODE=local
+FB_LOCAL_API_KEY=your_local_key
+FB_HOST=192.168.0.11
 ```
 
 **Cloud API** (remote access):
 ```bash
-VB_API_MODE=cloud
-VB_READ_WRITE_KEY=your_read_write_key
+FB_API_MODE=cloud
+FB_READ_WRITE_KEY=your_read_write_key
 ```
 
 ## Troubleshooting
 
 ### "401 Unauthorized" Error
 
-- Check that your `VB_READ_WRITE_KEY` is correct
+- Check that your `FB_READ_WRITE_KEY` is correct
 - Make sure you copied the entire key (no spaces/newlines)
 - Verify Read/Write API is enabled in the web dashboard
 

@@ -176,7 +176,7 @@ class TestHomeAssistantDisplay:
     
     def test_max_display_length(self):
         """Test that display text fits within constraints."""
-        max_chars = 22  # Vestaboard line width
+        max_chars = 22  # Board line width
         
         entity_display = "Living Room: ON"
         assert len(entity_display) <= max_chars
@@ -189,6 +189,6 @@ class TestHomeAssistantDisplay:
             {"name": "Lock", "state": "LOCKED"}
         ]
         
-        # Should fit within 6 lines (Vestaboard)
+        # Should fit within 6 lines (board)
         assert len(entities) <= 6
 

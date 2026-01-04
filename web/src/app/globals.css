@@ -55,14 +55,14 @@
   --color-board-white: #ffffff;
   --color-board-black: #1a1a1a;
   /* Backward compatibility aliases */
-  --color-vesta-red: var(--color-board-red);
-  --color-vesta-orange: var(--color-board-orange);
-  --color-vesta-yellow: var(--color-board-yellow);
-  --color-vesta-green: var(--color-board-green);
-  --color-vesta-blue: var(--color-board-blue);
-  --color-vesta-violet: var(--color-board-violet);
-  --color-vesta-white: var(--color-board-white);
-  --color-vesta-black: var(--color-board-black);
+  --color-fiesta-red: var(--color-board-red);
+  --color-fiesta-orange: var(--color-board-orange);
+  --color-fiesta-yellow: var(--color-board-yellow);
+  --color-fiesta-green: var(--color-board-green);
+  --color-fiesta-blue: var(--color-board-blue);
+  --color-fiesta-violet: var(--color-board-violet);
+  --color-fiesta-white: var(--color-board-white);
+  --color-fiesta-black: var(--color-board-black);
 }
 
 :root {

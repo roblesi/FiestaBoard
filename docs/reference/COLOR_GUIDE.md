@@ -306,7 +306,7 @@ Potential color improvements:
 ## References
 
 - [Board Character Codes](https://docs.vestaboard.com/docs/charactercodes)
-- [VBML Documentation](https://docs.vestaboard.com/docs/vbml)
+- [FBML Documentation](https://docs.vestaboard.com/docs/vbml)
 - Project: `src/board_chars.py`
 - Project: `src/formatters/message_formatter.py`
 

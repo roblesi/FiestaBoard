@@ -19,7 +19,7 @@ class PluginResult:
         available: Whether the plugin is available and configured
         data: The fetched data dictionary (raw data for template variables)
         error: Error message if fetch failed
-        formatted_lines: Optional pre-formatted display lines (6 lines for Vestaboard)
+        formatted_lines: Optional pre-formatted display lines (6 lines for board)
     """
     available: bool
     data: Optional[Dict[str, Any]] = None
@@ -173,7 +173,7 @@ class PluginBase(ABC):
         This is used when showing the plugin as a "single" page type.
         
         Returns:
-            List of 6 strings for Vestaboard display, or None to use
+            List of 6 strings for board display, or None to use
             the template system for formatting.
         """
         return None

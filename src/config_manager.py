@@ -403,13 +403,13 @@ class ConfigManager:
         general_config = self._config["general"]
         
         # ==================== Board Configuration ====================
-        changed |= apply_str(board_config, "api_mode", "BOARD_API_MODE", "VB_API_MODE")
-        changed |= apply_str(board_config, "local_api_key", "BOARD_LOCAL_API_KEY", "VB_LOCAL_API_KEY")
-        changed |= apply_str(board_config, "host", "BOARD_HOST", "VB_HOST")
-        changed |= apply_str(board_config, "cloud_key", "BOARD_READ_WRITE_KEY", "VB_READ_WRITE_KEY")
-        changed |= apply_str(board_config, "transition_strategy", "BOARD_TRANSITION_STRATEGY", "VB_TRANSITION_STRATEGY")
-        changed |= apply_int(board_config, "transition_interval_ms", "BOARD_TRANSITION_INTERVAL_MS", "VB_TRANSITION_INTERVAL_MS")
-        changed |= apply_int(board_config, "transition_step_size", "BOARD_TRANSITION_STEP_SIZE", "VB_TRANSITION_STEP_SIZE")
+        changed |= apply_str(board_config, "api_mode", "BOARD_API_MODE", "FB_API_MODE")
+        changed |= apply_str(board_config, "local_api_key", "BOARD_LOCAL_API_KEY", "FB_LOCAL_API_KEY")
+        changed |= apply_str(board_config, "host", "BOARD_HOST", "FB_HOST")
+        changed |= apply_str(board_config, "cloud_key", "BOARD_READ_WRITE_KEY", "FB_READ_WRITE_KEY")
+        changed |= apply_str(board_config, "transition_strategy", "BOARD_TRANSITION_STRATEGY", "FB_TRANSITION_STRATEGY")
+        changed |= apply_int(board_config, "transition_interval_ms", "BOARD_TRANSITION_INTERVAL_MS", "FB_TRANSITION_INTERVAL_MS")
+        changed |= apply_int(board_config, "transition_step_size", "BOARD_TRANSITION_STEP_SIZE", "FB_TRANSITION_STEP_SIZE")
         
         # ==================== General Configuration ====================
         changed |= apply_str(general_config, "timezone", "TIMEZONE")
@@ -554,8 +554,8 @@ class ConfigManager:
     def get_board(self) -> Dict[str, Any]:
         """Get board configuration."""
         with self._file_lock:
-            # Support both old "vestaboard" and new "board" keys for migration
-            config = self._config.get("board") or self._config.get("vestaboard", {})
+            # Support both old "board_legacy" and new "board" keys for migration
+            config = self._config.get("board") or self._config.get("board_legacy", {})
             return self._deep_copy(config)
 
     def set_board(self, settings: Dict[str, Any]) -> None:
@@ -581,11 +581,11 @@ class ConfigManager:
         logger.info("Board settings updated")
 
     # Backward compatibility aliases
-    def get_vestaboard(self) -> Dict[str, Any]:
+    def get_board_legacy(self) -> Dict[str, Any]:
         """Backward compatibility alias for get_board()."""
         return self.get_board()
 
-    def set_vestaboard(self, settings: Dict[str, Any]) -> None:
+    def set_board_legacy(self, settings: Dict[str, Any]) -> None:
         """Backward compatibility alias for set_board()."""
         self.set_board(settings)
 
@@ -726,7 +726,7 @@ class ConfigManager:
         config = self.get_all()
         
         # Validate board settings (support both old and new key names)
-        board = config.get("board") or config.get("vestaboard", {})
+        board = config.get("board") or config.get("board_legacy", {})
         api_mode = board.get("api_mode", "local")
         
         if api_mode == "cloud":

@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { VariablePicker } from "@/components/variable-picker";
-import { VestaboardDisplay } from "@/components/vestaboard-display";
+import { BoardDisplay } from "@/components/board-display";
 import {
   Sheet,
   SheetContent,
@@ -41,7 +41,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { api, PageCreate, PageUpdate, PageType } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { useBoardSettings } from "@/hooks/use-vestaboard";
+import { useBoardSettings } from "@/hooks/use-board";
 
 // Transition strategy display names
 const STRATEGY_LABELS: Record<string, string> = {
@@ -530,7 +530,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
                             />
                             {warning.hasWarning && (
                               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none" title={`Line may render up to ${warning.maxLength} chars (max 22)`}>
-                                <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-vesta-yellow" />
+                                <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-fiesta-yellow" />
                               </div>
                             )}
                           </div>
@@ -595,7 +595,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
               <div className="mt-4">
                 <label className="text-xs sm:text-sm font-medium mb-2 block">Preview</label>
                 <div className="flex justify-center">
-                  <VestaboardDisplay 
+                  <BoardDisplay 
                     message={preview} 
                     isLoading={previewMutation.isPending}
                     size="md"

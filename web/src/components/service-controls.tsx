@@ -1,6 +1,6 @@
 "use client";
 
-import { useStatus, useToggleDevMode } from "@/hooks/use-vestaboard";
+import { useStatus, useToggleDevMode } from "@/hooks/use-board";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";

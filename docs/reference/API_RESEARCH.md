@@ -1,17 +1,17 @@
 # API Research Documentation
 
-This document contains detailed research findings for all APIs that will be integrated into the Vestaboard display service.
+This document contains detailed research findings for all APIs that will be integrated into the FiestaBoard display service.
 
-## 1. Vestaboard Read/Write API
+## 1. Board Read/Write API
 
 ### Authentication
 - **API Key Location**: Enable Read/Write API in the API tab on [web.vestaboard.com](https://web.vestaboard.com)
-- **Header Name**: `X-Vestaboard-Read-Write-Key`
+- **Header Name**: `X-Vestaboard-Read-Write-Key` (official board API header)
 - **Key Type**: Single Read/Write API key (not separate key/secret)
 - **Key Management**: 
   - Only one key allowed at a time
   - Can be disabled or regenerated at any time
-  - Key is specific to your Vestaboard
+  - Key is specific to your board
 
 ### Endpoints
 
@@ -58,11 +58,11 @@ This document contains detailed research findings for all APIs that will be inte
   - Plain text is automatically converted to character codes
   - For precise control, use character array format
   - Character codes are numeric (0-63+ for different characters/symbols)
-- **VBML**: Vestaboard Markup Language available for richer formatting
-- **Character Codes**: Reference table available in Vestaboard documentation
+- **FBML**: Board Markup Language available for richer formatting
+- **Character Codes**: Reference table available in board documentation
 
 ### Python Libraries
-- **`vesta`** library available on PyPI: `pip install vesta`
+- **`fiesta`** library available on PyPI: `pip install fiesta`
 - Provides `ReadWriteClient` class for easier integration
 - Handles character encoding and message formatting
 
@@ -323,7 +323,7 @@ Since this is an unofficial API, we need to:
 
 ### Priority Implementation Order
 
-1. **Vestaboard API** (Required)
+1. **Board API** (Required)
    - Core functionality
    - Simple authentication
    - Rate limit: 15 seconds between messages
@@ -352,8 +352,8 @@ Since this is an unofficial API, we need to:
 All APIs will need configuration in `config.yaml`:
 
 ```yaml
-vestaboard:
-  read_write_key: ${VB_READ_WRITE_KEY}  # From .env
+board:
+  read_write_key: ${FB_READ_WRITE_KEY}  # From .env
 
 weather:
   provider: "weatherapi"  # or "openweathermap"
@@ -376,7 +376,7 @@ waymo:
 
 | Service | Limit | Our Usage | Status |
 |---------|-------|-----------|--------|
-| Vestaboard | 1 msg/15s | Every 5+ min | ✅ Safe |
+| Board | 1 msg/15s | Every 5+ min | ✅ Safe |
 | WeatherAPI | 1M/month | ~288/day | ✅ Safe |
 | OpenWeatherMap | 1K/day | ~288/day | ✅ Safe |
 | Baywheels GBFS | None | Every 5 min | ✅ Safe |
@@ -384,9 +384,9 @@ waymo:
 
 ### Next Steps
 
-1. ✅ Research complete for Vestaboard, Weather, Baywheels
+1. ✅ Research complete for Board, Weather, Baywheels
 2. ⏳ Research Waymo API GitHub repo in detail
-3. ⏳ Test Vestaboard API with actual credentials
+3. ⏳ Test Board API with actual credentials
 4. ⏳ Verify Baywheels GBFS endpoint accessibility
 5. ⏳ Choose weather provider and get API key
 
