@@ -38,7 +38,7 @@ services:
       - "4420:3000"
     environment:
       # FIESTA_API_URL is used by the UI to fetch runtime config
-      # Set this to your API's external URL (e.g., http://your-nas-ip:6969)
+      # Set this to your API's external URL (e.g., http://your-server-ip:6969)
       # If not set, the UI will default to same-origin requests
       - FIESTA_API_URL=${FIESTA_API_URL:-}
     depends_on:

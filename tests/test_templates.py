@@ -96,29 +96,11 @@ class TestFilters:
         result = engine.render("{{weather.temperature|pad:5}}", context)
         assert result == "72   "  # Padded to 5 chars
     
-    def test_upper_filter(self, engine):
-        """Test |upper filter."""
-        context = {"weather": {"condition": "sunny"}}
-        result = engine.render("{{weather.condition|upper}}", context)
-        assert result == "SUNNY"
-    
-    def test_lower_filter(self, engine):
-        """Test |lower filter."""
-        context = {"weather": {"condition": "SUNNY"}}
-        result = engine.render("{{weather.condition|lower}}", context)
-        assert result == "sunny"
-    
     def test_truncate_filter(self, engine):
         """Test |truncate:N filter."""
         context = {"weather": {"condition": "Partly Cloudy"}}
         result = engine.render("{{weather.condition|truncate:6}}", context)
         assert result == "Partly"
-    
-    def test_capitalize_filter(self, engine):
-        """Test |capitalize filter."""
-        context = {"weather": {"condition": "sunny"}}
-        result = engine.render("{{weather.condition|capitalize}}", context)
-        assert result == "Sunny"
 
 
 class TestColors:

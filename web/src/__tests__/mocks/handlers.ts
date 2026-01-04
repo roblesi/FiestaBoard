@@ -157,7 +157,7 @@ export const mockTemplateVariables: TemplateVariables = {
   },
   colors: { red: 63, orange: 64, yellow: 65, green: 66, blue: 67, violet: 68, white: 69, black: 70 },
   symbols: ["sun", "cloud", "rain", "star", "heart"],
-  filters: ["pad:N", "upper", "lower", "truncate:N", "capitalize", "wrap"],
+  filters: ["pad:N", "truncate:N", "wrap"],
   formatting: {
     fill_space: {
       syntax: "{{fill_space}}",

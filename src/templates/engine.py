@@ -786,8 +786,6 @@ class TemplateEngine:
         
         Supported filters:
         - pad:N - Pad to N characters
-        - upper - Uppercase
-        - lower - Lowercase
         - truncate:N - Truncate to N characters
         """
         if ':' in filter_expr:
@@ -807,15 +805,6 @@ class TemplateEngine:
                     return value[:length]
                 except ValueError:
                     return value
-        else:
-            filter_name = filter_expr.lower()
-            
-            if filter_name == 'upper':
-                return value.upper()
-            elif filter_name == 'lower':
-                return value.lower()
-            elif filter_name == 'capitalize':
-                return value.capitalize()
         
         return value
     

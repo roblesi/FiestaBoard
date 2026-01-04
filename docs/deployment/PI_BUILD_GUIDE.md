@@ -2,7 +2,7 @@
 
 ## Overview
 
-Raspberry Pi Docker images are built **on-demand** to save CI time. By default, releases only build for `linux/amd64` (Synology NAS, x86-64 systems).
+Raspberry Pi Docker images are built **on-demand** to save CI time. By default, releases only build for `linux/amd64` (x86-64 systems).
 
 ## How to Enable Pi Builds
 
@@ -22,7 +22,7 @@ Raspberry Pi Docker images are built **on-demand** to save CI time. By default, 
 ### Default (No `pi` label)
 - **Platform:** `linux/amd64` only
 - **Build time:** ~5 minutes
-- **Best for:** Regular releases, Synology NAS, x86-64 systems
+- **Best for:** Regular releases, x86-64 systems
 
 ### With `pi` Label
 - **Platforms:** `linux/amd64`, `linux/arm/v7`, `linux/arm64`
