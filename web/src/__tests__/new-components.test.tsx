@@ -1,10 +1,27 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { PageBuilder } from "@/components/page-builder";
 import { ConfigOverridesProvider } from "@/hooks/use-config-overrides";
+import { api } from "@/lib/api";
+
+// Mock the api module
+vi.mock("@/lib/api", async () => {
+  const actual = await vi.importActual("@/lib/api");
+  return {
+    ...actual,
+    api: {
+      ...(actual as { api: object }).api,
+      renderTemplate: vi.fn(),
+      getTemplateVariables: vi.fn(),
+      createPage: vi.fn(),
+      updatePage: vi.fn(),
+      getPage: vi.fn(),
+    },
+  };
+});
 
 // Test wrapper with providers
 function TestWrapper({ children }: { children: React.ReactNode }) {
@@ -32,6 +49,36 @@ describe("PageBuilder", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default mock implementations
+    vi.mocked(api.getTemplateVariables).mockResolvedValue({
+      variables: {},
+      max_lengths: {},
+      colors: {},
+      symbols: [],
+      filters: [],
+      formatting: {},
+      syntax_examples: {},
+    });
+    vi.mocked(api.renderTemplate).mockResolvedValue({
+      rendered: "test preview",
+      valid: true,
+    });
+    vi.mocked(api.createPage).mockResolvedValue({
+      id: "test-page-id",
+      name: "Test Page",
+      type: "template",
+      template: ["", "", "", "", "", ""],
+    });
+    vi.mocked(api.updatePage).mockResolvedValue({
+      id: "test-page-id",
+      name: "Test Page",
+      type: "template",
+      template: ["", "", "", "", "", ""],
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("renders create page form", async () => {
@@ -140,6 +187,150 @@ describe("PageBuilder", () => {
     await user.type(line1Editor, "Hello World");
     
     expect(line1Editor).toHaveTextContent("Hello World");
+  });
+
+  describe("Debounce behavior", () => {
+    it("updates input immediately for responsive UI", async () => {
+      const user = userEvent.setup();
+      
+      render(
+        <PageBuilder onClose={mockOnClose} onSave={mockOnSave} />,
+        { wrapper: TestWrapper }
+      );
+
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText("My Custom Page")).toBeInTheDocument();
+      });
+
+      const nameInput = screen.getByPlaceholderText("My Custom Page");
+      
+      // Type in the input
+      await user.type(nameInput, "Test Page Name");
+      
+      // Input should update immediately (no debounce delay)
+      expect(nameInput).toHaveValue("Test Page Name");
+    });
+
+    it("debounces preview API calls", async () => {
+      const user = userEvent.setup();
+      
+      render(
+        <PageBuilder onClose={mockOnClose} onSave={mockOnSave} />,
+        { wrapper: TestWrapper }
+      );
+
+      await waitFor(() => {
+        const textboxes = screen.getAllByRole("textbox");
+        expect(textboxes.length).toBe(7);
+      });
+
+      const textboxes = screen.getAllByRole("textbox");
+      const line1Editor = textboxes[1]; // First template line editor
+      
+      // Clear any initial calls
+      vi.clearAllMocks();
+      
+      // Type rapidly
+      await user.type(line1Editor, "Hello");
+      
+      // Preview should not be called immediately (debounced)
+      // Wait a bit to see if it's called too early
+      await new Promise(resolve => setTimeout(resolve, 100));
+      expect(vi.mocked(api.renderTemplate)).not.toHaveBeenCalled();
+      
+      // Wait for debounce to complete (300ms state + 500ms preview = ~800ms)
+      await waitFor(() => {
+        expect(vi.mocked(api.renderTemplate)).toHaveBeenCalled();
+      }, { timeout: 2000 });
+    });
+
+    it("debounces line length warnings", async () => {
+      const user = userEvent.setup();
+      
+      vi.mocked(api.getTemplateVariables).mockResolvedValue({
+        variables: {},
+        max_lengths: { "weather.temp": 5 },
+        colors: {},
+        symbols: [],
+        filters: [],
+        formatting: {},
+        syntax_examples: {},
+      });
+      
+      render(
+        <PageBuilder onClose={mockOnClose} onSave={mockOnSave} />,
+        { wrapper: TestWrapper }
+      );
+
+      await waitFor(() => {
+        const textboxes = screen.getAllByRole("textbox");
+        expect(textboxes.length).toBe(7);
+      });
+
+      const textboxes = screen.getAllByRole("textbox");
+      const line1Editor = textboxes[1];
+      
+      // Type a long line that would trigger warning
+      const longLine = "A".repeat(30);
+      await user.type(line1Editor, longLine);
+      
+      // Input should show the text immediately
+      expect(line1Editor).toHaveValue(longLine);
+      
+      // Warning should not appear immediately (uses debounced state)
+      const warningsBefore = screen.queryAllByTitle(/Line may render/i);
+      expect(warningsBefore.length).toBe(0);
+      
+      // Wait for debounce to complete (~300ms)
+      await waitFor(() => {
+        const warningsAfter = screen.queryAllByTitle(/Line may render/i);
+        expect(warningsAfter.length).toBeGreaterThan(0);
+      }, { timeout: 1000 });
+    });
+
+    it("uses immediate state for save (no data loss)", async () => {
+      const user = userEvent.setup();
+      
+      render(
+        <PageBuilder onClose={mockOnClose} onSave={mockOnSave} />,
+        { wrapper: TestWrapper }
+      );
+
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText("My Custom Page")).toBeInTheDocument();
+      });
+
+      const nameInput = screen.getByPlaceholderText("My Custom Page");
+      const textboxes = screen.getAllByRole("textbox");
+      const line1Editor = textboxes[1];
+      
+      // Type in inputs
+      await user.clear(nameInput);
+      await user.type(nameInput, "My Test Page");
+      
+      await user.clear(line1Editor);
+      await user.type(line1Editor, "Template content");
+      
+      // Verify input has the value immediately
+      await waitFor(() => {
+        expect(nameInput).toHaveValue("My Test Page");
+        expect(line1Editor).toHaveValue("Template content");
+      });
+      
+      // Immediately click save (before debounce completes)
+      const saveButton = screen.getByRole("button", { name: /save page/i });
+      await user.click(saveButton);
+      
+      // Save should be called with immediate state values
+      await waitFor(() => {
+        expect(vi.mocked(api.createPage)).toHaveBeenCalled();
+      });
+      
+      const saveCall = vi.mocked(api.createPage).mock.calls[0][0];
+      expect(saveCall.name).toBe("My Test Page");
+      // textboxes[0] is page name, textboxes[1] is first template line (templateLines[0])
+      expect(saveCall.template[0]).toBe("Template content");
+    });
   });
 });
 

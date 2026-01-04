@@ -149,7 +149,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
   // Fetch board settings for display type
   const { data: boardSettings } = useBoardSettings();
 
-  // Form state
+  // Form state (immediate - for UI responsiveness)
   const [name, setName] = useState("");
   const [templateLines, setTemplateLines] = useState<string[]>(["", "", "", "", "", ""]);
   const [lineAlignments, setLineAlignments] = useState<LineAlignment[]>(["left", "left", "left", "left", "left", "left"]);
@@ -157,11 +157,19 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
   const [showMobileVariablePicker, setShowMobileVariablePicker] = useState(false);
   const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null);
   
-  // Transition settings state
+  // Transition settings state (immediate)
   const [transitionStrategy, setTransitionStrategy] = useState<string | null>(null);
   const [transitionIntervalMs, setTransitionIntervalMs] = useState<number | null>(null);
   const [transitionStepSize, setTransitionStepSize] = useState<number | null>(null);
   const [isTransitionOpen, setIsTransitionOpen] = useState(false);
+
+  // Debounced state (for expensive operations)
+  const [debouncedName, setDebouncedName] = useState("");
+  const [debouncedTemplateLines, setDebouncedTemplateLines] = useState<string[]>(["", "", "", "", "", ""]);
+  const [debouncedLineAlignments, setDebouncedLineAlignments] = useState<LineAlignment[]>(["left", "left", "left", "left", "left", "left"]);
+  const [debouncedTransitionStrategy, setDebouncedTransitionStrategy] = useState<string | null>(null);
+  const [debouncedTransitionIntervalMs, setDebouncedTransitionIntervalMs] = useState<number | null>(null);
+  const [debouncedTransitionStepSize, setDebouncedTransitionStepSize] = useState<number | null>(null);
 
   // Track if we need to re-preview after current mutation completes
   const needsRePreview = useRef(false);
@@ -182,7 +190,11 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
   // Load existing page data
   useEffect(() => {
     if (existingPage) {
-      setName(existingPage.name);
+      const pageName = existingPage.name;
+      setName(pageName);
+      // Initialize debounced state immediately when loading (no debounce needed)
+      setDebouncedName(pageName);
+      
       const rawLines = existingPage.template || ["", "", "", "", "", ""];
       // Extract alignments and clean content from stored lines
       const alignments: LineAlignment[] = [];
@@ -194,17 +206,71 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
       }
       setLineAlignments(alignments);
       setTemplateLines(contents);
+      // Initialize debounced state immediately when loading
+      setDebouncedLineAlignments(alignments);
+      setDebouncedTemplateLines(contents);
       
       // Load transition settings
-      setTransitionStrategy(existingPage.transition_strategy ?? null);
-      setTransitionIntervalMs(existingPage.transition_interval_ms ?? null);
-      setTransitionStepSize(existingPage.transition_step_size ?? null);
+      const strategy = existingPage.transition_strategy ?? null;
+      const intervalMs = existingPage.transition_interval_ms ?? null;
+      const stepSize = existingPage.transition_step_size ?? null;
+      setTransitionStrategy(strategy);
+      setTransitionIntervalMs(intervalMs);
+      setTransitionStepSize(stepSize);
+      // Initialize debounced state immediately when loading
+      setDebouncedTransitionStrategy(strategy);
+      setDebouncedTransitionIntervalMs(intervalMs);
+      setDebouncedTransitionStepSize(stepSize);
+      
       // Open transition accordion if page has custom transition settings
       if (existingPage.transition_strategy) {
         setIsTransitionOpen(true);
       }
     }
   }, [existingPage]);
+
+  // Sync immediate state to debounced state (300ms debounce)
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedName(name);
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [name]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedTemplateLines(templateLines);
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [templateLines]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedLineAlignments(lineAlignments);
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [lineAlignments]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedTransitionStrategy(transitionStrategy);
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [transitionStrategy]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedTransitionIntervalMs(transitionIntervalMs);
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [transitionIntervalMs]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedTransitionStepSize(transitionStepSize);
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [transitionStepSize]);
 
   // Auto-resize textareas when content changes
   useEffect(() => {
@@ -333,9 +399,14 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
     },
   });
 
+  // Build template lines with alignment prefixes applied (using debounced state for preview)
+  const getDebouncedTemplateWithAlignments = (): string[] => {
+    return debouncedTemplateLines.map((content, i) => applyAlignment(debouncedLineAlignments[i], content));
+  };
+
   // Preview mutation
   const previewMutation = useMutation({
-    mutationFn: () => api.renderTemplate(getTemplateWithAlignments()),
+    mutationFn: () => api.renderTemplate(getDebouncedTemplateWithAlignments()),
     onSuccess: (data) => {
       setPreview(data.rendered);
       
@@ -353,16 +424,16 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
     },
   });
 
-  // Auto-preview when template lines or alignments change (debounced)
+  // Auto-preview when debounced template lines or alignments change (debounced)
   useEffect(() => {
     // Only preview if at least one line has content
-    const hasContent = templateLines.some(line => line.trim().length > 0);
+    const hasContent = debouncedTemplateLines.some(line => line.trim().length > 0);
     if (!hasContent) {
       setPreview(null);
       return;
     }
 
-    // Debounce the preview
+    // Debounce the preview (500ms after debounced state stabilizes)
     const timeoutId = setTimeout(() => {
       // Only start a new preview if there isn't one already pending
       // If one is pending, set a flag so it re-runs after completion
@@ -376,7 +447,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
 
     return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [templateLines, lineAlignments]);
+  }, [debouncedTemplateLines, debouncedLineAlignments]);
 
   // Insert variable/text - appends to the active line
   // Note: Drag-and-drop insertion is handled by TemplateLineEditor directly
@@ -490,7 +561,9 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
               <div className="flex flex-col gap-2 sm:gap-2 w-full">
                   {templateLines.map((line, i) => {
                     const maxLengths = variablesData?.max_lengths || {};
-                    const warning = getLineLengthWarning(line, maxLengths);
+                    // Use debounced state for warnings to reduce expensive calculations
+                    const debouncedLine = debouncedTemplateLines[i] || "";
+                    const warning = getLineLengthWarning(debouncedLine, maxLengths);
                     const alignment = lineAlignments[i];
                     
                     return (
