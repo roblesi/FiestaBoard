@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { api } from "@/lib/api";
-import { ChevronDown, Bike, TrainFront, Car, Home, TrendingUp, Trophy } from "lucide-react";
+import { ChevronDown, Bike, TrainFront, Car, Home, TrendingUp, Trophy, Plane } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { FIESTABOARD_COLORS } from "@/lib/board-colors";
@@ -259,6 +259,21 @@ export function VariablePicker({
     enabled: templateVars?.variables?.sports_scores !== undefined,
   });
 
+  // Fetch live Nearby Aircraft data
+  const { data: nearbyAircraftData } = useQuery({
+    queryKey: ["nearby-aircraft-live-data"],
+    queryFn: async () => {
+      try {
+        const display = await api.getDisplayRaw("nearby_aircraft");
+        return display.data as { aircraft?: any[] };
+      } catch {
+        return null;
+      }
+    },
+    refetchInterval: 30000,
+    enabled: templateVars?.variables?.nearby_aircraft !== undefined,
+  });
+
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success("Copied to clipboard");
@@ -293,6 +308,7 @@ export function VariablePicker({
   const deferredStocksData = useDeferredValue(stocksData);
   const deferredFlightsData = useDeferredValue(flightsData);
   const deferredSportsScoresData = useDeferredValue(sportsScoresData);
+  const deferredNearbyAircraftData = useDeferredValue(nearbyAircraftData);
 
   return (
     <>
@@ -979,6 +995,91 @@ export function VariablePicker({
                             <p className="mb-2">Enable flight tracking in Settings and configure your location to see nearby aircraft here.</p>
                             <p className="font-mono text-[10px]">
                               Example: <code className="bg-background px-1 rounded">flights.0.call_sign</code>, <code className="bg-background px-1 rounded">flights.1.altitude</code>, <code className="bg-background px-1 rounded">flights.2.formatted</code>
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CollapsibleSection>
+                );
+              }
+
+              // Special handling for Nearby Aircraft with live aircraft data
+              if (category === "nearby_aircraft") {
+                return (
+                  <CollapsibleSection key={category} title={category} defaultOpen={false}>
+                    <div className="space-y-3">
+                      {/* Aggregate/General Variables */}
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1.5">General</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {vars.filter((v: string) => !v.startsWith("aircraft.")).map((variable: string) => {
+                            const varValue = `{{${category}.${variable}}}`;
+                            return (
+                              <VariablePill
+                                key={variable}
+                                label={variable}
+                                value={varValue}
+                                onInsert={() => handleInsert(varValue)}
+                                onDragStart={(e) => handleDragStart(e, varValue)}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Individual Aircraft Accordion */}
+                      <div className="space-y-1.5">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Plane className="h-3 w-3" />
+                          Aircraft {deferredNearbyAircraftData?.aircraft ? `(${deferredNearbyAircraftData.aircraft.length})` : "(None detected)"}
+                        </p>
+                        {deferredNearbyAircraftData?.aircraft && deferredNearbyAircraftData.aircraft.length > 0 ? (
+                          <div className="max-h-[400px] overflow-y-auto pr-1">
+                            <Accordion type="single" collapsible className="w-full">
+                              {deferredNearbyAircraftData.aircraft.map((aircraft: any, index: number) => (
+                              <AccordionItem key={aircraft.call_sign || aircraft.icao24 || index} value={`aircraft-${index}`} className="border-b-0">
+                                <AccordionTrigger className="py-2 hover:no-underline">
+                                  <div className="flex items-center gap-2 text-xs">
+                                    <Plane className="h-4 w-4" />
+                                    <div className="text-left">
+                                      <div className="font-medium">{aircraft.call_sign || aircraft.icao24 || `Aircraft ${index}`}</div>
+                                      <div className="text-muted-foreground text-xs">
+                                        {aircraft.altitude?.toLocaleString() || "N/A"}ft • {aircraft.ground_speed || "N/A"}kt • {aircraft.distance_km?.toFixed(1) || "N/A"}km away • Index: {index}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                  <div className="space-y-2 pt-2 pl-2">
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {["icao24", "call_sign", "altitude", "ground_speed", "squawk", "latitude", "longitude", "distance_km", "formatted"].map((field) => {
+                                        const varValue = `{{${category}.aircraft.${index}.${field}}}`;
+                                        return (
+                                          <VariablePill
+                                            key={field}
+                                            label={field}
+                                            value={varValue}
+                                            onInsert={() => handleInsert(varValue)}
+                                            onDragStart={(e) => handleDragStart(e, varValue)}
+                                          />
+                                        );
+                                      })}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                                      <code className="text-xs">aircraft.{index}.*</code>
+                                    </div>
+                                  </div>
+                                </AccordionContent>
+                              </AccordionItem>
+                            ))}
+                            </Accordion>
+                          </div>
+                        ) : (
+                          <div className="p-3 bg-muted/30 rounded-lg text-xs text-muted-foreground">
+                            <p className="mb-2">Enable Nearby Aircraft in Settings and configure your location to see aircraft here.</p>
+                            <p className="font-mono text-[10px]">
+                              Example: <code className="bg-background px-1 rounded">aircraft.0.call_sign</code>, <code className="bg-background px-1 rounded">aircraft.1.altitude</code>, <code className="bg-background px-1 rounded">aircraft.2.formatted</code>
                             </p>
                           </div>
                         )}

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -13,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { Plus, Trash2, Eye, EyeOff } from "lucide-react";
+import { Plus, Trash2, Eye, EyeOff, MapPin, Loader2 } from "lucide-react";
 
 // JSON Schema types (simplified for our use case)
 interface SchemaProperty {
@@ -88,7 +89,7 @@ function StringField({ name, property, value, onChange, required, disabled }: Fi
       <textarea
         id={name}
         value={String(value || "")}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onChange(e.target.value)}
         placeholder={property["ui:placeholder"] || property.description}
         disabled={disabled}
         required={required}
@@ -108,7 +109,7 @@ function StringField({ name, property, value, onChange, required, disabled }: Fi
         id={name}
         type={isPassword && !showPassword ? "password" : "text"}
         value={String(value || "")}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
         placeholder={property["ui:placeholder"] || property.description}
         disabled={disabled}
         required={required}
@@ -134,26 +135,166 @@ function StringField({ name, property, value, onChange, required, disabled }: Fi
   );
 }
 
-function NumberField({ name, property, value, onChange, required, disabled }: FieldProps) {
-  return (
-    <Input
-      id={name}
-      type="number"
-      value={value !== undefined && value !== null ? String(value) : ""}
-      onChange={(e) => {
-        const val = e.target.value;
-        if (val === "") {
-          onChange(undefined);
-        } else {
-          onChange(property.type === "integer" ? parseInt(val, 10) : parseFloat(val));
+interface NumberFieldProps extends FieldProps {
+  onLocationRequest?: (lat: number, lon: number) => void;
+  showLocationButton?: boolean;
+  isLocationLoading?: boolean;
+}
+
+function NumberField({ name, property, value, onChange, required, disabled, onLocationRequest, showLocationButton, isLocationLoading }: NumberFieldProps) {
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+
+  // Helper function to get user-friendly error message
+  const getErrorMessage = (error: GeolocationPositionError | null | undefined): string => {
+    if (!error) {
+      return "Failed to get your location. Please check that Location Services are enabled in System Settings → Privacy & Security → Location Services, and that Safari has permission to access your location.";
+    }
+
+    const errorCode = error.code;
+    let message = "Failed to get your location. ";
+    
+    if (errorCode === 1) {
+      message += "Location permission denied. Please enable location access in Safari settings (Safari → Settings → Websites → Location Services).";
+    } else if (errorCode === 2) {
+      const isMacOS = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      if (isMacOS) {
+        message += "Location information unavailable. On macOS, Wi-Fi must be enabled for location services to work, even if you're connected via Ethernet. Please: 1) Enable Wi-Fi in System Settings, 2) Ensure Location Services is enabled in System Settings → Privacy & Security → Location Services, 3) Wait a few moments for location to be determined, then try again.";
+      } else {
+        message += "Location information unavailable. This usually means your device cannot determine its location. Try: 1) Ensure Location Services is enabled, 2) Make sure Wi-Fi is enabled (needed for location on some systems), 3) Try moving to a different location or wait a few moments and try again, 4) Restart your browser if the issue persists.";
+      }
+    } else if (errorCode === 3) {
+      message += "Location request timed out. Please try again.";
+    } else {
+      message += "Please check that Location Services are enabled in System Settings → Privacy & Security → Location Services, and that Safari has permission to access your location.";
+    }
+    
+    return message;
+  };
+
+  const handleLocationClick = async () => {
+    console.log("handleLocationClick called");
+    
+    // Check if we're on HTTPS or localhost (required for Safari)
+    const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (!isSecure) {
+      toast.error("Geolocation requires HTTPS or localhost. Please use a secure connection.");
+      return;
+    }
+    
+    if (!navigator.geolocation) {
+      console.log("Geolocation not available");
+      toast.error("Geolocation is not supported by your browser");
+      return;
+    }
+
+    if (!onLocationRequest) {
+      console.log("onLocationRequest not provided");
+      toast.error("Location request callback not available");
+      return;
+    }
+
+    console.log("Starting geolocation request...");
+    setIsGettingLocation(true);
+    
+    // Use native geolocation API directly for better control
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        console.log("Geolocation success:", position);
+        setIsGettingLocation(false);
+        if (onLocationRequest && position.coords) {
+          onLocationRequest(position.coords.latitude, position.coords.longitude);
+          toast.success("Location obtained successfully");
         }
-      }}
-      placeholder={property["ui:placeholder"] || property.description}
-      min={property.minimum}
-      max={property.maximum}
-      disabled={disabled}
-      required={required}
-    />
+      },
+      (error: GeolocationPositionError) => {
+        // Safari-compatible error handling - try multiple ways to access error code
+        let errorCode: number | undefined;
+        
+        // Try direct access first
+        try {
+          errorCode = error.code;
+        } catch (e) {
+          // If direct access fails, try alternative methods
+          try {
+            const err = error as any;
+            if (typeof err === 'object' && err !== null) {
+              // Try accessing code property
+              errorCode = err.code;
+              // If that doesn't work, try PERMISSION_DENIED, POSITION_UNAVAILABLE, TIMEOUT constants
+              if (errorCode === undefined) {
+                if (err.PERMISSION_DENIED === 1 || err.message?.toLowerCase().includes('permission')) {
+                  errorCode = 1;
+                } else if (err.POSITION_UNAVAILABLE === 2 || err.message?.toLowerCase().includes('unavailable')) {
+                  errorCode = 2;
+                } else if (err.TIMEOUT === 3 || err.message?.toLowerCase().includes('timeout')) {
+                  errorCode = 3;
+                }
+              }
+            }
+          } catch (e2) {
+            // If all else fails, we'll use a generic message
+            console.error("Could not extract error code:", e2);
+          }
+        }
+        
+        console.error("Geolocation error - code:", errorCode, "error object:", error);
+        setIsGettingLocation(false);
+        
+        // Create a proper error object with the code we extracted
+        const errorWithCode = errorCode !== undefined 
+          ? { ...error, code: errorCode } as GeolocationPositionError
+          : error;
+        
+        toast.error(getErrorMessage(errorWithCode));
+      },
+      {
+        enableHighAccuracy: false,
+        timeout: 15000, // Increased timeout for Safari
+        maximumAge: 300000 // 5 minutes - Safari works better with cached positions
+      }
+    );
+  };
+
+  return (
+    <div className="relative">
+      <Input
+        id={name}
+        type="number"
+        value={value !== undefined && value !== null ? String(value) : ""}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+          const val = e.target.value;
+          if (val === "") {
+            onChange(undefined);
+          } else {
+            onChange(property.type === "integer" ? parseInt(val, 10) : parseFloat(val));
+          }
+        }}
+        placeholder={property["ui:placeholder"] || property.description}
+        min={property.minimum}
+        max={property.maximum}
+        disabled={disabled}
+        required={required}
+        className={showLocationButton ? "pr-10" : undefined}
+      />
+      {showLocationButton && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+          onClick={handleLocationClick}
+          disabled={disabled || isGettingLocation || (isLocationLoading ?? false)}
+          tabIndex={-1}
+          title="Use my current location"
+        >
+          {(isGettingLocation || isLocationLoading) ? (
+            <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
+          ) : (
+            <MapPin className="h-4 w-4 text-muted-foreground" />
+          )}
+        </Button>
+      )}
+    </div>
   );
 }
 
@@ -226,6 +367,9 @@ function ArrayField({ name, property, value, onChange, disabled, itemSchema }: A
                         handleItemChange(index, newItem);
                       }}
                       disabled={disabled}
+                      onLocationRequest={undefined}
+                      showLocationButton={false}
+                      isLocationLoading={false}
                     />
                   </div>
                 ))}
@@ -272,7 +416,13 @@ function ArrayField({ name, property, value, onChange, disabled, itemSchema }: A
   );
 }
 
-function FormField({ name, property, value, onChange, required, disabled }: FieldProps) {
+interface FormFieldProps extends FieldProps {
+  onLocationRequest?: (lat: number, lon: number) => void;
+  showLocationButton?: boolean;
+  isLocationLoading?: boolean;
+}
+
+function FormField({ name, property, value, onChange, required, disabled, onLocationRequest, showLocationButton, isLocationLoading }: FormFieldProps) {
   switch (property.type) {
     case "string":
       return (
@@ -295,6 +445,9 @@ function FormField({ name, property, value, onChange, required, disabled }: Fiel
           onChange={onChange}
           required={required}
           disabled={disabled}
+          onLocationRequest={onLocationRequest}
+          showLocationButton={showLocationButton}
+          isLocationLoading={isLocationLoading}
         />
       );
     case "boolean":
@@ -345,6 +498,9 @@ function FormField({ name, property, value, onChange, required, disabled }: Fiel
                   }}
                   required={property.required?.includes(key)}
                   disabled={disabled}
+                  onLocationRequest={undefined}
+                  showLocationButton={false}
+                  isLocationLoading={false}
                 />
                 {propSchema.description && (
                   <p className="text-xs text-muted-foreground">{propSchema.description}</p>
@@ -379,6 +535,22 @@ export function SchemaForm({ schema, values, onChange, disabled, className }: Sc
     [values, onChange]
   );
 
+  // Check if both latitude and longitude fields exist
+  const hasLatitude = schema.properties?.latitude !== undefined;
+  const hasLongitude = schema.properties?.longitude !== undefined;
+  const hasLocationFields = hasLatitude && hasLongitude;
+
+  const handleLocationRequest = useCallback(
+    (lat: number, lon: number) => {
+      onChange({
+        ...values,
+        latitude: lat,
+        longitude: lon,
+      });
+    },
+    [values, onChange]
+  );
+
   if (!schema.properties) {
     return (
       <div className="text-sm text-muted-foreground">
@@ -394,6 +566,8 @@ export function SchemaForm({ schema, values, onChange, disabled, className }: Sc
         if (name === "enabled") return null;
         
         const isRequired = schema.required?.includes(name);
+        const isLocationField = hasLocationFields && (name === "latitude" || name === "longitude");
+        const showLocationButton = isLocationField && !!navigator.geolocation;
         
         return (
           <div key={name} className="grid gap-1.5">
@@ -408,9 +582,17 @@ export function SchemaForm({ schema, values, onChange, disabled, className }: Sc
               onChange={(val) => handleFieldChange(name, val)}
               required={isRequired}
               disabled={disabled}
+              onLocationRequest={showLocationButton ? handleLocationRequest : undefined}
+              showLocationButton={showLocationButton}
+              isLocationLoading={false}
             />
             {property.description && (
               <p className="text-xs text-muted-foreground">{property.description}</p>
+            )}
+            {showLocationButton && (
+              <p className="text-xs text-muted-foreground">
+                Click the location icon to use your current location
+              </p>
             )}
           </div>
         );
