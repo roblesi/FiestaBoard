@@ -355,15 +355,37 @@ MIT License - see [LICENSE](./LICENSE) file for details.
 
 ## Screenshots
 
+### Web UI
+
+![Web UI Home](./images/web-ui-home.png)
+
+### Plugin Displays
+
+**Stocks**: Monitor stock prices and percentage changes with color-coded indicators
+
+![Stocks Display](./images/stocks-display.png)
+
+**Nearby Aircraft**: Real-time nearby aircraft information with call signs, altitude, and ground speed
+
+![Nearby Aircraft Display](./plugins/nearby_aircraft/docs/nearby-aircraft-display.png)
+
+**Sports Scores**: Display recent match scores from NFL, Soccer, NHL, and NBA
+
+![Sports Scores Display](./plugins/sports_scores/docs/sports-scores-display.png)
+
+### Other Available Features
+
 The board can display various screens:
 
 - **Weather + DateTime**: Current conditions with temperature and text-based weather icons
 - **Home Assistant**: House status with green ([G]) and red ([R]) indicators
 - **Star Trek Quotes**: Inspiring quotes from TNG, Voyager, and DS9
 - **Guest WiFi**: SSID and password for guests
-- **Stocks**: Monitor stock prices and percentage changes with color-coded indicators
-
-![Stocks Display](./images/stocks-display.png)
+- **Air Quality & Fog**: Monitor AQI and fog conditions
+- **Bay Wheels**: Track bike availability at multiple stations
+- **Muni Transit**: Real-time SF Muni arrival predictions
+- **Traffic**: Travel time to destinations with live traffic
+- **Surf Conditions**: Live surf reports with wave height and quality ratings
 
 **System Features:**
 - **Silence Schedule**: Configure quiet hours when the board won't update (e.g., 8pm-7am)
