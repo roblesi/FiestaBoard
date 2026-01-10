@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { api } from "@/lib/api";
-import { ChevronDown, Bike, TrainFront, Car, Home, TrendingUp } from "lucide-react";
+import { ChevronDown, Bike, TrainFront, Car, Home, TrendingUp, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { FIESTABOARD_COLORS } from "@/lib/board-colors";
@@ -243,6 +243,22 @@ export function VariablePicker({
     enabled: templateVars?.variables?.flights !== undefined,
   });
 
+  // Fetch live Sports Scores data
+  const { data: sportsScoresData } = useQuery({
+    queryKey: ["sports-scores-live-data"],
+    queryFn: async () => {
+      try {
+        const display = await api.getDisplayRaw("sports_scores");
+        return display.data as { games?: any[] };
+      } catch (error) {
+        // Return empty structure on error so UI can still show the structure
+        return { games: [] };
+      }
+    },
+    refetchInterval: 30000,
+    enabled: templateVars?.variables?.sports_scores !== undefined,
+  });
+
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success("Copied to clipboard");
@@ -276,6 +292,7 @@ export function VariablePicker({
   const deferredWeatherData = useDeferredValue(weatherData);
   const deferredStocksData = useDeferredValue(stocksData);
   const deferredFlightsData = useDeferredValue(flightsData);
+  const deferredSportsScoresData = useDeferredValue(sportsScoresData);
 
   return (
     <>
@@ -793,6 +810,91 @@ export function VariablePicker({
                             <p className="mb-2">Configure stock symbols in Settings to see indexed variables here.</p>
                             <p className="font-mono text-[10px]">
                               Example: <code className="bg-background px-1 rounded">stocks.0.symbol</code>, <code className="bg-background px-1 rounded">stocks.1.current_price</code>, <code className="bg-background px-1 rounded">stocks.2.formatted</code>
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CollapsibleSection>
+                );
+              }
+
+              // Special handling for Sports Scores with live game data OR when enabled but no games yet
+              if (category === "sports_scores") {
+                return (
+                  <CollapsibleSection key={category} title={category} defaultOpen={false}>
+                    <div className="space-y-3">
+                      {/* Aggregate/General Variables */}
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1.5">General</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {vars.filter(v => !v.startsWith("games.")).map((variable) => {
+                            const varValue = `{{${category}.${variable}}}`;
+                            return (
+                              <VariablePill
+                                key={variable}
+                                label={variable}
+                                value={varValue}
+                                onInsert={() => handleInsert(varValue)}
+                                onDragStart={(e) => handleDragStart(e, varValue)}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Individual Games Accordion */}
+                      <div className="space-y-1.5">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Trophy className="h-3 w-3" />
+                          Games {deferredSportsScoresData?.games !== undefined ? `(${deferredSportsScoresData.games.length})` : "(None configured)"}
+                        </p>
+                        {deferredSportsScoresData?.games && deferredSportsScoresData.games.length > 0 ? (
+                          <div className="max-h-[400px] overflow-y-auto pr-1">
+                            <Accordion type="single" collapsible className="w-full">
+                              {deferredSportsScoresData.games.map((game: any, index: number) => (
+                              <AccordionItem key={game.formatted || index} value={`game-${index}`} className="border-b-0">
+                                <AccordionTrigger className="py-2 hover:no-underline">
+                                  <div className="flex items-center gap-2 text-xs">
+                                    <Trophy className="h-4 w-4" />
+                                    <div className="text-left">
+                                      <div className="font-medium">{game.team1 || `Team 1`} vs {game.team2 || `Team 2`}</div>
+                                      <div className="text-muted-foreground text-xs">
+                                        {game.score1 !== undefined && game.score2 !== undefined ? `${game.score1} - ${game.score2}` : game.status || "Scheduled"} • {game.sport || "N/A"} • Index: {index}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                  <div className="space-y-2 pt-2 pl-2">
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {["sport", "team1", "team2", "team1_full", "team2_full", "team1_color", "team2_color", "score1", "score2", "status", "date", "time", "formatted"].map((field) => {
+                                        const varValue = `{{${category}.games.${index}.${field}}}`;
+                                        return (
+                                          <VariablePill
+                                            key={field}
+                                            label={field}
+                                            value={varValue}
+                                            onInsert={() => handleInsert(varValue)}
+                                            onDragStart={(e) => handleDragStart(e, varValue)}
+                                          />
+                                        );
+                                      })}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                                      <code className="text-xs">games.{index}.*</code>
+                                    </div>
+                                  </div>
+                                </AccordionContent>
+                              </AccordionItem>
+                            ))}
+                            </Accordion>
+                          </div>
+                        ) : (
+                          <div className="p-3 bg-muted/30 rounded-lg text-xs text-muted-foreground">
+                            <p className="mb-2">Configure sports in Settings to see indexed variables here.</p>
+                            <p className="font-mono text-[10px]">
+                              Example: <code className="bg-background px-1 rounded">games.0.team1</code>, <code className="bg-background px-1 rounded">games.1.score1</code>, <code className="bg-background px-1 rounded">games.2.formatted</code>
                             </p>
                           </div>
                         )}

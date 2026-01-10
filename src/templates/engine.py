@@ -464,6 +464,18 @@ class TemplateEngine:
                 return f"{color_prefix}{filtered}" if color_prefix else filtered
             else:
                 value = self._get_variable_value(expr, context)
+                # Check if the value itself is a color code (e.g., {66})
+                # This allows plugins to return color codes directly
+                # Only recognize color codes, not color names (to avoid issues with team names like "Green Hornets")
+                if isinstance(value, str):
+                    # Check if value is already a color code like {66}
+                    color_code_match = re.match(r'^\{(\d+)\}$', value)
+                    if color_code_match:
+                        code = int(color_code_match.group(1))
+                        if 63 <= code <= 70:
+                            # Already a valid color code, return as-is
+                            return value
+                
                 # Apply color rules
                 color_prefix = self._get_color_for_value(expr, context)
                 return f"{color_prefix}{value}" if color_prefix else value

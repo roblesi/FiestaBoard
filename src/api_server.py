@@ -2985,6 +2985,7 @@ async def update_plugin_config(plugin_id: str, request: PluginConfigRequest):
     # Validate configuration against manifest schema
     errors = registry.set_plugin_config(plugin_id, request.config)
     if errors:
+        logger.error(f"Plugin '{plugin_id}' config validation failed: {errors}")
         raise HTTPException(
             status_code=400,
             detail={"errors": errors}
