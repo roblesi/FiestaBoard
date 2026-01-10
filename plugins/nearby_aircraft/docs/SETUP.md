@@ -168,14 +168,18 @@ NEARBY_AIRCRAFT_REFRESH_SECONDS=120   # Default: 120 seconds (2 min)
 
 ### Default Format (Matches Screenshot)
 
+![Nearby Aircraft Display](./nearby-aircraft-display.png)
+
 ```
 {center}NEARBY AIRCRAFT
-CALLSGN  ALT   GS  SQWK
+{{nearby_aircraft.headers}}
 {{nearby_aircraft.aircraft.0.formatted}}
 {{nearby_aircraft.aircraft.1.formatted}}
 {{nearby_aircraft.aircraft.2.formatted}}
 {{nearby_aircraft.aircraft.3.formatted}}
 ```
+
+**Note:** The `{{nearby_aircraft.headers}}` variable automatically generates aligned column headers that match the width of your aircraft data, ensuring perfect column alignment.
 
 Output example:
 ```
