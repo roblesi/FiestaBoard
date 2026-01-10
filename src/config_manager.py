@@ -187,16 +187,6 @@ DEFAULT_CONFIG: Dict[str, Any] = {
                 ],
             },
         },
-        "flights": {
-            "enabled": False,
-            "api_key": "",  # aviationstack API key
-            "latitude": 37.7749,  # San Francisco (default)
-            "longitude": -122.4194,  # San Francisco (default)
-            "radius_km": 50,  # Search radius in kilometers
-            "max_count": 4,  # Maximum flights to display (1-4)
-            "refresh_seconds": 28800,  # 8 hours (free tier: 100 requests/month limit)
-            "color_rules": {},
-        },
     },
     "general": {
         "timezone": "America/Los_Angeles",  # User's timezone for display purposes
@@ -503,16 +493,6 @@ class ConfigManager:
             stocks["symbols"] = [s.strip() for s in symbols_str.split(",") if s.strip()]
             logger.info("Applied STOCKS_SYMBOLS from environment variable")
             changed = True
-        
-        # ==================== Flights Feature ====================
-        flights = get_feature("flights")
-        changed |= apply_bool(flights, "enabled", "FLIGHTS_ENABLED")
-        changed |= apply_str(flights, "api_key", "AVIATIONSTACK_API_KEY")
-        changed |= apply_float(flights, "latitude", "FLIGHTS_LATITUDE")
-        changed |= apply_float(flights, "longitude", "FLIGHTS_LONGITUDE")
-        changed |= apply_int(flights, "radius_km", "FLIGHTS_RADIUS_KM")
-        changed |= apply_int(flights, "max_count", "FLIGHTS_MAX_COUNT")
-        changed |= apply_int(flights, "refresh_seconds", "FLIGHTS_REFRESH_SECONDS")
         
         # Save if any changes were made
         if changed:

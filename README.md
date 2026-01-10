@@ -62,21 +62,19 @@ docker-compose down
 FiestaBoard uses a **plugin architecture** - each feature is a self-contained plugin with its own documentation. Browse the `plugins/` directory or use the web UI's **Integrations** page to discover and enable plugins.
 
 ### Available Plugins
-- 🌤️ **[Weather](./plugins/weather/docs/SETUP.md)**: Current weather conditions with text-based icons
-- 📅 **[Date & Time](./plugins/date_time/docs/SETUP.md)**: Current date and time with timezone support
-- 🏠 **[Home Assistant](./plugins/home_assistant/docs/SETUP.md)**: House status display (doors, garage, locks, etc.)
-- 🖖 **[Star Trek Quotes](./plugins/star_trek_quotes/docs/SETUP.md)**: Random quotes from TNG, Voyager, and DS9
-- 📶 **[Guest WiFi](./plugins/guest_wifi/docs/SETUP.md)**: Display WiFi credentials for guests
-- 🚴 **[Bay Wheels](./plugins/baywheels/docs/SETUP.md)**: Track bike availability at multiple stations
-- 🚇 **[Muni Transit](./plugins/muni/docs/SETUP.md)**: Real-time SF Muni arrival predictions
-- 🚗 **[Traffic](./plugins/traffic/docs/SETUP.md)**: Travel time to destinations with live traffic
-- 📈 **[Stocks](./plugins/stocks/docs/SETUP.md)**: Monitor stock prices with color-coded indicators
-- 🏆 **[Sports Scores](./plugins/sports_scores/docs/SETUP.md)**: Display recent sports match scores from NFL, Soccer, NHL, and NBA
-- 🌊 **[Surf Conditions](./plugins/surf/docs/SETUP.md)**: Live surf reports with wave height and quality ratings
 - 💨 **[Air Quality & Fog](./plugins/air_fog/docs/SETUP.md)**: Monitor AQI and fog conditions
-- ✈️ **[Flight Tracking](./plugins/flights/docs/SETUP.md)**: Display nearby aircraft with call signs and altitude
+- 🚴 **[Bay Wheels](./plugins/baywheels/docs/SETUP.md)**: Track bike availability at multiple stations
+- 📅 **[Date & Time](./plugins/date_time/README.md)**: Current date and time with timezone support
+- 📶 **[Guest WiFi](./plugins/guest_wifi/docs/SETUP.md)**: Display WiFi credentials for guests
+- 🏠 **[Home Assistant](./plugins/home_assistant/docs/SETUP.md)**: House status display (doors, garage, locks, etc.)
+- 🚇 **[Muni Transit](./plugins/muni/docs/SETUP.md)**: Real-time SF Muni arrival predictions
 - 🛩️ **[Nearby Aircraft](./plugins/nearby_aircraft/docs/SETUP.md)**: Real-time nearby aircraft information from OpenSky Network API
-- 🌙 **Silence Schedule**: Configure quiet hours when the board won't update
+- 🏆 **[Sports Scores](./plugins/sports_scores/docs/SETUP.md)**: Display recent match scores from NFL, Soccer, NHL, and NBA
+- 🖖 **[Star Trek Quotes](./plugins/star_trek_quotes/docs/SETUP.md)**: Random quotes from TNG, Voyager, and DS9
+- 📈 **[Stocks](./plugins/stocks/docs/SETUP.md)**: Monitor stock prices with color-coded indicators
+- 🌊 **[Surf Conditions](./plugins/surf/docs/SETUP.md)**: Live surf reports with wave height and quality ratings
+- 🚗 **[Traffic](./plugins/traffic/docs/SETUP.md)**: Travel time to destinations with live traffic
+- 🌤️ **[Weather](./plugins/weather/docs/SETUP.md)**: Current weather conditions with text-based icons
 
 **→ [Plugin Development Guide](./docs/development/PLUGIN_DEVELOPMENT.md)** - Create your own plugins!
 
@@ -84,6 +82,7 @@ FiestaBoard uses a **plugin architecture** - each feature is a self-contained pl
 - 📄 **Page-Based Display**: Create and select pages via the web UI
 - 🔄 **Configurable Update Interval**: Adjust how often the board checks for new content (10-3600 seconds)
 - ⚡ **Smart Preview Caching**: Page previews are cached (5 min TTL) for fast UI rendering, while active displays always get fresh data
+- 🌙 **Silence Schedule**: Configure quiet hours when the board won't update
 - 🐳 **Docker Ready**: Containerized for easy deployment on any system
 - ⚙️ **Highly Configurable**: Environment-based configuration for all features
 - 🔒 **Secure**: API token support for all integrations
@@ -183,18 +182,19 @@ All plugins can be configured via the web UI (**Integrations** page) or environm
 
 | Plugin | API Key Required | Setup Guide |
 |--------|-----------------|-------------|
-| Bay Wheels | No | [plugins/baywheels/docs/SETUP.md](./plugins/baywheels/docs/SETUP.md) |
-| Muni Transit | Yes (free 511.org) | [plugins/muni/docs/SETUP.md](./plugins/muni/docs/SETUP.md) |
-| Traffic | Yes (Google Routes) | [plugins/traffic/docs/SETUP.md](./plugins/traffic/docs/SETUP.md) |
-| Stocks | No (optional Finnhub) | [plugins/stocks/docs/SETUP.md](./plugins/stocks/docs/SETUP.md) |
-| Sports Scores | No (optional TheSportsDB) | [plugins/sports_scores/docs/SETUP.md](./plugins/sports_scores/docs/SETUP.md) |
-| Surf | No | [plugins/surf/docs/SETUP.md](./plugins/surf/docs/SETUP.md) |
 | Air/Fog | Yes (PurpleAir/OWM) | [plugins/air_fog/docs/SETUP.md](./plugins/air_fog/docs/SETUP.md) |
-| Flights | Yes (aviationstack) | [plugins/flights/docs/SETUP.md](./plugins/flights/docs/SETUP.md) |
-| Nearby Aircraft | No (optional OpenSky) | [plugins/nearby_aircraft/docs/SETUP.md](./plugins/nearby_aircraft/docs/SETUP.md) |
-| Star Trek Quotes | No | [plugins/star_trek_quotes/docs/SETUP.md](./plugins/star_trek_quotes/docs/SETUP.md) |
-| Home Assistant | Yes (HA token) | [plugins/home_assistant/docs/SETUP.md](./plugins/home_assistant/docs/SETUP.md) |
+| Bay Wheels | No | [plugins/baywheels/docs/SETUP.md](./plugins/baywheels/docs/SETUP.md) |
+| Date & Time | No | [plugins/date_time/README.md](./plugins/date_time/README.md) |
 | Guest WiFi | No | [plugins/guest_wifi/docs/SETUP.md](./plugins/guest_wifi/docs/SETUP.md) |
+| Home Assistant | Yes (HA token) | [plugins/home_assistant/docs/SETUP.md](./plugins/home_assistant/docs/SETUP.md) |
+| Muni Transit | Yes (free 511.org) | [plugins/muni/docs/SETUP.md](./plugins/muni/docs/SETUP.md) |
+| Nearby Aircraft | No (optional OpenSky) | [plugins/nearby_aircraft/docs/SETUP.md](./plugins/nearby_aircraft/docs/SETUP.md) |
+| Sports Scores | No (optional TheSportsDB) | [plugins/sports_scores/docs/SETUP.md](./plugins/sports_scores/docs/SETUP.md) |
+| Star Trek Quotes | No | [plugins/star_trek_quotes/docs/SETUP.md](./plugins/star_trek_quotes/docs/SETUP.md) |
+| Stocks | No (optional Finnhub) | [plugins/stocks/docs/SETUP.md](./plugins/stocks/docs/SETUP.md) |
+| Surf | No | [plugins/surf/docs/SETUP.md](./plugins/surf/docs/SETUP.md) |
+| Traffic | Yes (Google Routes) | [plugins/traffic/docs/SETUP.md](./plugins/traffic/docs/SETUP.md) |
+| Weather | Yes (OpenWeatherMap) | [plugins/weather/docs/SETUP.md](./plugins/weather/docs/SETUP.md) |
 
 See `env.example` for all available environment variables.
 

@@ -41,7 +41,6 @@ FEATURE_TO_PLUGIN_MAP = {
     "baywheels": "baywheels",
     "traffic": "traffic",
     "stocks": "stocks",
-    "flights": "flights",
     # Note: silence_schedule is a system feature, not a plugin
 }
 

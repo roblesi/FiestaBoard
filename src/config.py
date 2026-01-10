@@ -670,50 +670,6 @@ class Config:
         """Stocks data refresh interval in seconds."""
         return cls._get_feature("stocks").get("refresh_seconds", 300)
     
-    # ==================== Flights Configuration ====================
-    
-    @classmethod
-    @property
-    def FLIGHTS_ENABLED(cls) -> bool:
-        """Whether flight tracking is enabled."""
-        return cls._get_feature("flights").get("enabled", False)
-    
-    @classmethod
-    @property
-    def AVIATIONSTACK_API_KEY(cls) -> str:
-        """aviationstack API key for flight tracking."""
-        return cls._get_feature("flights").get("api_key", "")
-    
-    @classmethod
-    @property
-    def FLIGHTS_LATITUDE(cls) -> float:
-        """Latitude for flight monitoring."""
-        return cls._get_feature("flights").get("latitude", 37.7749)
-    
-    @classmethod
-    @property
-    def FLIGHTS_LONGITUDE(cls) -> float:
-        """Longitude for flight monitoring."""
-        return cls._get_feature("flights").get("longitude", -122.4194)
-    
-    @classmethod
-    @property
-    def FLIGHTS_RADIUS_KM(cls) -> float:
-        """Search radius in kilometers for nearby flights."""
-        return cls._get_feature("flights").get("radius_km", 50.0)
-    
-    @classmethod
-    @property
-    def FLIGHTS_MAX_COUNT(cls) -> int:
-        """Maximum number of flights to display."""
-        return cls._get_feature("flights").get("max_count", 4)
-    
-    @classmethod
-    @property
-    def FLIGHTS_REFRESH_SECONDS(cls) -> int:
-        """Flight data refresh interval in seconds."""
-        return cls._get_feature("flights").get("refresh_seconds", 28800)  # 8 hours default (free tier: 100 req/month)
-    
     # ==================== Legacy/Unused Configuration ====================
     
     # These are kept for backward compatibility but not actively used
@@ -781,7 +737,6 @@ class Config:
             "baywheels_enabled": cls.BAYWHEELS_ENABLED,
             "traffic_enabled": cls.TRAFFIC_ENABLED,
             "stocks_enabled": cls.STOCKS_ENABLED,
-            "flights_enabled": cls.FLIGHTS_ENABLED,
             # Board config
             "board_api_mode": cls.BOARD_API_MODE,
             "board_host": cls.BOARD_HOST if cls.BOARD_API_MODE.lower() == "local" else "cloud",
