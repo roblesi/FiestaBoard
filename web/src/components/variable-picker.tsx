@@ -228,21 +228,6 @@ export function VariablePicker({
     enabled: templateVars?.variables?.stocks !== undefined,
   });
 
-  // Fetch live Flights data
-  const { data: flightsData } = useQuery({
-    queryKey: ["flights-live-data"],
-    queryFn: async () => {
-      try {
-        const display = await api.getDisplayRaw("flights");
-        return display.data as { flights?: any[] };
-      } catch {
-        return null;
-      }
-    },
-    refetchInterval: 30000,
-    enabled: templateVars?.variables?.flights !== undefined,
-  });
-
   // Fetch live Sports Scores data
   const { data: sportsScoresData } = useQuery({
     queryKey: ["sports-scores-live-data"],
@@ -306,7 +291,6 @@ export function VariablePicker({
   const deferredTrafficData = useDeferredValue(trafficData);
   const deferredWeatherData = useDeferredValue(weatherData);
   const deferredStocksData = useDeferredValue(stocksData);
-  const deferredFlightsData = useDeferredValue(flightsData);
   const deferredSportsScoresData = useDeferredValue(sportsScoresData);
   const deferredNearbyAircraftData = useDeferredValue(nearbyAircraftData);
 
@@ -911,90 +895,6 @@ export function VariablePicker({
                             <p className="mb-2">Configure sports in Settings to see indexed variables here.</p>
                             <p className="font-mono text-[10px]">
                               Example: <code className="bg-background px-1 rounded">games.0.team1</code>, <code className="bg-background px-1 rounded">games.1.score1</code>, <code className="bg-background px-1 rounded">games.2.formatted</code>
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </CollapsibleSection>
-                );
-              }
-
-              // Special handling for Flights with live flight data
-              if (category === "flights") {
-                return (
-                  <CollapsibleSection key={category} title={category} defaultOpen={false}>
-                    <div className="space-y-3">
-                      {/* General Variables */}
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1.5">General</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {vars.filter(v => !v.startsWith("flights.")).map((variable) => {
-                            const varValue = `{{${category}.${variable}}}`;
-                            return (
-                              <VariablePill
-                                key={variable}
-                                label={variable}
-                                value={varValue}
-                                onInsert={() => handleInsert(varValue)}
-                                onDragStart={(e) => handleDragStart(e, varValue)}
-                              />
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Individual Flights Accordion */}
-                      <div className="space-y-1.5">
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          ✈️ Nearby Aircraft {deferredFlightsData?.flights ? `(${deferredFlightsData.flights.length})` : "(None detected)"}
-                        </p>
-                        {deferredFlightsData?.flights && deferredFlightsData.flights.length > 0 ? (
-                          <div className="max-h-[400px] overflow-y-auto pr-1">
-                            <Accordion type="single" collapsible className="w-full">
-                              {deferredFlightsData.flights.map((flight: any, index: number) => (
-                              <AccordionItem key={flight.call_sign || index} value={`flight-${index}`} className="border-b-0">
-                                <AccordionTrigger className="py-2 hover:no-underline">
-                                  <div className="flex items-center gap-2 text-xs">
-                                    <span className="text-base">✈️</span>
-                                    <div className="text-left">
-                                      <div className="font-medium">{flight.call_sign || `Flight ${index}`}</div>
-                                      <div className="text-muted-foreground text-xs">
-                                        {flight.altitude?.toLocaleString() || "N/A"}ft • {flight.ground_speed || "N/A"}km/h • {flight.distance_km?.toFixed(1) || "N/A"}km away • Index: {index}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </AccordionTrigger>
-                                <AccordionContent>
-                                  <div className="space-y-2 pt-2 pl-2">
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {["call_sign", "altitude", "ground_speed", "squawk", "distance_km", "latitude", "longitude", "formatted"].map((field) => {
-                                        const varValue = `{{${category}.flights.${index}.${field}}}`;
-                                        return (
-                                          <VariablePill
-                                            key={field}
-                                            label={field}
-                                            value={varValue}
-                                            onInsert={() => handleInsert(varValue)}
-                                            onDragStart={(e) => handleDragStart(e, varValue)}
-                                          />
-                                        );
-                                      })}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
-                                      <code className="text-xs">flights.{index}.*</code>
-                                    </div>
-                                  </div>
-                                </AccordionContent>
-                              </AccordionItem>
-                            ))}
-                            </Accordion>
-                          </div>
-                        ) : (
-                          <div className="p-3 bg-muted/30 rounded-lg text-xs text-muted-foreground">
-                            <p className="mb-2">Enable flight tracking in Settings and configure your location to see nearby aircraft here.</p>
-                            <p className="font-mono text-[10px]">
-                              Example: <code className="bg-background px-1 rounded">flights.0.call_sign</code>, <code className="bg-background px-1 rounded">flights.1.altitude</code>, <code className="bg-background px-1 rounded">flights.2.formatted</code>
                             </p>
                           </div>
                         )}
