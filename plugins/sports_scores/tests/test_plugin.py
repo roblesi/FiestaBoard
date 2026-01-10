@@ -96,6 +96,7 @@ class TestSportsScoresPlugin:
         mock_response.status_code = 200
         mock_response.json.return_value = mock_api_response_nfl
         mock_response.raise_for_status = Mock()
+        mock_response.headers = {"content-type": "application/json"}
         mock_get.return_value = mock_response
         
         plugin = SportsScoresPlugin(sample_manifest)
@@ -156,6 +157,7 @@ class TestSportsScoresPlugin:
         mock_response.status_code = 200
         mock_response.json.return_value = mock_api_response_empty
         mock_response.raise_for_status = Mock()
+        mock_response.headers = {"content-type": "application/json"}
         mock_get.return_value = mock_response
         
         plugin = SportsScoresPlugin(sample_manifest)
@@ -172,6 +174,7 @@ class TestSportsScoresPlugin:
         mock_response.status_code = 200
         mock_response.json.return_value = mock_api_response_no_events
         mock_response.raise_for_status = Mock()
+        mock_response.headers = {"content-type": "application/json"}
         mock_get.return_value = mock_response
         
         plugin = SportsScoresPlugin(sample_manifest)
@@ -189,6 +192,7 @@ class TestSportsScoresPlugin:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.raise_for_status = Mock()
+            mock_response.headers = {"content-type": "application/json"}
             
             # Check which sport is being requested
             if "American%20Football" in args[0] or "American" in str(kwargs):
@@ -218,6 +222,7 @@ class TestSportsScoresPlugin:
         mock_response.status_code = 200
         mock_response.json.return_value = mock_api_response_nfl
         mock_response.raise_for_status = Mock()
+        mock_response.headers = {"content-type": "application/json"}
         mock_get.return_value = mock_response
         
         plugin = SportsScoresPlugin(sample_manifest)
@@ -257,6 +262,7 @@ class TestSportsScoresPlugin:
             ]
         }
         mock_response.raise_for_status = Mock()
+        mock_response.headers = {"content-type": "application/json"}
         mock_get.return_value = mock_response
         
         plugin = SportsScoresPlugin(sample_manifest)
@@ -294,6 +300,7 @@ class TestSportsScoresPlugin:
         mock_response.status_code = 200
         mock_response.json.return_value = many_events
         mock_response.raise_for_status = Mock()
+        mock_response.headers = {"content-type": "application/json"}
         mock_get.return_value = mock_response
         
         plugin = SportsScoresPlugin(sample_manifest)
@@ -328,6 +335,7 @@ class TestSportsScoresPlugin:
                 ]
             }
             mock_response.raise_for_status = Mock()
+            mock_response.headers = {"content-type": "application/json"}
             mock_get.return_value = mock_response
             
             plugin = SportsScoresPlugin(sample_manifest)
@@ -377,6 +385,7 @@ class TestSportsScoresPlugin:
                 ]
             }
             mock_response.raise_for_status = Mock()
+            mock_response.headers = {"content-type": "application/json"}
             mock_get.return_value = mock_response
             
             plugin = SportsScoresPlugin(sample_manifest)
@@ -398,6 +407,7 @@ class TestPluginEdgeCases:
         mock_response.status_code = 200
         mock_response.json.return_value = {"invalid": "data"}  # Missing "event" key
         mock_response.raise_for_status = Mock()
+        mock_response.headers = {"content-type": "application/json"}
         mock_get.return_value = mock_response
         
         plugin = SportsScoresPlugin(sample_manifest)
@@ -440,6 +450,7 @@ class TestPluginEdgeCases:
             ]
         }
         mock_response.raise_for_status = Mock()
+        mock_response.headers = {"content-type": "application/json"}
         mock_get.return_value = mock_response
         
         plugin = SportsScoresPlugin(sample_manifest)
@@ -469,6 +480,7 @@ class TestPluginEdgeCases:
             ]
         }
         mock_response.raise_for_status = Mock()
+        mock_response.headers = {"content-type": "application/json"}
         mock_get.return_value = mock_response
         
         plugin = SportsScoresPlugin(sample_manifest)
@@ -505,6 +517,7 @@ class TestPluginEdgeCases:
             ]
         }
         mock_response.raise_for_status = Mock()
+        mock_response.headers = {"content-type": "application/json"}
         mock_get.return_value = mock_response
         
         plugin = SportsScoresPlugin(sample_manifest)
@@ -539,6 +552,7 @@ class TestPluginEdgeCases:
             ]
         }
         mock_response.raise_for_status = Mock()
+        mock_response.headers = {"content-type": "application/json"}
         mock_get.return_value = mock_response
         
         plugin = SportsScoresPlugin(sample_manifest)
@@ -572,6 +586,7 @@ class TestPluginEdgeCases:
             ]
         }
         mock_response.raise_for_status = Mock()
+        mock_response.headers = {"content-type": "application/json"}
         mock_get.return_value = mock_response
         
         plugin = SportsScoresPlugin(sample_manifest)
@@ -662,6 +677,7 @@ class TestPluginEdgeCases:
             ]
         }
         mock_response.raise_for_status = Mock()
+        mock_response.headers = {"content-type": "application/json"}
         mock_get.return_value = mock_response
         
         plugin = SportsScoresPlugin(sample_manifest)
