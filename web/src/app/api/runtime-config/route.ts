@@ -9,6 +9,8 @@ export async function GET(request: NextRequest) {
     // Get hostname from request for fallback
     const hostname = request.headers.get('host')?.split(':')[0] || 'localhost';
     
+    console.log(`[Runtime Config] Request from hostname: ${hostname}`);
+    
     // In Docker, try service name first, then localhost
     const apiEndpoints = [
       'http://fiestaboard-api:8000/api/runtime-config',  // Docker service name
@@ -25,14 +27,17 @@ export async function GET(request: NextRequest) {
         
         if (response.ok) {
           const data = await response.json();
+          console.log(`[Runtime Config] Backend returned:`, data);
           
           // If API returned an empty apiUrl, use hostname-based URL
           if (!data.apiUrl || data.apiUrl === '') {
+            console.log(`[Runtime Config] Empty API URL, using fallback: http://${hostname}:6969`);
             return NextResponse.json({
               apiUrl: `http://${hostname}:6969`
             });
           }
           
+          console.log(`[Runtime Config] Returning API URL: ${data.apiUrl}`);
           return NextResponse.json(data);
         }
       } catch (err) {
