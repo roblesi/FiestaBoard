@@ -29,6 +29,8 @@ from .displays.service import get_display_service, reset_display_service, Displa
 from .settings.service import get_settings_service, VALID_STRATEGIES, VALID_OUTPUT_TARGETS
 from .pages.service import get_page_service, DeleteResult
 from .pages.models import PageCreate, PageUpdate
+from .schedules.service import get_schedule_service
+from .schedules.models import ScheduleCreate, ScheduleUpdate
 from .templates.engine import get_template_engine, reset_template_engine
 from .text_to_board import text_to_board_array
 
@@ -2991,6 +2993,258 @@ async def send_page(page_id: str, target: Optional[str] = None):
         "sent_to_board": sent_to_board,
         "target": target or ("ui" if _dev_mode else settings_service.get_output_settings().target),
         "dev_mode": _dev_mode
+    }
+
+
+# =============================================================================
+# Schedule Endpoints
+# =============================================================================
+
+@app.get("/schedules")
+async def list_schedules():
+    """List all schedule entries.
+    
+    Returns all schedules with their configurations, including:
+    - Schedule entries
+    - Default page ID
+    - Schedule mode enabled status
+    """
+    schedule_service = get_schedule_service()
+    settings_service = get_settings_service()
+    
+    schedules = schedule_service.list_schedules()
+    
+    return {
+        "schedules": [s.model_dump() for s in schedules],
+        "total": len(schedules),
+        "default_page_id": schedule_service.get_default_page(),
+        "enabled": settings_service.is_schedule_enabled()
+    }
+
+
+@app.post("/schedules")
+async def create_schedule(schedule_data: ScheduleCreate):
+    """Create a new schedule entry.
+    
+    Args:
+        schedule_data: Schedule configuration
+        
+    Returns:
+        Created schedule entry
+    """
+    schedule_service = get_schedule_service()
+    
+    try:
+        schedule = schedule_service.create_schedule(schedule_data)
+        return schedule.model_dump()
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/schedules/{schedule_id}")
+async def get_schedule(schedule_id: str):
+    """Get a schedule entry by ID.
+    
+    Args:
+        schedule_id: Schedule ID
+        
+    Returns:
+        Schedule entry
+    """
+    schedule_service = get_schedule_service()
+    schedule = schedule_service.get_schedule(schedule_id)
+    
+    if not schedule:
+        raise HTTPException(status_code=404, detail=f"Schedule not found: {schedule_id}")
+    
+    return schedule.model_dump()
+
+
+@app.put("/schedules/{schedule_id}")
+async def update_schedule(schedule_id: str, schedule_data: ScheduleUpdate):
+    """Update an existing schedule entry.
+    
+    Args:
+        schedule_id: Schedule ID
+        schedule_data: Fields to update
+        
+    Returns:
+        Updated schedule entry
+    """
+    schedule_service = get_schedule_service()
+    
+    try:
+        schedule = schedule_service.update_schedule(schedule_id, schedule_data)
+        if not schedule:
+            raise HTTPException(status_code=404, detail=f"Schedule not found: {schedule_id}")
+        return schedule.model_dump()
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.delete("/schedules/{schedule_id}")
+async def delete_schedule(schedule_id: str):
+    """Delete a schedule entry.
+    
+    Args:
+        schedule_id: Schedule ID
+        
+    Returns:
+        Success status
+    """
+    schedule_service = get_schedule_service()
+    
+    deleted = schedule_service.delete_schedule(schedule_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"Schedule not found: {schedule_id}")
+    
+    return {
+        "status": "success",
+        "message": f"Schedule {schedule_id} deleted"
+    }
+
+
+@app.get("/schedules/active/page")
+async def get_active_schedule():
+    """Get the currently active page based on schedule.
+    
+    Uses current time and day to determine which page should be displayed.
+    Falls back to default page if no schedule matches.
+    
+    Returns:
+        Active page ID and schedule information
+    """
+    from datetime import datetime
+    
+    schedule_service = get_schedule_service()
+    settings_service = get_settings_service()
+    
+    # Check if schedule mode is enabled
+    if not settings_service.is_schedule_enabled():
+        # Return manual active page
+        return {
+            "page_id": settings_service.get_active_page_id(),
+            "source": "manual",
+            "schedule_enabled": False
+        }
+    
+    # Get current time and day
+    now = datetime.now()
+    current_time = now.time()
+    current_day = now.strftime("%A").lower()  # monday, tuesday, etc.
+    
+    page_id = schedule_service.get_active_page_id(current_time, current_day)
+    
+    return {
+        "page_id": page_id,
+        "source": "schedule" if page_id else "none",
+        "schedule_enabled": True,
+        "current_time": now.strftime("%H:%M"),
+        "current_day": current_day,
+        "default_page_id": schedule_service.get_default_page()
+    }
+
+
+@app.post("/schedules/validate")
+async def validate_schedules():
+    """Validate all schedules for overlaps and gaps.
+    
+    Returns:
+        Validation result with overlaps and gaps
+    """
+    schedule_service = get_schedule_service()
+    
+    result = schedule_service.validate_schedules()
+    
+    return result.model_dump()
+
+
+@app.get("/schedules/default-page")
+async def get_default_page():
+    """Get the default page ID for schedule gaps.
+    
+    Returns:
+        Default page ID
+    """
+    schedule_service = get_schedule_service()
+    
+    return {
+        "default_page_id": schedule_service.get_default_page()
+    }
+
+
+@app.put("/schedules/default-page")
+async def set_default_page(request: dict):
+    """Set the default page ID for schedule gaps.
+    
+    Args:
+        request: {"page_id": "page-id-here"} or {"page_id": null}
+        
+    Returns:
+        Success status
+    """
+    if "page_id" not in request:
+        raise HTTPException(status_code=400, detail="page_id parameter required")
+    
+    page_id = request["page_id"]
+    
+    # Validate that page exists if not None
+    if page_id is not None:
+        page_service = get_page_service()
+        page = page_service.get_page(page_id)
+        if not page:
+            raise HTTPException(status_code=404, detail=f"Page not found: {page_id}")
+    
+    schedule_service = get_schedule_service()
+    schedule_service.set_default_page(page_id)
+    
+    return {
+        "status": "success",
+        "default_page_id": page_id
+    }
+
+
+@app.get("/schedules/enabled")
+async def get_schedule_enabled():
+    """Check if schedule mode is enabled.
+    
+    Returns:
+        Schedule enabled status
+    """
+    settings_service = get_settings_service()
+    
+    return {
+        "enabled": settings_service.is_schedule_enabled()
+    }
+
+
+@app.put("/schedules/enabled")
+async def set_schedule_enabled(request: dict):
+    """Enable or disable schedule mode.
+    
+    When enabled, time-based schedules control page display.
+    When disabled, manual active_page is used.
+    
+    Args:
+        request: {"enabled": true/false}
+        
+    Returns:
+        Success status
+    """
+    if "enabled" not in request:
+        raise HTTPException(status_code=400, detail="enabled parameter required")
+    
+    enabled = request["enabled"]
+    if not isinstance(enabled, bool):
+        raise HTTPException(status_code=400, detail="enabled must be boolean")
+    
+    settings_service = get_settings_service()
+    settings_service.set_schedule_enabled(enabled)
+    
+    return {
+        "status": "success",
+        "enabled": enabled,
+        "message": f"Schedule mode {'enabled' if enabled else 'disabled'}"
     }
 
 
