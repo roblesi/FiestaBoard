@@ -4,12 +4,14 @@ import { useEffect, useMemo, useTransition, useRef, useDeferredValue, useCallbac
 import { useActivePage, useSetActivePage, usePagePreview, usePages, useBoardSettings } from "@/hooks/use-board";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Moon, ArrowLeftRight } from "lucide-react";
+import { Moon, ArrowLeftRight, Calendar } from "lucide-react";
 import { BoardDisplay } from "@/components/board-display";
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import type { SilenceStatus } from "@/lib/api";
 import { api } from "@/lib/api";
 import { PageGridSelector } from "@/components/page-grid-selector";
@@ -92,6 +94,8 @@ function addSnoozingIndicator(content: string): string {
 }
 
 export function ActivePageDisplay() {
+  const router = useRouter();
+  
   // Sheet open state
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   // Pre-render state - start rendering grid in background after initial mount
@@ -125,7 +129,23 @@ export function ActivePageDisplay() {
     }
   }, [isSheetOpen]);
   
-  // Fetch active page setting
+  // Fetch schedule status
+  const { data: schedulesData } = useQuery({
+    queryKey: ["schedules"],
+    queryFn: api.getSchedules,
+  });
+  
+  const scheduleEnabled = schedulesData?.enabled || false;
+  
+  // Fetch active page from schedule if enabled, otherwise manual
+  const { data: activeScheduleData } = useQuery({
+    queryKey: ["schedules", "active"],
+    queryFn: api.getActiveSchedule,
+    enabled: scheduleEnabled,
+    refetchInterval: scheduleEnabled ? 60000 : false, // Refresh every minute if schedule enabled
+  });
+  
+  // Fetch manual active page setting
   const { 
     data: activePageData, 
     isLoading: isLoadingActivePage
@@ -143,8 +163,11 @@ export function ActivePageDisplay() {
   // Set active page mutation
   const setActivePageMutation = useSetActivePage();
   
-  // Get the active page ID
-  const activePageId = activePageData?.page_id || null;
+  // Get the active page ID based on mode
+  const activePageId = scheduleEnabled 
+    ? (activeScheduleData?.page_id || null)
+    : (activePageData?.page_id || null);
+  
   // Defer activePageId updates to reduce priority of non-urgent re-renders
   // This makes clicking feel more responsive
   const deferredActivePageId = useDeferredValue(activePageId);
@@ -251,19 +274,44 @@ export function ActivePageDisplay() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setIsSheetOpen(true)}
+              onClick={() => {
+                if (scheduleEnabled) {
+                  router.push("/schedule");
+                } else {
+                  setIsSheetOpen(true);
+                }
+              }}
               className="gap-2"
             >
-              <ArrowLeftRight className="h-4 w-4" />
-              Change Page
+              {scheduleEnabled ? (
+                <>
+                  <Calendar className="h-4 w-4" />
+                  View Schedule
+                </>
+              ) : (
+                <>
+                  <ArrowLeftRight className="h-4 w-4" />
+                  Change Page
+                </>
+              )}
             </Button>
           </div>
           
           {/* Active page name and status */}
-          <div className="flex items-center gap-4 text-xs text-muted-foreground mt-3">
+          <div className="flex items-center gap-4 text-xs text-muted-foreground mt-3 flex-wrap">
             <div className="flex items-center gap-1.5">
               <span className="font-medium text-foreground">{activePageName}</span>
             </div>
+            <Badge variant={scheduleEnabled ? "default" : "secondary"} className="text-xs">
+              {scheduleEnabled ? (
+                <>
+                  <Calendar className="h-3 w-3 mr-1" />
+                  Schedule Mode
+                </>
+              ) : (
+                "Manual Mode"
+              )}
+            </Badge>
             {silenceStatus?.active && (
               <div className="flex items-center gap-1.5">
                 <Moon className="h-3 w-3 text-blue-500" />

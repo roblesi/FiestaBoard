@@ -1,0 +1,227 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { DaySelector } from "@/components/day-selector";
+import { AlertCircle, Loader2 } from "lucide-react";
+import type { ScheduleEntry, ScheduleCreate, ScheduleUpdate, DayPattern } from "@/lib/api";
+
+interface ScheduleEntryFormProps {
+  schedule?: ScheduleEntry;
+  pages: Array<{ id: string; name: string }>;
+  onSubmit: (data: ScheduleCreate | ScheduleUpdate) => Promise<void>;
+  onCancel: () => void;
+}
+
+// Generate 15-minute interval times
+const generateTimeOptions = () => {
+  const times: string[] = [];
+  for (let hour = 0; hour < 24; hour++) {
+    for (let minute = 0; minute < 60; minute += 15) {
+      const h = hour.toString().padStart(2, "0");
+      const m = minute.toString().padStart(2, "0");
+      times.push(`${h}:${m}`);
+    }
+  }
+  return times;
+};
+
+const TIME_OPTIONS = generateTimeOptions();
+
+export function ScheduleEntryForm({ schedule, pages, onSubmit, onCancel }: ScheduleEntryFormProps) {
+  const isEdit = Boolean(schedule);
+  
+  const [pageId, setPageId] = useState(schedule?.page_id || "");
+  const [startTime, setStartTime] = useState(schedule?.start_time || "09:00");
+  const [endTime, setEndTime] = useState(schedule?.end_time || "17:00");
+  const [dayPattern, setDayPattern] = useState<DayPattern>(schedule?.day_pattern || "all");
+  const [customDays, setCustomDays] = useState<string[]>(schedule?.custom_days || []);
+  const [enabled, setEnabled] = useState(schedule?.enabled !== false);
+  
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Validation
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  
+  useEffect(() => {
+    const errors: string[] = [];
+    
+    if (!pageId) {
+      errors.push("Please select a page");
+    }
+    
+    // Validate time order
+    const startMinutes = timeToMinutes(startTime);
+    const endMinutes = timeToMinutes(endTime);
+    if (endMinutes <= startMinutes) {
+      errors.push("End time must be after start time");
+    }
+    
+    // Validate custom days
+    if (dayPattern === "custom" && customDays.length === 0) {
+      errors.push("Please select at least one day for custom pattern");
+    }
+    
+    setValidationErrors(errors);
+  }, [pageId, startTime, endTime, dayPattern, customDays]);
+
+  const timeToMinutes = (time: string): number => {
+    const [h, m] = time.split(":").map(Number);
+    return h * 60 + m;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (validationErrors.length > 0) {
+      return;
+    }
+    
+    setIsSubmitting(true);
+    setError(null);
+    
+    try {
+      const data = {
+        page_id: pageId,
+        start_time: startTime,
+        end_time: endTime,
+        day_pattern: dayPattern,
+        custom_days: dayPattern === "custom" ? customDays : undefined,
+        enabled,
+      };
+      
+      await onSubmit(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save schedule");
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDayChange = (pattern: DayPattern, days?: string[]) => {
+    setDayPattern(pattern);
+    if (days) {
+      setCustomDays(days);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      
+      {/* Page Selection */}
+      <div className="space-y-2">
+        <Label htmlFor="page">Page</Label>
+        <Select value={pageId} onValueChange={setPageId}>
+          <SelectTrigger id="page">
+            <SelectValue placeholder="Select a page" />
+          </SelectTrigger>
+          <SelectContent>
+            {pages.map((page) => (
+              <SelectItem key={page.id} value={page.id}>
+                {page.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Time Selection */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="start-time">Start Time</Label>
+          <Select value={startTime} onValueChange={setStartTime}>
+            <SelectTrigger id="start-time">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="max-h-60">
+              {TIME_OPTIONS.map((time) => (
+                <SelectItem key={`start-${time}`} value={time}>
+                  {time}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="end-time">End Time</Label>
+          <Select value={endTime} onValueChange={setEndTime}>
+            <SelectTrigger id="end-time">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="max-h-60">
+              {TIME_OPTIONS.map((time) => (
+                <SelectItem key={`end-${time}`} value={time}>
+                  {time}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Day Pattern Selection */}
+      <DaySelector
+        value={dayPattern}
+        customDays={customDays}
+        onChange={handleDayChange}
+      />
+
+      {/* Enabled Toggle */}
+      <div className="flex items-center justify-between rounded-lg border p-4">
+        <div className="space-y-0.5">
+          <Label htmlFor="enabled" className="text-base">
+            Enabled
+          </Label>
+          <div className="text-sm text-muted-foreground">
+            Schedule will be active when enabled
+          </div>
+        </div>
+        <Switch
+          id="enabled"
+          checked={enabled}
+          onCheckedChange={setEnabled}
+        />
+      </div>
+
+      {/* Validation Errors */}
+      {validationErrors.length > 0 && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <ul className="list-disc list-inside space-y-1">
+              {validationErrors.map((err, i) => (
+                <li key={i}>{err}</li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Actions */}
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+          Cancel
+        </Button>
+        <Button
+          type="submit"
+          disabled={validationErrors.length > 0 || isSubmitting}
+        >
+          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {isEdit ? "Update" : "Create"} Schedule
+        </Button>
+      </div>
+    </form>
+  );
+}
