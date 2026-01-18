@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Moon, ArrowLeftRight, Calendar } from "lucide-react";
+import { Moon, ArrowLeftRight, Calendar, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { BoardDisplay } from "@/components/board-display";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
@@ -248,9 +249,12 @@ export function ActivePageDisplay() {
   
   // Get the active page name for display
   const activePageName = useMemo(() => {
+    if (!activePageId && scheduleEnabled) {
+      return "Schedule gap (no default page set)";
+    }
     const page = pages.find(p => p.id === activePageId);
     return page?.name || "No page selected";
-  }, [pages, activePageId]);
+  }, [pages, activePageId, scheduleEnabled]);
   
   // Compute the display message with snoozing indicator if needed
   const displayMessage = useMemo(() => {
@@ -321,14 +325,33 @@ export function ActivePageDisplay() {
           </div>
         </CardHeader>
         
-        <CardContent className="flex justify-center overflow-x-hidden px-2">
+        <CardContent className="space-y-4">
+          {/* Schedule gap warning */}
+          {scheduleEnabled && !activePageId && (
+            <Alert variant="default" className="border-yellow-500/50 bg-yellow-500/10">
+              <AlertTriangle className="h-4 w-4 text-yellow-500" />
+              <AlertDescription className="text-sm">
+                No page scheduled for current time. Set a default page in{" "}
+                <button
+                  onClick={() => router.push("/schedule")}
+                  className="underline font-medium hover:text-primary"
+                >
+                  Schedule settings
+                </button>
+                .
+              </AlertDescription>
+            </Alert>
+          )}
+          
           {/* Board Frame */}
-          <BoardDisplay 
-            message={displayMessage} 
-            isLoading={isLoadingPreview || (!!activePageId && !previewData)}
-            size="md"
-            boardType={boardSettings?.board_type ?? "black"}
-          />
+          <div className="flex justify-center overflow-x-hidden px-2">
+            <BoardDisplay 
+              message={displayMessage} 
+              isLoading={isLoadingPreview || (!!activePageId && !previewData)}
+              size="md"
+              boardType={boardSettings?.board_type ?? "black"}
+            />
+          </div>
         </CardContent>
       </Card>
 

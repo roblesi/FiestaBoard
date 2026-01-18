@@ -195,26 +195,28 @@ export function DaySelector({ value, customDays = [], onChange, className }: Day
             <span className="text-sm font-medium">Custom Days</span>
           </div>
 
-          {/* Custom Day Checkboxes */}
+          {/* Custom Day Checkboxes - prevent nested buttons by using labels with checkboxes */}
           {value === "custom" && (
-            <div className="ml-6 flex flex-wrap gap-2 pt-2">
+            <div className="ml-6 flex flex-wrap gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
               {ALL_DAYS.map((day) => (
-                <button
+                <label
                   key={day}
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCustomDayToggle(day);
-                  }}
                   className={cn(
-                    "rounded-md border px-3 py-1.5 text-xs font-medium transition-colors",
+                    "rounded-md border px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer inline-flex items-center gap-1.5",
                     selectedCustomDays.includes(day)
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-border bg-background hover:bg-accent"
                   )}
                 >
+                  <input
+                    type="checkbox"
+                    checked={selectedCustomDays.includes(day)}
+                    onChange={() => handleCustomDayToggle(day)}
+                    className="sr-only"
+                    aria-label={day.charAt(0).toUpperCase() + day.slice(1)}
+                  />
                   {DAY_LABELS[day]}
-                </button>
+                </label>
               ))}
             </div>
           )}

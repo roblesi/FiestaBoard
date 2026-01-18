@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ScheduleEntryForm } from "@/components/schedule-entry-form";
-import { PageSelector } from "@/components/page-selector";
+import { PagePickerDialog } from "@/components/page-picker-dialog";
 import { Plus, Edit, Trash2, AlertCircle, Calendar, CheckCircle2, AlertTriangle } from "lucide-react";
 import { api, type ScheduleEntry, type ScheduleCreate, type ScheduleUpdate } from "@/lib/api";
 import { toast } from "sonner";
@@ -185,6 +185,9 @@ export default function SchedulePage() {
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Schedule</h1>
           <p className="text-muted-foreground mt-1 text-sm sm:text-base">
             Automate page rotation based on time and day
+          </p>
+          <p className="text-muted-foreground text-xs mt-1">
+            Times shown in: {Intl.DateTimeFormat().resolvedOptions().timeZone}
           </p>
         </div>
 
@@ -355,10 +358,12 @@ export default function SchedulePage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <PageSelector
+                <PagePickerDialog
                   pages={pagesData.pages}
                   selectedPageId={defaultPageId || null}
-                  onSelect={(pageId) => setDefaultPage.mutate(pageId)}
+                  onSelect={(pageId) => {
+                    setDefaultPage.mutate(pageId);
+                  }}
                   allowNone={true}
                 />
                 <div className="flex justify-end gap-2 mt-4">
