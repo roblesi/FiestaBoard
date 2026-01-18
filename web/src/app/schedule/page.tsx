@@ -160,6 +160,29 @@ export default function SchedulePage() {
     return pagesData?.pages.find((p) => p.id === pageId)?.name || pageId;
   };
 
+  const formatDaysCompact = (days: string[]): string => {
+    if (!days || days.length === 0) return "";
+    
+    const weekdays = ["monday", "tuesday", "wednesday", "thursday", "friday"];
+    const weekends = ["saturday", "sunday"];
+    const allDays = [...weekdays, ...weekends];
+    
+    // Check for common patterns
+    const sortedDays = [...days].sort();
+    const hasAllWeekdays = weekdays.every(d => days.includes(d));
+    const hasAllWeekends = weekends.every(d => days.includes(d));
+    const hasAllDays = allDays.every(d => days.includes(d));
+    
+    if (hasAllDays) return "Every day";
+    if (hasAllWeekdays && days.length === 5) return "Weekdays";
+    if (hasAllWeekends && days.length === 2) return "Weekends";
+    
+    // For other combinations, show abbreviated day names
+    return days
+      .map(d => d.slice(0, 3).charAt(0).toUpperCase() + d.slice(1, 3))
+      .join(", ");
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background p-4 sm:p-6 md:p-8">
@@ -249,16 +272,15 @@ export default function SchedulePage() {
                   {validation?.gaps && validation.gaps.length > 0 && (
                     <div className="mt-2 space-y-1 text-xs opacity-90">
                       <div className="font-semibold">Time gaps:</div>
-                      {validation.gaps.flatMap((gap, gapIdx) => {
+                      {validation.gaps.map((gap, i) => {
                         // Skip gaps with missing data
-                        if (!gap?.days || !gap?.start_time || !gap?.end_time) return [];
+                        if (!gap?.days || !gap?.start_time || !gap?.end_time) return null;
                         
-                        // Expand each gap into one line per day
-                        return gap.days.map((day, dayIdx) => (
-                          <div key={`${gapIdx}-${dayIdx}`} className="pl-2">
-                            • {day.charAt(0).toUpperCase() + day.slice(1)}: {gap.start_time} - {gap.end_time}
+                        return (
+                          <div key={i} className="pl-2">
+                            • {formatDaysCompact(gap.days)}: {gap.start_time} - {gap.end_time}
                           </div>
-                        ));
+                        );
                       })}
                     </div>
                   )}
