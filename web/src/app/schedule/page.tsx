@@ -249,11 +249,16 @@ export default function SchedulePage() {
                   {validation?.gaps && validation.gaps.length > 0 && (
                     <div className="mt-2 space-y-1 text-xs opacity-90">
                       <div className="font-semibold">Time gaps:</div>
-                      {validation.gaps.map((gap, i) => (
-                        <div key={i} className="pl-2">
-                          • {gap?.day ? gap.day.charAt(0).toUpperCase() + gap.day.slice(1) : "Unknown"}: {gap?.start_time || "?"} - {gap?.end_time || "?"}
-                        </div>
-                      ))}
+                      {validation.gaps.map((gap, i) => {
+                        // Skip gaps with missing data
+                        if (!gap?.day || !gap?.start_time || !gap?.end_time) return null;
+                        
+                        return (
+                          <div key={i} className="pl-2">
+                            • {gap.day.charAt(0).toUpperCase() + gap.day.slice(1)}: {gap.start_time} - {gap.end_time}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
