@@ -2301,6 +2301,53 @@ async def update_board_settings(request: dict):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@app.get("/settings/all")
+async def get_all_settings():
+    """
+    Get all settings in a single request.
+    
+    Returns consolidated settings for the settings page including:
+    - general config (timezone, etc.)
+    - silence_schedule plugin config
+    - polling interval settings
+    - transitions settings
+    - output settings
+    - board settings
+    - service status (running, dev_mode)
+    """
+    global _service_running, _dev_mode
+    
+    settings_service = get_settings_service()
+    config_manager = get_config_manager()
+    
+    # Get silence schedule config
+    silence_config = config_manager.get_plugin_config("silence_schedule")
+    
+    # Get all other settings
+    general = config_manager.get_general()
+    polling = settings_service.get_polling_settings()
+    transitions = settings_service.get_transition_settings()
+    output = settings_service.get_output_settings()
+    board = settings_service.get_board_settings()
+    
+    return {
+        "general": general,
+        "silence_schedule": silence_config or {},
+        "polling": {
+            "interval_seconds": polling.interval_seconds
+        },
+        "transitions": transitions.to_dict(),
+        "output": output.to_dict(),
+        "board": {
+            "board_type": board.board_type
+        },
+        "status": {
+            "running": _service_running,
+            "dev_mode": _dev_mode
+        }
+    }
+
+
 # =============================================================================
 # Pages Endpoints
 # =============================================================================

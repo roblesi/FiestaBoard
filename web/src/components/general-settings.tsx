@@ -27,31 +27,29 @@ export function GeneralSettings() {
   const [silenceEndTime, setSilenceEndTime] = useState("07:00");
   const [pollingInterval, setPollingInterval] = useState(60);
 
-  // Fetch general config
-  const { data: generalConfig, isLoading: isLoadingConfig } = useQuery({
-    queryKey: ["generalConfig"],
-    queryFn: api.getGeneralConfig,
+  // Fetch all settings in one request
+  const { data: allSettings, isLoading: isLoadingSettings } = useQuery({
+    queryKey: ["all-settings"],
+    queryFn: api.getAllSettings,
   });
 
-  // Fetch silence schedule config (now uses plugin API)
-  const { data: silenceConfig, isLoading: isLoadingSilence } = useQuery({
-    queryKey: ["plugin", "silence_schedule"],
-    queryFn: () => api.getPlugin("silence_schedule"),
-  });
-
-  // Fetch polling settings
-  const { data: pollingSettings, isLoading: isLoadingPolling } = useQuery({
-    queryKey: ["polling-settings"],
-    queryFn: api.getPollingSettings,
-  });
-
-  // Fetch service status
-  const { data: status, isLoading: isLoadingStatus } = useStatus();
   const devModeMutation = useToggleDevMode();
+
+  // Extract individual settings from consolidated response
+  const generalConfig = allSettings?.general;
+  const silenceConfig = allSettings?.silence_schedule;
+  const pollingSettings = allSettings?.polling;
+  const status = allSettings?.status;
 
   // Use deferred values for non-critical data to reduce re-render priority
   const deferredSilenceConfig = useDeferredValue(silenceConfig);
   const deferredPollingSettings = useDeferredValue(pollingSettings);
+  
+  // Compute loading states
+  const isLoadingConfig = isLoadingSettings;
+  const isLoadingSilence = isLoadingSettings;
+  const isLoadingPolling = isLoadingSettings;
+  const isLoadingStatus = isLoadingSettings;
 
   // Initialize form data when config loads
   useEffect(() => {

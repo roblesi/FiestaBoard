@@ -368,6 +368,19 @@ export interface BoardSettings {
   board_type: "black" | "white" | null;
 }
 
+export interface AllSettingsResponse {
+  general: GeneralConfig;
+  silence_schedule: Record<string, unknown>;
+  polling: PollingSettings;
+  transitions: TransitionSettings;
+  output: OutputSettings;
+  board: BoardSettings;
+  status: {
+    running: boolean;
+    dev_mode: boolean;
+  };
+}
+
 export interface FullConfig {
   board: BoardConfig;
   general: GeneralConfig;
@@ -833,6 +846,7 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ board_type }),
     }),
+  getAllSettings: () => fetchApi<AllSettingsResponse>("/settings/all"),
 
   // Home Assistant endpoints
   getHomeAssistantEntities: () =>
