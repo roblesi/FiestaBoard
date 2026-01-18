@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 export async function GET(request: NextRequest) {
   try {
-    // Try to reach the API - check multiple possible locations
+    // Get hostname from request for fallback
     const hostname = request.headers.get('host')?.split(':')[0] || 'localhost';
     
     // In Docker, try service name first, then localhost
@@ -25,6 +25,14 @@ export async function GET(request: NextRequest) {
         
         if (response.ok) {
           const data = await response.json();
+          
+          // If API returned an empty apiUrl, use hostname-based URL
+          if (!data.apiUrl || data.apiUrl === '') {
+            return NextResponse.json({
+              apiUrl: `http://${hostname}:6969`
+            });
+          }
+          
           return NextResponse.json(data);
         }
       } catch (err) {
