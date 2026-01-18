@@ -1190,6 +1190,74 @@ async def get_display_raw(display_type: str):
     }
 
 
+@app.post("/displays/raw/batch")
+async def get_displays_raw_batch(request: dict):
+    """
+    Get raw data from multiple display sources in one request.
+    
+    This is useful for efficiently fetching data for multiple plugins
+    without making individual requests.
+    
+    Request body:
+        {
+            "display_types": ["baywheels", "muni", "weather", "stocks"],
+            "enabled_only": true  // Optional, only fetch enabled plugins
+        }
+    
+    Returns:
+        {
+            "displays": {
+                "baywheels": {
+                    "data": {...},
+                    "available": true,
+                    "error": null
+                },
+                ...
+            },
+            "total": 4,
+            "successful": 3
+        }
+    """
+    display_types = request.get("display_types", [])
+    enabled_only = request.get("enabled_only", True)
+    
+    if not display_types:
+        raise HTTPException(status_code=400, detail="display_types parameter required")
+    
+    if not isinstance(display_types, list):
+        raise HTTPException(status_code=400, detail="display_types must be a list")
+    
+    display_service = get_display_service()
+    results = {}
+    
+    for display_type in display_types:
+        try:
+            result = display_service.get_display(display_type)
+            
+            # Skip if enabled_only is true and plugin is not available
+            if enabled_only and not result.available:
+                continue
+            
+            results[display_type] = {
+                "data": result.raw,
+                "available": result.available,
+                "error": result.error
+            }
+        except Exception as e:
+            logger.error(f"Error fetching display {display_type}: {e}", exc_info=True)
+            results[display_type] = {
+                "data": {},
+                "available": False,
+                "error": str(e)
+            }
+    
+    return {
+        "displays": results,
+        "total": len(display_types),
+        "successful": sum(1 for r in results.values() if r.get("available", False))
+    }
+
+
 @app.post("/displays/{display_type}/send")
 async def send_display(
     display_type: str,

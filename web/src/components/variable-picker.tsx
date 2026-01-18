@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, DragEvent, useDeferredValue } from "react";
+import { useState, DragEvent, useDeferredValue, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -153,111 +153,49 @@ export function VariablePicker({
     queryFn: api.getTemplateVariables,
   });
 
-  // Fetch live BayWheels station data
-  const { data: baywheelsData } = useQuery({
-    queryKey: ["baywheels-live-data"],
-    queryFn: async () => {
-      try {
-        const display = await api.getDisplayRaw("baywheels");
-        return display.data as { stations?: BayWheelsStationData[] };
-      } catch {
-        return null;
-      }
-    },
-    refetchInterval: 30000, // Refresh every 30 seconds
-    enabled: templateVars?.variables?.baywheels !== undefined,
+  // Determine which plugins are enabled from templateVars
+  const enabledPlugins = useMemo(() => {
+    if (!templateVars?.variables) return [];
+    const pluginKeys = ['baywheels', 'muni', 'traffic', 'weather', 'stocks', 'sports_scores', 'nearby_aircraft'];
+    return pluginKeys.filter(key => templateVars.variables[key] !== undefined);
+  }, [templateVars]);
+
+  // Single batch query instead of 7+ individual queries
+  const { data: pluginDisplayData } = useQuery({
+    queryKey: ["plugin-displays-batch", enabledPlugins],
+    queryFn: () => api.getDisplaysRawBatch(enabledPlugins),
+    refetchInterval: 30000,
+    enabled: enabledPlugins.length > 0,
   });
 
-  // Fetch live MUNI stop data
-  const { data: muniData } = useQuery({
-    queryKey: ["muni-live-data"],
-    queryFn: async () => {
-      try {
-        const display = await api.getDisplayRaw("muni");
-        return display.data as { stops?: any[] };
-      } catch {
-        return null;
-      }
-    },
-    refetchInterval: 30000,
-    enabled: templateVars?.variables?.muni !== undefined,
-  });
-
-  // Fetch live Traffic route data
-  const { data: trafficData } = useQuery({
-    queryKey: ["traffic-live-data"],
-    queryFn: async () => {
-      try {
-        const display = await api.getDisplayRaw("traffic");
-        return display.data as { routes?: any[] };
-      } catch {
-        return null;
-      }
-    },
-    refetchInterval: 30000,
-    enabled: templateVars?.variables?.traffic !== undefined,
-  });
-
-  // Fetch live Weather location data
-  const { data: weatherData } = useQuery({
-    queryKey: ["weather-live-data"],
-    queryFn: async () => {
-      try {
-        const display = await api.getDisplayRaw("weather");
-        return display.data as { locations?: any[] };
-      } catch {
-        return null;
-      }
-    },
-    refetchInterval: 30000,
-    enabled: templateVars?.variables?.weather !== undefined,
-  });
-
-  // Fetch live Stocks data
-  const { data: stocksData } = useQuery({
-    queryKey: ["stocks-live-data"],
-    queryFn: async () => {
-      try {
-        const display = await api.getDisplayRaw("stocks");
-        return display.data as { stocks?: any[] };
-      } catch {
-        return null;
-      }
-    },
-    refetchInterval: 30000,
-    enabled: templateVars?.variables?.stocks !== undefined,
-  });
-
-  // Fetch live Sports Scores data
-  const { data: sportsScoresData } = useQuery({
-    queryKey: ["sports-scores-live-data"],
-    queryFn: async () => {
-      try {
-        const display = await api.getDisplayRaw("sports_scores");
-        return display.data as { games?: any[] };
-      } catch (error) {
-        // Return empty structure on error so UI can still show the structure
-        return { games: [] };
-      }
-    },
-    refetchInterval: 30000,
-    enabled: templateVars?.variables?.sports_scores !== undefined,
-  });
-
-  // Fetch live Nearby Aircraft data
-  const { data: nearbyAircraftData } = useQuery({
-    queryKey: ["nearby-aircraft-live-data"],
-    queryFn: async () => {
-      try {
-        const display = await api.getDisplayRaw("nearby_aircraft");
-        return display.data as { aircraft?: any[] };
-      } catch {
-        return null;
-      }
-    },
-    refetchInterval: 30000,
-    enabled: templateVars?.variables?.nearby_aircraft !== undefined,
-  });
+  // Extract individual plugin data from batch response
+  const baywheelsData = useMemo(() => 
+    pluginDisplayData?.displays?.baywheels?.data as { stations?: BayWheelsStationData[] } | null | undefined
+  , [pluginDisplayData]);
+  
+  const muniData = useMemo(() => 
+    pluginDisplayData?.displays?.muni?.data as { stops?: any[] } | null | undefined
+  , [pluginDisplayData]);
+  
+  const trafficData = useMemo(() => 
+    pluginDisplayData?.displays?.traffic?.data as { routes?: any[] } | null | undefined
+  , [pluginDisplayData]);
+  
+  const weatherData = useMemo(() => 
+    pluginDisplayData?.displays?.weather?.data as { locations?: any[] } | null | undefined
+  , [pluginDisplayData]);
+  
+  const stocksData = useMemo(() => 
+    pluginDisplayData?.displays?.stocks?.data as { stocks?: any[] } | null | undefined
+  , [pluginDisplayData]);
+  
+  const sportsScoresData = useMemo(() => 
+    pluginDisplayData?.displays?.sports_scores?.data as { games?: any[] } | null | undefined ?? { games: [] }
+  , [pluginDisplayData]);
+  
+  const nearbyAircraftData = useMemo(() => 
+    pluginDisplayData?.displays?.nearby_aircraft?.data as { aircraft?: any[] } | null | undefined
+  , [pluginDisplayData]);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);

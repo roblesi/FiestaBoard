@@ -130,6 +130,16 @@ export interface DisplayRawResponse {
   error: string | null;
 }
 
+export interface DisplayRawBatchResponse {
+  displays: Record<string, {
+    data: Record<string, unknown>;
+    available: boolean;
+    error: string | null;
+  }>;
+  total: number;
+  successful: number;
+}
+
 // Settings types
 export interface TransitionSettings {
   strategy: string | null;
@@ -590,6 +600,14 @@ export const api = {
   getDisplays: () => fetchApi<DisplaysResponse>("/displays"),
   getDisplay: (type: string) => fetchApi<DisplayResponse>(`/displays/${type}`),
   getDisplayRaw: (type: string) => fetchApi<DisplayRawResponse>(`/displays/${type}/raw`),
+  getDisplaysRawBatch: (displayTypes: string[], enabledOnly?: boolean) =>
+    fetchApi<DisplayRawBatchResponse>("/displays/raw/batch", {
+      method: "POST",
+      body: JSON.stringify({
+        display_types: displayTypes,
+        enabled_only: enabledOnly ?? true
+      }),
+    }),
   sendDisplay: (type: string, target?: "ui" | "board" | "both") => {
     const params = target ? `?target=${target}` : "";
     return fetchApi<ActionResponse>(`/displays/${type}/send${params}`, { method: "POST" });
