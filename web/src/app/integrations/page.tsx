@@ -1249,7 +1249,7 @@ export default function IntegrationsPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["plugins"],
     queryFn: api.listPlugins,
-    refetchInterval: 30000, // Refresh every 30 seconds
+    // No refetchInterval needed - already using optimistic updates
   });
 
   // Toggle plugin mutation
