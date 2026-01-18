@@ -229,15 +229,15 @@ export default function SchedulePage() {
               {hasOverlaps && (
                 <div className="font-semibold mb-2">Schedule Conflicts Detected</div>
               )}
-              {validation?.overlaps.map((overlap, i) => (
+              {validation?.overlaps?.map((overlap, i) => (
                 <div key={i} className="text-sm">
-                  {overlap.conflict_description}
+                  {overlap?.conflict_description || "Unknown conflict"}
                 </div>
               ))}
               {hasGaps && !hasOverlaps && (
                 <div className="text-sm space-y-2">
                   <div>
-                    {validation?.gaps.length} time gap(s) in schedule.{" "}
+                    {validation?.gaps?.length || 0} time gap(s) in schedule.{" "}
                     {defaultPageId ? (
                       <span className="text-blue-600 dark:text-blue-400">
                         Default page &quot;{getPageName(defaultPageId)}&quot; will be shown.
@@ -246,12 +246,12 @@ export default function SchedulePage() {
                       <span>Consider setting a default page.</span>
                     )}
                   </div>
-                  {validation && validation.gaps.length > 0 && (
+                  {validation?.gaps && validation.gaps.length > 0 && (
                     <div className="mt-2 space-y-1 text-xs opacity-90">
                       <div className="font-semibold">Time gaps:</div>
                       {validation.gaps.map((gap, i) => (
                         <div key={i} className="pl-2">
-                          • {gap.day.charAt(0).toUpperCase() + gap.day.slice(1)}: {gap.start_time} - {gap.end_time}
+                          • {gap?.day ? gap.day.charAt(0).toUpperCase() + gap.day.slice(1) : "Unknown"}: {gap?.start_time || "?"} - {gap?.end_time || "?"}
                         </div>
                       ))}
                     </div>
