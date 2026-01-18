@@ -130,6 +130,16 @@ export interface DisplayRawResponse {
   error: string | null;
 }
 
+export interface DisplayRawBatchResponse {
+  displays: Record<string, {
+    data: Record<string, unknown>;
+    available: boolean;
+    error: string | null;
+  }>;
+  total: number;
+  successful: number;
+}
+
 // Settings types
 export interface TransitionSettings {
   strategy: string | null;
@@ -356,6 +366,19 @@ export interface PollingSettings {
 
 export interface BoardSettings {
   board_type: "black" | "white" | null;
+}
+
+export interface AllSettingsResponse {
+  general: GeneralConfig;
+  silence_schedule: Record<string, unknown>;
+  polling: PollingSettings;
+  transitions: TransitionSettings;
+  output: OutputSettings;
+  board: BoardSettings;
+  status: {
+    running: boolean;
+    dev_mode: boolean;
+  };
 }
 
 export interface FullConfig {
@@ -590,6 +613,14 @@ export const api = {
   getDisplays: () => fetchApi<DisplaysResponse>("/displays"),
   getDisplay: (type: string) => fetchApi<DisplayResponse>(`/displays/${type}`),
   getDisplayRaw: (type: string) => fetchApi<DisplayRawResponse>(`/displays/${type}/raw`),
+  getDisplaysRawBatch: (displayTypes: string[], enabledOnly?: boolean) =>
+    fetchApi<DisplayRawBatchResponse>("/displays/raw/batch", {
+      method: "POST",
+      body: JSON.stringify({
+        display_types: displayTypes,
+        enabled_only: enabledOnly ?? true
+      }),
+    }),
   sendDisplay: (type: string, target?: "ui" | "board" | "both") => {
     const params = target ? `?target=${target}` : "";
     return fetchApi<ActionResponse>(`/displays/${type}/send${params}`, { method: "POST" });
@@ -815,6 +846,7 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ board_type }),
     }),
+  getAllSettings: () => fetchApi<AllSettingsResponse>("/settings/all"),
 
   // Home Assistant endpoints
   getHomeAssistantEntities: () =>

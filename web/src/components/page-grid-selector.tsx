@@ -72,60 +72,17 @@ function isCacheValid(cached: CachedPreviewData | undefined, pageUpdatedAt: stri
   return cached.pageUpdatedAt === pageUpdatedAt;
 }
 
-// Mini preview component for each page button - uses localStorage caching
+// Mini preview component for each page button - receives preview data from parent
 // Memoized to prevent unnecessary re-renders when parent updates
 const PageButtonPreview = memo(function PageButtonPreview({ 
-  page, 
+  preview,
+  isLoading,
   boardType = "black" 
 }: { 
-  page: Page;
+  preview: PagePreviewResponse | null;
+  isLoading: boolean;
   boardType?: "black" | "white" | null;
 }) {
-  const pageId = page.id;
-  // Use empty string as fallback for optional updated_at
-  const pageUpdatedAt = page.updated_at || "";
-  const pageName = page.name;
-  
-  const [preview, setPreview] = useState<PagePreviewResponse | null>(() => 
-    getCachedPreview(pageId, pageUpdatedAt)
-  );
-  const [isLoading, setIsLoading] = useState(!preview);
-  
-  useEffect(() => {
-    // Check if we already have a valid cached preview
-    const cached = getCachedPreview(pageId, pageUpdatedAt);
-    if (cached) {
-      setPreview(cached);
-      setIsLoading(false);
-      return;
-    }
-    
-    // Fetch fresh preview
-    let mounted = true;
-    
-    const fetchPreview = async () => {
-      try {
-        const result = await api.previewPage(pageId);
-        if (mounted) {
-          setPreview(result);
-          setCachedPreview(pageId, pageUpdatedAt, result);
-          setIsLoading(false);
-        }
-      } catch (error) {
-        console.error(`Failed to fetch preview for ${pageName}:`, error);
-        if (mounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-    
-    fetchPreview();
-    
-    return () => {
-      mounted = false;
-    };
-  }, [pageId, pageUpdatedAt, pageName]);
-  
   return (
     <div 
       className="w-full hover-stable overflow-hidden -mr-3"
@@ -143,15 +100,17 @@ const PageButtonPreview = memo(function PageButtonPreview({
     </div>
   );
 }, (prevProps, nextProps) => {
-  // Custom comparison: only re-render if page ID, updated_at, or boardType changes
-  return prevProps.page.id === nextProps.page.id && 
-         prevProps.page.updated_at === nextProps.page.updated_at &&
+  // Custom comparison: only re-render if preview or loading state changes
+  return prevProps.preview === nextProps.preview && 
+         prevProps.isLoading === nextProps.isLoading &&
          prevProps.boardType === nextProps.boardType;
 });
 
 // Memoized page button component to prevent unnecessary re-renders
 const PageButton = memo(function PageButton({
   page,
+  preview,
+  isLoadingPreview,
   isActive,
   isPending,
   onSelect,
@@ -159,6 +118,8 @@ const PageButton = memo(function PageButton({
   boardType = "black",
 }: {
   page: Page;
+  preview: PagePreviewResponse | null;
+  isLoadingPreview: boolean;
   isActive: boolean;
   isPending: boolean;
   onSelect: (pageId: string) => void;
@@ -208,7 +169,11 @@ const PageButton = memo(function PageButton({
       
       {/* Mini preview - isolated to prevent hover re-renders */}
       <div className="hover-stable">
-        <PageButtonPreview page={page} boardType={boardType} />
+        <PageButtonPreview 
+          preview={preview} 
+          isLoading={isLoadingPreview}
+          boardType={boardType} 
+        />
       </div>
       
       {/* Active indicator */}
@@ -220,6 +185,8 @@ const PageButton = memo(function PageButton({
 }, (prevProps, nextProps) => {
   // Only re-render if relevant props change
   return prevProps.page.id === nextProps.page.id &&
+         prevProps.preview === nextProps.preview &&
+         prevProps.isLoadingPreview === nextProps.isLoadingPreview &&
          prevProps.isActive === nextProps.isActive &&
          prevProps.isPending === nextProps.isPending &&
          prevProps.page.updated_at === nextProps.page.updated_at &&
@@ -255,6 +222,91 @@ export function PageGridSelector({
   
   // Memoize pages array to prevent unnecessary re-renders
   const pages = useMemo(() => pagesData?.pages || [], [pagesData]);
+  
+  // State for batch preview data
+  const [previews, setPreviews] = useState<Record<string, PagePreviewResponse>>({});
+  const [loadingPreviews, setLoadingPreviews] = useState(true);
+  
+  // Fetch batch previews when pages change
+  useEffect(() => {
+    if (pages.length === 0) {
+      setLoadingPreviews(false);
+      return;
+    }
+    
+    // Check cache first for instant render
+    const cachedPreviews = getCachedPreviews();
+    const initialPreviews: Record<string, PagePreviewResponse> = {};
+    const pagesToFetch: string[] = [];
+    
+    for (const page of pages) {
+      const cached = cachedPreviews[page.id];
+      const pageUpdatedAt = page.updated_at || "";
+      
+      if (isCacheValid(cached, pageUpdatedAt)) {
+        initialPreviews[page.id] = cached.preview;
+      } else {
+        pagesToFetch.push(page.id);
+      }
+    }
+    
+    // Set cached previews immediately for instant render
+    if (Object.keys(initialPreviews).length > 0) {
+      setPreviews(initialPreviews);
+      setLoadingPreviews(pagesToFetch.length > 0);
+    }
+    
+    // Fetch missing previews in batch
+    if (pagesToFetch.length > 0) {
+      let mounted = true;
+      
+      const fetchBatchPreviews = async () => {
+        try {
+          const result = await api.previewPagesBatch(pagesToFetch);
+          
+          if (mounted && result.previews) {
+            // Update cache with new previews
+            const newCachedPreviews = { ...cachedPreviews };
+            
+            for (const [pageId, preview] of Object.entries(result.previews)) {
+              if (preview.available) {
+                const page = pages.find(p => p.id === pageId);
+                if (page) {
+                  newCachedPreviews[pageId] = {
+                    preview,
+                    pageUpdatedAt: page.updated_at || "",
+                    cachedAt: new Date().toISOString(),
+                  };
+                }
+              }
+            }
+            
+            setCachedPreviews(newCachedPreviews);
+            
+            // Merge with existing cached previews
+            setPreviews(prev => ({
+              ...prev,
+              ...result.previews
+            }));
+            setLoadingPreviews(false);
+          }
+        } catch (error) {
+          console.error("Failed to fetch batch previews:", error);
+          if (mounted) {
+            setLoadingPreviews(false);
+          }
+        }
+      };
+      
+      fetchBatchPreviews();
+      
+      return () => {
+        mounted = false;
+      };
+    } else {
+      setLoadingPreviews(false);
+    }
+  }, [pages]);
   
   if (isLoadingPages) {
     return (
@@ -299,6 +351,8 @@ export function PageGridSelector({
           <PageButton
             key={page.id}
             page={page}
+            preview={previews[page.id] || null}
+            isLoadingPreview={loadingPreviews}
             isActive={page.id === activePageId}
             isPending={isPending}
             onSelect={onSelectPage}

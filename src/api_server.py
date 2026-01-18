@@ -1190,6 +1190,74 @@ async def get_display_raw(display_type: str):
     }
 
 
+@app.post("/displays/raw/batch")
+async def get_displays_raw_batch(request: dict):
+    """
+    Get raw data from multiple display sources in one request.
+    
+    This is useful for efficiently fetching data for multiple plugins
+    without making individual requests.
+    
+    Request body:
+        {
+            "display_types": ["baywheels", "muni", "weather", "stocks"],
+            "enabled_only": true  // Optional, only fetch enabled plugins
+        }
+    
+    Returns:
+        {
+            "displays": {
+                "baywheels": {
+                    "data": {...},
+                    "available": true,
+                    "error": null
+                },
+                ...
+            },
+            "total": 4,
+            "successful": 3
+        }
+    """
+    display_types = request.get("display_types", [])
+    enabled_only = request.get("enabled_only", True)
+    
+    if not display_types:
+        raise HTTPException(status_code=400, detail="display_types parameter required")
+    
+    if not isinstance(display_types, list):
+        raise HTTPException(status_code=400, detail="display_types must be a list")
+    
+    display_service = get_display_service()
+    results = {}
+    
+    for display_type in display_types:
+        try:
+            result = display_service.get_display(display_type)
+            
+            # Skip if enabled_only is true and plugin is not available
+            if enabled_only and not result.available:
+                continue
+            
+            results[display_type] = {
+                "data": result.raw,
+                "available": result.available,
+                "error": result.error
+            }
+        except Exception as e:
+            logger.error(f"Error fetching display {display_type}: {e}", exc_info=True)
+            results[display_type] = {
+                "data": {},
+                "available": False,
+                "error": str(e)
+            }
+    
+    return {
+        "displays": results,
+        "total": len(display_types),
+        "successful": sum(1 for r in results.values() if r.get("available", False))
+    }
+
+
 @app.post("/displays/{display_type}/send")
 async def send_display(
     display_type: str,
@@ -2231,6 +2299,53 @@ async def update_board_settings(request: dict):
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/settings/all")
+async def get_all_settings():
+    """
+    Get all settings in a single request.
+    
+    Returns consolidated settings for the settings page including:
+    - general config (timezone, etc.)
+    - silence_schedule plugin config
+    - polling interval settings
+    - transitions settings
+    - output settings
+    - board settings
+    - service status (running, dev_mode)
+    """
+    global _service_running, _dev_mode
+    
+    settings_service = get_settings_service()
+    config_manager = get_config_manager()
+    
+    # Get silence schedule config
+    silence_config = config_manager.get_plugin_config("silence_schedule")
+    
+    # Get all other settings
+    general = config_manager.get_general()
+    polling = settings_service.get_polling_settings()
+    transitions = settings_service.get_transition_settings()
+    output = settings_service.get_output_settings()
+    board = settings_service.get_board_settings()
+    
+    return {
+        "general": general,
+        "silence_schedule": silence_config or {},
+        "polling": {
+            "interval_seconds": polling.interval_seconds
+        },
+        "transitions": transitions.to_dict(),
+        "output": output.to_dict(),
+        "board": {
+            "board_type": board.board_type
+        },
+        "status": {
+            "running": _service_running,
+            "dev_mode": _dev_mode
+        }
+    }
 
 
 # =============================================================================

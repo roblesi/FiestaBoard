@@ -33,7 +33,7 @@ export function PageSelector({ onCreateNew, onEditPage }: PageSelectorProps) {
   const { data, isLoading } = useQuery({
     queryKey: ["pages"],
     queryFn: () => api.getPages(),
-    refetchInterval: 30000,
+    // No refetchInterval needed - mutations already invalidate this cache
   });
 
   // Delete page mutation
