@@ -46,6 +46,7 @@ _service_lock = threading.Lock()
 _service_thread: Optional[threading.Thread] = None
 _service_running = False
 _dev_mode = False  # When True, preview only - don't send to board
+_service_start_time: Optional[float] = None  # Track when service started
 
 # In-memory log buffer (last 500 log entries for quick access)
 _log_buffer: deque = deque(maxlen=500)
@@ -283,7 +284,7 @@ def get_service() -> Optional[DisplayService]:
 
 def run_service_background():
     """Run the service in a background thread."""
-    global _service_running, _service
+    global _service_running, _service, _service_start_time
     service = get_service()
     if service:
         # Check if service needs initialization (might have failed during startup)
@@ -294,6 +295,7 @@ def run_service_background():
                 return
         
         _service_running = True
+        _service_start_time = time.time()  # Track start time
         try:
             logger.info("Starting background display service...")
             service.run()
@@ -2345,6 +2347,314 @@ async def get_all_settings():
             "running": _service_running,
             "dev_mode": _dev_mode
         }
+    }
+
+
+# ==================== Debug Endpoints ====================
+
+def _get_server_ip() -> str:
+    """Get the server's IP address."""
+    import socket
+    try:
+        # Create a socket to determine the IP
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "unknown"
+
+
+def _get_service_uptime() -> Optional[float]:
+    """Get service uptime in seconds."""
+    global _service_start_time
+    if _service_start_time is None:
+        return None
+    return time.time() - _service_start_time
+
+
+def _format_uptime(seconds: Optional[float]) -> str:
+    """Format uptime seconds as 'Xd Xh Xm'."""
+    if seconds is None:
+        return "not running"
+    
+    days = int(seconds // 86400)
+    hours = int((seconds % 86400) // 3600)
+    minutes = int((seconds % 3600) // 60)
+    
+    parts = []
+    if days > 0:
+        parts.append(f"{days}d")
+    if hours > 0:
+        parts.append(f"{hours}h")
+    if minutes > 0 or len(parts) == 0:
+        parts.append(f"{minutes}m")
+    
+    return " ".join(parts)
+
+
+def _get_board_client():
+    """Get the board client from the service."""
+    service = get_service()
+    if service and service.vb_client:
+        return service.vb_client
+    return None
+
+
+@app.post("/debug/blank")
+async def debug_blank_board():
+    """Clear the board by filling with space characters (code 0)."""
+    global _dev_mode
+    
+    client = _get_board_client()
+    if not client:
+        raise HTTPException(status_code=400, detail="Board not configured")
+    
+    settings_service = get_settings_service()
+    send_to_board = settings_service.should_send_to_board(_dev_mode)
+    
+    if not send_to_board:
+        return {
+            "status": "success",
+            "message": "Board blank (preview only - dev mode active)"
+        }
+    
+    try:
+        # Create a 6x22 array filled with spaces (code 0)
+        blank_array = [[0] * 22 for _ in range(6)]
+        success, was_sent = client.send_characters(blank_array, force=True)
+        
+        if success:
+            return {
+                "status": "success",
+                "message": "Board blanked successfully"
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to blank board")
+    except Exception as e:
+        logger.error(f"Error blanking board: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/debug/fill")
+async def debug_fill_board(request: dict):
+    """Fill the board with a single character.
+    
+    Body: {"character_code": number} - code must be 0-71
+    """
+    global _dev_mode
+    
+    character_code = request.get("character_code")
+    if character_code is None:
+        raise HTTPException(status_code=400, detail="character_code is required")
+    
+    if not isinstance(character_code, int) or character_code < 0 or character_code > 71:
+        raise HTTPException(status_code=400, detail="character_code must be 0-71")
+    
+    client = _get_board_client()
+    if not client:
+        raise HTTPException(status_code=400, detail="Board not configured")
+    
+    settings_service = get_settings_service()
+    send_to_board = settings_service.should_send_to_board(_dev_mode)
+    
+    if not send_to_board:
+        return {
+            "status": "success",
+            "message": f"Board filled with character {character_code} (preview only - dev mode active)"
+        }
+    
+    try:
+        # Create a 6x22 array filled with the specified character
+        fill_array = [[character_code] * 22 for _ in range(6)]
+        success, was_sent = client.send_characters(fill_array, force=True)
+        
+        if success:
+            return {
+                "status": "success",
+                "message": f"Board filled with character {character_code}"
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to fill board")
+    except Exception as e:
+        logger.error(f"Error filling board: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/debug/info")
+async def debug_show_info():
+    """Display debug information on the board."""
+    global _dev_mode
+    
+    client = _get_board_client()
+    if not client:
+        raise HTTPException(status_code=400, detail="Board not configured")
+    
+    settings_service = get_settings_service()
+    send_to_board = settings_service.should_send_to_board(_dev_mode)
+    
+    # Gather system info
+    board_ip = Config.BOARD_HOST or "not set"
+    server_ip = _get_server_ip()
+    uptime = _get_service_uptime()
+    uptime_str = _format_uptime(uptime)
+    connection_mode = Config.BOARD_API_MODE.upper()
+    version = __version__
+    
+    # Get current timestamp
+    from .time_service import get_time_service
+    time_service = get_time_service()
+    now = time_service.now()
+    timestamp = now.strftime("%H:%M")
+    
+    # Build debug info text (6 lines max, 22 chars each)
+    debug_text = f"""DEBUG INFO
+BOARD: {board_ip[:15]}
+SERVER: {server_ip[:14]}
+UP: {uptime_str[:18]}
+{connection_mode[:20]} API
+V{version[:7]} {timestamp}"""
+    
+    if not send_to_board:
+        return {
+            "status": "success",
+            "message": "Debug info displayed (preview only - dev mode active)",
+            "debug_info": debug_text
+        }
+    
+    try:
+        # Convert text to board array
+        from .text_to_board import text_to_board_array
+        board_array = text_to_board_array(debug_text, use_color_tiles=False)
+        
+        success, was_sent = client.send_characters(board_array, force=True)
+        
+        if success:
+            return {
+                "status": "success",
+                "message": "Debug info sent to board",
+                "debug_info": debug_text
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to send debug info")
+    except Exception as e:
+        logger.error(f"Error sending debug info: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/debug/test-connection")
+async def debug_test_connection():
+    """Test connection to the board."""
+    client = _get_board_client()
+    if not client:
+        raise HTTPException(status_code=400, detail="Board not configured")
+    
+    try:
+        start_time = time.time()
+        connected = client.test_connection()
+        latency = round((time.time() - start_time) * 1000)  # ms
+        
+        if connected:
+            return {
+                "status": "success",
+                "message": f"Connection successful (latency: {latency}ms)",
+                "connected": True,
+                "latency_ms": latency
+            }
+        else:
+            return {
+                "status": "error",
+                "message": "Connection failed",
+                "connected": False,
+                "latency_ms": None
+            }
+    except Exception as e:
+        logger.error(f"Error testing connection: {e}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "connected": False,
+            "latency_ms": None
+        }
+
+
+@app.post("/debug/clear-cache")
+async def debug_clear_cache():
+    """Clear the board client's message cache."""
+    client = _get_board_client()
+    if not client:
+        raise HTTPException(status_code=400, detail="Board not configured")
+    
+    try:
+        client.clear_cache()
+        return {
+            "status": "success",
+            "message": "Cache cleared - next message will be sent regardless of content"
+        }
+    except Exception as e:
+        logger.error(f"Error clearing cache: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/debug/cache-status")
+async def debug_get_cache_status():
+    """Get current cache status for debugging."""
+    client = _get_board_client()
+    if not client:
+        raise HTTPException(status_code=400, detail="Board not configured")
+    
+    try:
+        cache_status = client.get_cache_status()
+        return {
+            "status": "success",
+            "cache": cache_status
+        }
+    except Exception as e:
+        logger.error(f"Error getting cache status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/debug/system-info")
+async def debug_get_system_info():
+    """Get system information without sending to board."""
+    global _service_running, _dev_mode
+    
+    # Gather all system info
+    board_ip = Config.BOARD_HOST or ""
+    server_ip = _get_server_ip()
+    uptime_seconds = _get_service_uptime()
+    uptime_formatted = _format_uptime(uptime_seconds)
+    connection_mode = Config.BOARD_API_MODE
+    version = __version__
+    
+    # Get current timestamp
+    from .time_service import get_time_service
+    time_service = get_time_service()
+    timestamp = time_service.create_utc_timestamp()
+    
+    # Get cache status if available
+    client = _get_board_client()
+    cache_status = client.get_cache_status() if client else None
+    
+    # Check if board is configured
+    board_configured = bool(board_ip and (
+        (connection_mode == "local" and Config.BOARD_LOCAL_API_KEY) or
+        (connection_mode == "cloud" and Config.BOARD_READ_WRITE_KEY)
+    ))
+    
+    return {
+        "board_ip": board_ip,
+        "server_ip": server_ip,
+        "uptime_seconds": uptime_seconds,
+        "uptime_formatted": uptime_formatted,
+        "connection_mode": connection_mode,
+        "version": version,
+        "timestamp": timestamp,
+        "cache_status": cache_status,
+        "board_configured": board_configured,
+        "service_running": _service_running,
+        "dev_mode": _dev_mode
     }
 
 

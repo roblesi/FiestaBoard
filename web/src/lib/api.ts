@@ -91,6 +91,44 @@ export interface ActionResponse {
   status: string;
   message: string;
   dev_mode?: boolean;
+  debug_info?: string;
+}
+
+// Debug types
+export interface DebugTestResponse {
+  status: string;
+  message: string;
+  connected: boolean;
+  latency_ms: number | null;
+}
+
+export interface DebugCacheStatus {
+  status: string;
+  cache: {
+    has_cached_text: boolean;
+    has_cached_characters: boolean;
+    skip_unchanged_enabled: boolean;
+    cached_text_preview: string | null;
+  };
+}
+
+export interface DebugSystemInfo {
+  board_ip: string;
+  server_ip: string;
+  uptime_seconds: number | null;
+  uptime_formatted: string;
+  connection_mode: string;
+  version: string;
+  timestamp: string;
+  cache_status: {
+    has_cached_text: boolean;
+    has_cached_characters: boolean;
+    skip_unchanged_enabled: boolean;
+    cached_text_preview: string | null;
+  } | null;
+  board_configured: boolean;
+  service_running: boolean;
+  dev_mode: boolean;
 }
 
 export interface PageDeleteResponse {
@@ -913,4 +951,35 @@ export const api = {
       method: "POST",
       body: JSON.stringify(request),
     }),
+
+  // Debug endpoints
+  blankBoard: () => 
+    fetchApi<ActionResponse>("/debug/blank", { method: "POST" }),
+  
+  fillBoard: (characterCode: number) =>
+    fetchApi<ActionResponse>("/debug/fill", {
+      method: "POST",
+      body: JSON.stringify({ character_code: characterCode }),
+    }),
+  
+  showDebugInfo: () =>
+    fetchApi<ActionResponse>("/debug/info", { method: "POST" }),
+  
+  testBoardConnection: (request: BoardTestRequest) =>
+    fetchApi<BoardTestResponse>("/config/board/test", {
+      method: "POST",
+      body: JSON.stringify(request),
+    }),
+  
+  testDebugConnection: () =>
+    fetchApi<DebugTestResponse>("/debug/test-connection", { method: "POST" }),
+  
+  clearBoardCache: () =>
+    fetchApi<ActionResponse>("/debug/clear-cache", { method: "POST" }),
+  
+  getBoardCacheStatus: () =>
+    fetchApi<DebugCacheStatus>("/debug/cache-status"),
+  
+  getDebugSystemInfo: () =>
+    fetchApi<DebugSystemInfo>("/debug/system-info"),
 };
