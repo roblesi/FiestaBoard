@@ -2505,7 +2505,7 @@ async def debug_show_info():
     # Get current timestamp
     from .time_service import get_time_service
     time_service = get_time_service()
-    now = time_service.now()
+    now = time_service.get_current_time()
     timestamp = now.strftime("%H:%M")
     
     # Build debug info text (6 lines max, 22 chars each)
