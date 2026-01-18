@@ -406,6 +406,81 @@ export interface BoardSettings {
   board_type: "black" | "white" | null;
 }
 
+// Schedule types
+export type DayPattern = "all" | "weekdays" | "weekends" | "custom";
+
+export interface ScheduleEntry {
+  id: string;
+  page_id: string;
+  start_time: string; // HH:MM format
+  end_time: string;   // HH:MM format
+  day_pattern: DayPattern;
+  custom_days?: string[]; // Only used when day_pattern is "custom"
+  enabled: boolean;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface ScheduleCreate {
+  page_id: string;
+  start_time: string;
+  end_time: string;
+  day_pattern: DayPattern;
+  custom_days?: string[];
+  enabled?: boolean; // Defaults to true
+}
+
+export interface ScheduleUpdate {
+  page_id?: string;
+  start_time?: string;
+  end_time?: string;
+  day_pattern?: DayPattern;
+  custom_days?: string[];
+  enabled?: boolean;
+}
+
+export interface SchedulesResponse {
+  schedules: ScheduleEntry[];
+  total: number;
+  default_page_id: string | null;
+  enabled: boolean;
+}
+
+export interface Overlap {
+  schedule1_id: string;
+  schedule2_id: string;
+  conflict_description: string;
+}
+
+export interface Gap {
+  start_time: string;
+  end_time: string;
+  days: string[];
+}
+
+export interface ScheduleValidationResult {
+  valid: boolean;
+  overlaps: Overlap[];
+  gaps: Gap[];
+}
+
+export interface ActiveScheduleResponse {
+  page_id: string | null;
+  source: "schedule" | "manual" | "none";
+  schedule_enabled: boolean;
+  current_time?: string;
+  current_day?: string;
+  default_page_id?: string | null;
+}
+
+export interface ScheduleEnabledResponse {
+  enabled: boolean;
+}
+
+export interface DefaultPageResponse {
+  default_page_id: string | null;
+}
+
 export interface AllSettingsResponse {
   general: GeneralConfig;
   silence_schedule: Record<string, unknown>;
@@ -470,34 +545,6 @@ export interface EnableLocalApiResponse {
 }
 
 // Logs types
-export type LogLevel = "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL";
-
-export interface LogEntry {
-  timestamp: string;
-  level: LogLevel;
-  logger: string;
-  message: string;
-}
-
-export interface LogsParams {
-  limit?: number;
-  offset?: number;
-  level?: LogLevel;
-  search?: string;
-}
-
-export interface LogsResponse {
-  logs: LogEntry[];
-  total: number;
-  limit: number;
-  offset: number;
-  has_more: boolean;
-  filters: {
-    level: LogLevel | null;
-    search: string | null;
-  };
-}
-
 // Plugin system types
 export interface PluginInfo {
   id: string;
@@ -726,16 +773,60 @@ export const api = {
       body: JSON.stringify({ template }),
     }),
 
-  // Logs endpoints
-  getLogs: (params: LogsParams = {}) => {
-    const searchParams = new URLSearchParams();
-    if (params.limit !== undefined) searchParams.set("limit", String(params.limit));
-    if (params.offset !== undefined) searchParams.set("offset", String(params.offset));
-    if (params.level) searchParams.set("level", params.level);
-    if (params.search) searchParams.set("search", params.search);
-    const query = searchParams.toString();
-    return fetchApi<LogsResponse>(`/logs${query ? `?${query}` : ""}`);
-  },
+  // Schedule endpoints
+  getSchedules: () => fetchApi<SchedulesResponse>("/schedules"),
+  
+  createSchedule: (data: ScheduleCreate) =>
+    fetchApi<ScheduleEntry>("/schedules", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  
+  getSchedule: (scheduleId: string) =>
+    fetchApi<ScheduleEntry>(`/schedules/${scheduleId}`),
+  
+  updateSchedule: (scheduleId: string, data: ScheduleUpdate) =>
+    fetchApi<ScheduleEntry>(`/schedules/${scheduleId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+  
+  deleteSchedule: (scheduleId: string) =>
+    fetchApi<{ status: string; message: string }>(`/schedules/${scheduleId}`, {
+      method: "DELETE",
+    }),
+  
+  getActiveSchedule: () =>
+    fetchApi<ActiveScheduleResponse>("/schedules/active/page"),
+  
+  validateSchedules: () =>
+    fetchApi<ScheduleValidationResult>("/schedules/validate", {
+      method: "POST",
+    }),
+  
+  getDefaultPage: () =>
+    fetchApi<DefaultPageResponse>("/schedules/default-page"),
+  
+  setDefaultPage: (pageId: string | null) =>
+    fetchApi<{ status: string; default_page_id: string | null }>(
+      "/schedules/default-page",
+      {
+        method: "PUT",
+        body: JSON.stringify({ page_id: pageId }),
+      }
+    ),
+  
+  getScheduleEnabled: () =>
+    fetchApi<ScheduleEnabledResponse>("/schedules/enabled"),
+  
+  setScheduleEnabled: (enabled: boolean) =>
+    fetchApi<{ status: string; enabled: boolean; message: string }>(
+      "/schedules/enabled",
+      {
+        method: "PUT",
+        body: JSON.stringify({ enabled }),
+      }
+    ),
 
   // Configuration endpoints
   getFullConfig: () => fetchApi<FullConfig>("/config/full"),
