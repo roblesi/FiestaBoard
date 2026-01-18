@@ -214,9 +214,14 @@ export default function SchedulePage() {
 
         {/* Validation Status */}
         {scheduleEnabled && (hasOverlaps || hasGaps) && (
-          <Alert variant={hasOverlaps ? "destructive" : "default"} className="mb-6">
+          <Alert 
+            variant={hasOverlaps ? "destructive" : "default"} 
+            className={`mb-6 ${hasGaps && !hasOverlaps && defaultPageId ? "border-blue-500/50 bg-blue-500/10" : ""}`}
+          >
             {hasOverlaps ? (
               <AlertCircle className="h-4 w-4" />
+            ) : hasGaps && defaultPageId ? (
+              <CheckCircle2 className="h-4 w-4 text-blue-500" />
             ) : (
               <AlertTriangle className="h-4 w-4" />
             )}
@@ -231,7 +236,14 @@ export default function SchedulePage() {
               ))}
               {hasGaps && !hasOverlaps && (
                 <div className="text-sm">
-                  {validation?.gaps.length} time gap(s) in schedule. Consider setting a default page.
+                  {validation?.gaps.length} time gap(s) in schedule.{" "}
+                  {defaultPageId ? (
+                    <span className="text-blue-600 dark:text-blue-400">
+                      Default page &quot;{getPageName(defaultPageId)}&quot; will be shown.
+                    </span>
+                  ) : (
+                    <span>Consider setting a default page.</span>
+                  )}
                 </div>
               )}
             </AlertDescription>
