@@ -1,6 +1,7 @@
 "use client";
 
 import { BoardSettings } from "@/components/feature-settings/board-settings";
+import { DebugSettings } from "@/components/feature-settings/debug-settings";
 import { GeneralSettings } from "@/components/general-settings";
 import { useWizard } from "@/components/wizard-provider";
 import Link from "next/link";
@@ -47,6 +48,12 @@ export default function SettingsPage() {
                 Manage Integrations
               </Button>
             </Link>
+          </section>
+
+          {/* Debug Tools */}
+          <section className="pt-4 border-t">
+            <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Debug</h2>
+            <DebugSettings />
           </section>
 
           {/* Setup Wizard - at the bottom */}
