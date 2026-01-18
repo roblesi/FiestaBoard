@@ -3041,68 +3041,8 @@ async def create_schedule(schedule_data: ScheduleCreate):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.get("/schedules/{schedule_id}")
-async def get_schedule(schedule_id: str):
-    """Get a schedule entry by ID.
-    
-    Args:
-        schedule_id: Schedule ID
-        
-    Returns:
-        Schedule entry
-    """
-    schedule_service = get_schedule_service()
-    schedule = schedule_service.get_schedule(schedule_id)
-    
-    if not schedule:
-        raise HTTPException(status_code=404, detail=f"Schedule not found: {schedule_id}")
-    
-    return schedule.model_dump()
-
-
-@app.put("/schedules/{schedule_id}")
-async def update_schedule(schedule_id: str, schedule_data: ScheduleUpdate):
-    """Update an existing schedule entry.
-    
-    Args:
-        schedule_id: Schedule ID
-        schedule_data: Fields to update
-        
-    Returns:
-        Updated schedule entry
-    """
-    schedule_service = get_schedule_service()
-    
-    try:
-        schedule = schedule_service.update_schedule(schedule_id, schedule_data)
-        if not schedule:
-            raise HTTPException(status_code=404, detail=f"Schedule not found: {schedule_id}")
-        return schedule.model_dump()
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@app.delete("/schedules/{schedule_id}")
-async def delete_schedule(schedule_id: str):
-    """Delete a schedule entry.
-    
-    Args:
-        schedule_id: Schedule ID
-        
-    Returns:
-        Success status
-    """
-    schedule_service = get_schedule_service()
-    
-    deleted = schedule_service.delete_schedule(schedule_id)
-    if not deleted:
-        raise HTTPException(status_code=404, detail=f"Schedule not found: {schedule_id}")
-    
-    return {
-        "status": "success",
-        "message": f"Schedule {schedule_id} deleted"
-    }
-
+# Specific routes must come BEFORE parameterized routes
+# to avoid /schedules/{schedule_id} matching everything
 
 @app.get("/schedules/active/page")
 async def get_active_schedule():
@@ -3245,6 +3185,71 @@ async def set_schedule_enabled(request: dict):
         "status": "success",
         "enabled": enabled,
         "message": f"Schedule mode {'enabled' if enabled else 'disabled'}"
+    }
+
+
+# Parameterized routes come LAST to avoid matching specific paths
+
+@app.get("/schedules/{schedule_id}")
+async def get_schedule(schedule_id: str):
+    """Get a schedule entry by ID.
+    
+    Args:
+        schedule_id: Schedule ID
+        
+    Returns:
+        Schedule entry
+    """
+    schedule_service = get_schedule_service()
+    schedule = schedule_service.get_schedule(schedule_id)
+    
+    if not schedule:
+        raise HTTPException(status_code=404, detail=f"Schedule not found: {schedule_id}")
+    
+    return schedule.model_dump()
+
+
+@app.put("/schedules/{schedule_id}")
+async def update_schedule(schedule_id: str, schedule_data: ScheduleUpdate):
+    """Update an existing schedule entry.
+    
+    Args:
+        schedule_id: Schedule ID
+        schedule_data: Fields to update
+        
+    Returns:
+        Updated schedule entry
+    """
+    schedule_service = get_schedule_service()
+    
+    try:
+        schedule = schedule_service.update_schedule(schedule_id, schedule_data)
+        if not schedule:
+            raise HTTPException(status_code=404, detail=f"Schedule not found: {schedule_id}")
+        return schedule.model_dump()
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.delete("/schedules/{schedule_id}")
+async def delete_schedule(schedule_id: str):
+    """Delete a schedule entry.
+    
+    Args:
+        schedule_id: Schedule ID
+        
+    Returns:
+        Success status
+    """
+    schedule_service = get_schedule_service()
+    
+    deleted = schedule_service.delete_schedule(schedule_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"Schedule not found: {schedule_id}")
+    
+    return {
+        "status": "success",
+        "message": f"Schedule {schedule_id} deleted"
     }
 
 
