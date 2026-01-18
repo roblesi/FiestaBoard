@@ -109,6 +109,19 @@ class BoardSettings:
         return cls(board_type=board_type)
 
 
+@dataclass
+class ScheduleSettings:
+    """Schedule system settings."""
+    enabled: bool = False  # Schedule mode disabled by default
+    
+    def to_dict(self) -> dict:
+        return asdict(self)
+    
+    @classmethod
+    def from_dict(cls, data: dict) -> "ScheduleSettings":
+        return cls(enabled=data.get("enabled", False))
+
+
 class SettingsService:
     """Service for managing runtime settings.
     
@@ -137,6 +150,7 @@ class SettingsService:
         self._active_page = self._load_active_page_settings()
         self._polling = self._load_polling_settings()
         self._board = self._load_board_settings()
+        self._schedule = self._load_schedule_settings()
         
         logger.info(f"SettingsService initialized (file: {self.settings_file})")
     
@@ -158,7 +172,8 @@ class SettingsService:
                 "output": self._output.to_dict(),
                 "active_page": self._active_page.to_dict(),
                 "polling": self._polling.to_dict(),
-                "board": self._board.to_dict()
+                "board": self._board.to_dict(),
+                "schedule": self._schedule.to_dict()
             }
             with open(self.settings_file, 'w') as f:
                 json.dump(data, f, indent=2)
@@ -212,6 +227,13 @@ class SettingsService:
         if "board" in file_data:
             return BoardSettings.from_dict(file_data["board"])
         return BoardSettings()  # Default to black board
+    
+    def _load_schedule_settings(self) -> ScheduleSettings:
+        """Load schedule settings from file."""
+        file_data = self._load_from_file()
+        if "schedule" in file_data:
+            return ScheduleSettings.from_dict(file_data["schedule"])
+        return ScheduleSettings()  # Default to disabled
     
     # Transition settings
     def get_transition_settings(self) -> TransitionSettings:
@@ -391,6 +413,41 @@ class SettingsService:
         self._save_to_file()
         logger.info(f"Board type set to: {board_type}")
         return self._board
+    
+    # Schedule settings
+    def get_schedule_settings(self) -> ScheduleSettings:
+        """Get current schedule settings.
+        
+        Returns:
+            ScheduleSettings instance
+        """
+        return self._schedule
+    
+    def is_schedule_enabled(self) -> bool:
+        """Check if schedule mode is enabled.
+        
+        Returns:
+            True if schedule mode is active
+        """
+        return self._schedule.enabled
+    
+    def set_schedule_enabled(self, enabled: bool) -> ScheduleSettings:
+        """Enable or disable schedule mode.
+        
+        When enabled, the system uses time-based schedules to determine
+        which page to display. When disabled, the manual active_page is used.
+        
+        Args:
+            enabled: True to enable schedule mode, False for manual mode
+            
+        Returns:
+            Updated ScheduleSettings
+        """
+        self._schedule.enabled = enabled
+        self._save_to_file()
+        mode = "enabled" if enabled else "disabled"
+        logger.info(f"Schedule mode {mode}")
+        return self._schedule
 
 
 # Singleton instance

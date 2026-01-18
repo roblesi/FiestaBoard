@@ -11,7 +11,7 @@ services:
       - "6969:8000"
     environment:
       - PRODUCTION=false
-      - FIESTA_API_URL=http://localhost:6969
+      # Don't set FIESTA_API_URL - let frontend determine dynamically based on request hostname
     volumes:
       # Persist data (including config and logs) to local filesystem
       - ./data:/app/data
