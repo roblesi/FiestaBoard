@@ -346,7 +346,8 @@ export function TipTapTemplateEditor({
           // Trigger onChange to ensure serialized template includes wrap state
           // Use setTimeout to ensure transaction is fully applied
           setTimeout(() => {
-            const serialized = serializeTemplate(editor.state.doc);
+            const doc = editor.getJSON();
+            const serialized = serializeTemplate(doc);
             onChange(serialized);
           }, 0);
         }
