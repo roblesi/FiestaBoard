@@ -621,6 +621,68 @@ export function TipTapTemplateEditor({
         .ProseMirror p[data-alignment="left"] {
           text-align: left;
         }
+        
+        /* Visual alignment indicators using pseudo-elements */
+        .ProseMirror > p::before {
+          content: '';
+          position: absolute;
+          left: 2px;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 3px;
+          height: 12px;
+          border-radius: 2px;
+          opacity: 0.5;
+          transition: opacity 0.2s, width 0.2s;
+          pointer-events: none;
+          z-index: 1;
+        }
+        
+        /* Left alignment: vertical bar on the left */
+        .ProseMirror > p[data-alignment="left"]::before {
+          background-color: hsl(var(--primary));
+          left: 2px;
+          width: 3px;
+        }
+        
+        /* Center alignment: centered dot */
+        .ProseMirror > p[data-alignment="center"]::before {
+          background-color: hsl(var(--primary));
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+        }
+        
+        /* Right alignment: vertical bar on the right */
+        .ProseMirror > p[data-alignment="right"]::before {
+          background-color: hsl(var(--primary));
+          right: 2px;
+          left: auto;
+          width: 3px;
+        }
+        
+        /* Increase opacity on hover for better visibility */
+        .ProseMirror > p:hover::before {
+          opacity: 0.8;
+        }
+        
+        /* Add subtle background tint for non-left alignments */
+        .ProseMirror > p[data-alignment="center"] {
+          background: linear-gradient(to right, 
+            transparent 0%, 
+            hsl(var(--primary) / 0.03) 48%, 
+            hsl(var(--primary) / 0.03) 52%, 
+            transparent 100%);
+        }
+        
+        .ProseMirror > p[data-alignment="right"] {
+          background: linear-gradient(to right, 
+            transparent 0%, 
+            hsl(var(--primary) / 0.03) 85%, 
+            hsl(var(--primary) / 0.03) 100%);
+        }
       `}</style>
     </div>
   );
