@@ -85,6 +85,7 @@ export default function SchedulePage() {
     mutationFn: (enabled: boolean) => api.setScheduleEnabled(enabled),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["schedules", "active"] });
       toast.success(schedulesData?.enabled ? "Schedule mode disabled" : "Schedule mode enabled");
     },
     onError: () => {
@@ -97,6 +98,7 @@ export default function SchedulePage() {
     mutationFn: (data: ScheduleCreate) => api.createSchedule(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["schedules", "active"] });
       queryClient.invalidateQueries({ queryKey: ["schedules", "validation"] });
       toast.success("Schedule created");
       setShowForm(false);
@@ -114,6 +116,7 @@ export default function SchedulePage() {
       api.updateSchedule(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["schedules", "active"] });
       queryClient.invalidateQueries({ queryKey: ["schedules", "validation"] });
       toast.success("Schedule updated");
       setShowForm(false);
@@ -130,6 +133,7 @@ export default function SchedulePage() {
     mutationFn: (id: string) => api.deleteSchedule(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["schedules", "active"] });
       queryClient.invalidateQueries({ queryKey: ["schedules", "validation"] });
       toast.success("Schedule deleted");
       setDeleteScheduleId(null);
@@ -144,6 +148,7 @@ export default function SchedulePage() {
     mutationFn: (pageId: string | null) => api.setDefaultPage(pageId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["schedules", "active"] });
       toast.success("Default page updated");
       setShowDefaultPageSelector(false);
     },

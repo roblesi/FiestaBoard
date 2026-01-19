@@ -31,7 +31,7 @@ export function PageSelector({ onCreateNew, onEditPage }: PageSelectorProps) {
 
   // Fetch pages
   const { data, isLoading } = useQuery({
-    queryKey: ["pages"],
+    queryKey: queryKeys.pages,
     queryFn: () => api.getPages(),
     // No refetchInterval needed - mutations already invalidate this cache
   });
@@ -40,16 +40,16 @@ export function PageSelector({ onCreateNew, onEditPage }: PageSelectorProps) {
   const _deleteMutation = useMutation({
     mutationFn: (pageId: string) => api.deletePage(pageId),
     onSuccess: (data, pageId) => {
-      queryClient.invalidateQueries({ queryKey: ["pages"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.pages });
       
       // Invalidate the specific page and its preview to bust the cache
       queryClient.invalidateQueries({ queryKey: ["page", pageId] });
-      queryClient.invalidateQueries({ queryKey: ["pagePreview", pageId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.pagePreview(pageId) });
       
       // Also invalidate active page if it was updated
       if (data.active_page_updated) {
-        queryClient.invalidateQueries({ queryKey: ["active-page"] });
-        queryClient.invalidateQueries({ queryKey: ["status"] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.activePage });
+        queryClient.invalidateQueries({ queryKey: queryKeys.status });
       }
       
       // Show appropriate message

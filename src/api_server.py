@@ -3054,8 +3054,6 @@ async def get_active_schedule():
     Returns:
         Active page ID and schedule information
     """
-    from datetime import datetime
-    
     schedule_service = get_schedule_service()
     settings_service = get_settings_service()
     
@@ -3068,8 +3066,10 @@ async def get_active_schedule():
             "schedule_enabled": False
         }
     
-    # Get current time and day
-    now = datetime.now()
+    # Get current time and day in user's configured timezone
+    from .time_service import get_time_service
+    time_service = get_time_service()
+    now = time_service.get_current_time()  # Uses configured timezone
     current_time = now.time()
     current_day = now.strftime("%A").lower()  # monday, tuesday, etc.
     

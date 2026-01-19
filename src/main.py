@@ -133,7 +133,10 @@ class DisplayService:
             # Determine active page based on schedule mode
             if settings_service.is_schedule_enabled():
                 # Schedule mode: Use schedule service to determine page
-                now = datetime.now()
+                # Use TimeService to get current time in configured timezone
+                from .time_service import get_time_service
+                time_service = get_time_service()
+                now = time_service.get_current_time()
                 current_time = now.time()
                 current_day = now.strftime("%A").lower()  # monday, tuesday, etc.
                 

@@ -2,6 +2,7 @@
 
 import pytest
 import tempfile
+import pytz
 from pathlib import Path
 from datetime import datetime, time
 from unittest.mock import Mock, patch
@@ -358,14 +359,15 @@ class TestScheduleModeIntegration:
             with patch('src.main.get_page_service', return_value=page_service):
                 with patch('src.main.get_settings_service', return_value=settings_service):
                     with patch('src.main.get_schedule_service', return_value=schedule_service):
-                        # Mock datetime to be Monday 12:00 (within schedule)
-                        mock_now = Mock()
-                        mock_now.time.return_value = time(12, 0)
-                        mock_now.strftime.return_value = "Monday"
+                        # Mock TimeService to return Monday 12:00 (within schedule)
+                        # Create a mock datetime for Monday 12:00
+                        mock_datetime_obj = datetime(2025, 1, 13, 12, 0, 0)  # Monday Jan 13, 2025 at 12:00
+                        mock_datetime_obj = pytz.UTC.localize(mock_datetime_obj)
                         
-                        with patch('src.main.datetime') as mock_datetime:
-                            mock_datetime.now.return_value = mock_now
-                            
+                        mock_time_service = Mock()
+                        mock_time_service.get_current_time.return_value = mock_datetime_obj
+                        
+                        with patch('src.time_service.get_time_service', return_value=mock_time_service):
                             service = DisplayService()
                             service.vb_client = mock_client_instance
                             
@@ -419,14 +421,15 @@ class TestScheduleModeIntegration:
             with patch('src.main.get_page_service', return_value=page_service):
                 with patch('src.main.get_settings_service', return_value=settings_service):
                     with patch('src.main.get_schedule_service', return_value=schedule_service):
-                        # Mock datetime to be Monday 20:00 (outside schedule, should use default)
-                        mock_now = Mock()
-                        mock_now.time.return_value = time(20, 0)
-                        mock_now.strftime.return_value = "Monday"
+                        # Mock TimeService to return Monday 20:00 (outside schedule, should use default)
+                        # Create a mock datetime for Monday 20:00
+                        mock_datetime_obj = datetime(2025, 1, 13, 20, 0, 0)  # Monday Jan 13, 2025 at 20:00
+                        mock_datetime_obj = pytz.UTC.localize(mock_datetime_obj)
                         
-                        with patch('src.main.datetime') as mock_datetime:
-                            mock_datetime.now.return_value = mock_now
-                            
+                        mock_time_service = Mock()
+                        mock_time_service.get_current_time.return_value = mock_datetime_obj
+                        
+                        with patch('src.time_service.get_time_service', return_value=mock_time_service):
                             service = DisplayService()
                             service.vb_client = mock_client_instance
                             
@@ -473,14 +476,15 @@ class TestScheduleModeIntegration:
             with patch('src.main.get_page_service', return_value=page_service):
                 with patch('src.main.get_settings_service', return_value=settings_service):
                     with patch('src.main.get_schedule_service', return_value=schedule_service):
-                        # Mock datetime to be Tuesday 12:00 (no schedule for Tuesday)
-                        mock_now = Mock()
-                        mock_now.time.return_value = time(12, 0)
-                        mock_now.strftime.return_value = "Tuesday"
+                        # Mock TimeService to return Tuesday 12:00 (no schedule for Tuesday)
+                        # Create a mock datetime for Tuesday 12:00
+                        mock_datetime_obj = datetime(2025, 1, 14, 12, 0, 0)  # Tuesday Jan 14, 2025 at 12:00
+                        mock_datetime_obj = pytz.UTC.localize(mock_datetime_obj)
                         
-                        with patch('src.main.datetime') as mock_datetime:
-                            mock_datetime.now.return_value = mock_now
-                            
+                        mock_time_service = Mock()
+                        mock_time_service.get_current_time.return_value = mock_datetime_obj
+                        
+                        with patch('src.time_service.get_time_service', return_value=mock_time_service):
                             service = DisplayService()
                             service.vb_client = mock_client_instance
                             
