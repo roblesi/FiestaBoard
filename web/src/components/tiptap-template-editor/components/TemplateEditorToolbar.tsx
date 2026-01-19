@@ -60,7 +60,7 @@ export function TemplateEditorToolbar({
     <TooltipProvider>
       <div
         className={cn(
-          "flex items-center gap-1 p-2 border-b bg-background",
+          "flex items-center gap-1 p-2 border rounded-t-md bg-background",
           "flex-wrap",
           className
         )}

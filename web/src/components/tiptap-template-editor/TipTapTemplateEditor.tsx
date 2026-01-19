@@ -300,7 +300,10 @@ export function TipTapTemplateEditor({
       
       {/* Editor container */}
       <div className="flex-1">
-        <div className="border rounded-md bg-background relative" style={{ padding: '0.5rem', paddingLeft: '2.5rem', overflow: 'visible' }}>
+        <div className={cn(
+          "border bg-background relative",
+          showToolbar ? "rounded-b-md border-t-0" : "rounded-md"
+        )} style={{ padding: '0.5rem', paddingLeft: '2.5rem', overflow: 'visible' }}>
             {/* Grid overlay - 22 columns × 6 rows matching board display */}
             <div 
               className="absolute pointer-events-none z-0"
