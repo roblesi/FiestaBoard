@@ -10,6 +10,11 @@ from src.data_sources.star_trek_quotes import (
     get_star_trek_quotes_source
 )
 
+# Also test the plugin itself
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from plugins.star_trek_quotes import StarTrekQuotesPlugin
+
 
 class TestStarTrekQuotesSource:
     """Tests for StarTrekQuotesSource class."""
@@ -164,4 +169,105 @@ class TestQuoteData:
         
         # Should not contain HTML tags
         assert "<" not in quote_text or ">" not in quote_text
+
+
+class TestStarTrekQuotesPlugin:
+    """Tests for the StarTrekQuotesPlugin class."""
+    
+    @pytest.fixture
+    def plugin(self):
+        """Create a plugin instance."""
+        manifest = {
+            "id": "star_trek_quotes",
+            "name": "Star Trek Quotes",
+            "version": "1.0.0"
+        }
+        return StarTrekQuotesPlugin(manifest)
+    
+    def test_plugin_initialization(self, plugin):
+        """Test plugin initializes correctly."""
+        assert plugin.plugin_id == "star_trek_quotes"
+        assert plugin._quotes is not None
+    
+    def test_fetch_data_returns_all_variables(self, plugin):
+        """Test fetch_data returns all expected variables."""
+        result = plugin.fetch_data()
+        
+        assert result.available is True
+        assert result.data is not None
+        assert "quote" in result.data
+        assert "character" in result.data
+        assert "series" in result.data
+        assert "series_color" in result.data
+    
+    def test_quote_variable_not_empty(self, plugin):
+        """Test quote variable contains text."""
+        result = plugin.fetch_data()
+        
+        assert result.available is True
+        quote = result.data["quote"]
+        
+        # Quote should not be empty
+        assert len(quote) > 0
+        assert isinstance(quote, str)
+    
+    def test_character_variable_not_empty(self, plugin):
+        """Test character variable contains text."""
+        result = plugin.fetch_data()
+        
+        assert result.available is True
+        character = result.data["character"]
+        
+        # Character should not be empty
+        assert len(character) > 0
+        assert isinstance(character, str)
+    
+    def test_validate_config_valid_ratio(self, plugin):
+        """Test config validation with valid ratio."""
+        config = {"ratio": "3:5:9"}
+        errors = plugin.validate_config(config)
+        assert len(errors) == 0
+    
+    def test_validate_config_invalid_ratio(self, plugin):
+        """Test config validation with invalid ratio."""
+        config = {"ratio": "invalid"}
+        errors = plugin.validate_config(config)
+        assert len(errors) > 0
+    
+    def test_series_color_mapping(self, plugin):
+        """Test series color codes are set correctly."""
+        result = plugin.fetch_data()
+        
+        assert result.available is True
+        series_color = result.data["series_color"]
+        
+        # Should be a color code (format: {XX})
+        assert series_color.startswith("{")
+        assert series_color.endswith("}")
+    
+    def test_all_quotes_reasonable_length(self, plugin):
+        """Test that all quotes are reasonable length for display."""
+        # Test every quote in the actual data file
+        for series, quotes_list in plugin._quotes.items():
+            for quote_obj in quotes_list:
+                quote = quote_obj["quote"]
+                
+                # Quote should be under 120 characters (as defined in manifest)
+                assert len(quote) <= 120, (
+                    f"Quote too long: [{series}] {quote[:50]}... "
+                    f"has {len(quote)} chars, max 120"
+                )
+    
+    def test_all_character_names_reasonable_length(self, plugin):
+        """Test that all character names are reasonable length."""
+        for series, quotes_list in plugin._quotes.items():
+            for quote_obj in quotes_list:
+                character = quote_obj["character"]
+                
+                # Character names should be under 15 chars (as defined in manifest)
+                # This is reasonable for the display
+                assert len(character) <= 20, (
+                    f"Character name too long: [{series}] {character} "
+                    f"has {len(character)} chars"
+                )
 

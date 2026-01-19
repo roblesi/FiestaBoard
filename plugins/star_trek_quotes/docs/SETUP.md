@@ -110,9 +110,11 @@ that nebula!
 
 The system includes a curated collection of memorable quotes:
 
-- **18 TNG quotes** - From Picard, Data, Worf, and more
-- **30 Voyager quotes** - From Janeway, Seven of Nine, the Doctor, and more
-- **54 DS9 quotes** - From Sisko, Garak, Odo, Quark, Kira, and more
+- **17 TNG quotes** - From Picard, Data, Worf, and more
+- **28 Voyager quotes** - From Janeway, Seven of Nine, the Doctor, and more
+- **52 DS9 quotes** - From Sisko, Garak, Odo, Quark, Kira, and more
+
+All quotes are optimized to fit the 6-line display with proper spacing.
 
 ### Sample Quotes
 
@@ -148,9 +150,31 @@ To display Star Trek quotes on your board:
 ### Template Variables
 
 Available Star Trek template variables:
-- `{{star_trek.quote}}` - The quote text
-- `{{star_trek.character}}` - The character name
-- `{{star_trek.series}}` - Series abbreviation (TNG, VOY, DS9)
+- `{{star_trek_quotes.quote}}` - The quote text
+- `{{star_trek_quotes.character}}` - The character name
+- `{{star_trek_quotes.series}}` - Series abbreviation (TNG, VOY, DS9)
+- `{{star_trek_quotes.series_color}}` - Color tile based on series
+
+### Example Template
+
+Create a centered quote display:
+
+```
+{center}{{star_trek_quotes.quote|wrap}}
+
+
+
+
+{center}- {{star_trek_quotes.character}}
+```
+
+**Tip:** The `|wrap` filter automatically word-wraps long quotes across multiple lines, and `{center}` centers each line on the display.
+
+### Display Example
+
+![Star Trek Quotes Display](./star-trek-quotes-display.png)
+
+*Example showing a centered quote with character attribution on the FiestaBoard.*
 
 ## Common Configurations
 
