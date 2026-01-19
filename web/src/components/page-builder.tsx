@@ -405,7 +405,12 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
 
   // Preview mutation
   const previewMutation = useMutation({
-    mutationFn: () => api.renderTemplate(getDebouncedTemplateWithAlignments()),
+    mutationFn: () => {
+      const template = getDebouncedTemplateWithAlignments();
+      console.log('Sending template to API:', template);
+      console.log('Wrap states:', debouncedLineWrapEnabled);
+      return api.renderTemplate(template);
+    },
     onSuccess: (data) => {
       setPreview(data.rendered);
       
