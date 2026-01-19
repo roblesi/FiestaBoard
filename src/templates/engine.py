@@ -327,71 +327,79 @@ class TemplateEngine:
         return '\n'.join(rendered)
     
     def _render_with_wrap(self, template: str, context: Dict[str, Any], max_lines: int = 1) -> List[str]:
-        """Render a template line that contains |wrap filter.
+        """Render a template line that should wrap across multiple lines.
         
-        The |wrap filter causes content to wrap across multiple lines.
+        Handles two cases:
+        1. Line-level wrap (via {wrap} prefix): wraps the entire rendered content
+        2. Variable-level wrap (via |wrap filter): wraps only the variable with |wrap
         
         Args:
-            template: Template string containing |wrap
+            template: Template string that may contain |wrap filter or should be wrapped entirely
             context: Data context
             max_lines: Maximum number of lines to fill
             
         Returns:
             List of rendered lines (up to max_lines)
         """
-        # First, extract and render the wrapped variable
+        # First, check if there's a variable with |wrap filter (variable-level wrap)
         wrap_pattern = re.compile(r'\{\{([^}]+\|wrap(?:\|[^}]*)?)\}\}')
         match = wrap_pattern.search(template)
         
-        if not match:
-            # No wrap found, render normally
+        if match:
+            # Variable-level wrap: wrap only the variable with |wrap filter
+            # Get the variable expression (without |wrap)
+            expr = match.group(1)
+            # Remove |wrap from the filter chain
+            parts = expr.split('|')
+            var_part = parts[0].strip()
+            other_filters = [p for p in parts[1:] if p.lower() != 'wrap']
+            
+            # Get the raw value
+            value = self._get_variable_value(var_part, context)
+            
+            # Apply any other filters (except wrap)
+            for f in other_filters:
+                value = self._apply_filter(value, f)
+            
+            # Get prefix and suffix around the variable
+            prefix = template[:match.start()]
+            suffix = template[match.end():]
+            
+            # Render prefix and suffix (they may have other variables)
+            prefix = self.render(prefix, context)
+            suffix = self.render(suffix, context)
+            
+            # Calculate available width for wrapped content using tile counts, not character counts
+            # Color markers like {67} are 4 characters but only 1 tile
+            prefix_tiles = self._count_tiles(prefix)
+            suffix_tiles = self._count_tiles(suffix)
+            
+            # First line has prefix and suffix
+            first_line_width = max(1, 22 - prefix_tiles - suffix_tiles)  # Ensure at least 1 tile available
+            # Subsequent lines have full width
+            subsequent_width = 22
+            
+            # Word-wrap the value
+            wrapped = self._word_wrap(value, first_line_width, subsequent_width, max_lines)
+            
+            # Build result lines
+            result = []
+            for idx, wrapped_line in enumerate(wrapped):
+                if idx == 0:
+                    result.append(f"{prefix}{wrapped_line}{suffix}")
+                else:
+                    result.append(wrapped_line)
+            
+            return result
+        else:
+            # Line-level wrap: render the entire template first, then wrap the result
             rendered = self.render(template, context)
-            return [self._truncate_to_tiles(rendered, max_tiles=22)]
-        
-        # Get the variable expression (without |wrap)
-        expr = match.group(1)
-        # Remove |wrap from the filter chain
-        parts = expr.split('|')
-        var_part = parts[0].strip()
-        other_filters = [p for p in parts[1:] if p.lower() != 'wrap']
-        
-        # Get the raw value
-        value = self._get_variable_value(var_part, context)
-        
-        # Apply any other filters (except wrap)
-        for f in other_filters:
-            value = self._apply_filter(value, f)
-        
-        # Get prefix and suffix around the variable
-        prefix = template[:match.start()]
-        suffix = template[match.end():]
-        
-        # Render prefix and suffix (they may have other variables)
-        prefix = self.render(prefix, context)
-        suffix = self.render(suffix, context)
-        
-        # Calculate available width for wrapped content using tile counts, not character counts
-        # Color markers like {67} are 4 characters but only 1 tile
-        prefix_tiles = self._count_tiles(prefix)
-        suffix_tiles = self._count_tiles(suffix)
-        
-        # First line has prefix and suffix
-        first_line_width = max(1, 22 - prefix_tiles - suffix_tiles)  # Ensure at least 1 tile available
-        # Subsequent lines have full width
-        subsequent_width = 22
-        
-        # Word-wrap the value
-        wrapped = self._word_wrap(value, first_line_width, subsequent_width, max_lines)
-        
-        # Build result lines
-        result = []
-        for idx, wrapped_line in enumerate(wrapped):
-            if idx == 0:
-                result.append(f"{prefix}{wrapped_line}{suffix}")
-            else:
-                result.append(wrapped_line)
-        
-        return result
+            
+            # Use tile-based wrapping for the entire rendered content
+            # Full width available on all lines
+            wrapped = self._word_wrap_tiles(rendered, first_width=22, subsequent_width=22, max_lines=max_lines)
+            
+            return wrapped
     
     def _word_wrap(self, text: str, first_width: int, subsequent_width: int, max_lines: int) -> List[str]:
         """Word-wrap text across multiple lines.
@@ -430,6 +438,96 @@ class TemplateEngine:
                 if len(lines) >= max_lines:
                     break
                 current_line = word[:subsequent_width] if len(word) > subsequent_width else word
+                current_width = subsequent_width
+        
+        # Don't forget the last line
+        if current_line and len(lines) < max_lines:
+            lines.append(current_line)
+        
+        # Ensure we have at least one line
+        if not lines:
+            lines = [""]
+        
+        return lines
+    
+    def _word_wrap_tiles(self, text: str, first_width: int, subsequent_width: int, max_lines: int) -> List[str]:
+        """Word-wrap text across multiple lines using tile counts instead of character counts.
+        
+        This is used for line-level wrap where the text may contain color markers
+        like {67} which are 4 characters but only 1 tile.
+        
+        Args:
+            text: Text to wrap (may contain color markers like {67})
+            first_width: Tile width available on first line
+            subsequent_width: Tile width available on subsequent lines
+            max_lines: Maximum number of lines
+            
+        Returns:
+            List of wrapped lines
+        """
+        if not text:
+            return [""]
+        
+        # Split into words, preserving color markers
+        # We'll split on spaces but keep color markers with adjacent text
+        words = []
+        current_word = ""
+        i = 0
+        
+        while i < len(text):
+            if text[i] == "{":
+                # Found a potential color marker
+                closing_brace = text.find("}", i)
+                if closing_brace != -1:
+                    content = text[i + 1:closing_brace]
+                    # Check if it's a color code
+                    if content.isdigit() and 63 <= int(content) <= 70:
+                        # It's a color marker - add to current word
+                        current_word += text[i:closing_brace + 1]
+                        i = closing_brace + 1
+                        continue
+                    elif content.lower() in COLOR_CODES:
+                        # Named color marker
+                        current_word += text[i:closing_brace + 1]
+                        i = closing_brace + 1
+                        continue
+            
+            if text[i].isspace():
+                if current_word:
+                    words.append(current_word)
+                    current_word = ""
+            else:
+                current_word += text[i]
+            i += 1
+        
+        if current_word:
+            words.append(current_word)
+        
+        # Now wrap using tile counts
+        lines = []
+        current_line = ""
+        current_width = first_width
+        
+        for word in words:
+            word_tiles = self._count_tiles(word)
+            current_line_tiles = self._count_tiles(current_line) if current_line else 0
+            
+            if not current_line:
+                # First word on line
+                if word_tiles <= current_width:
+                    current_line = word
+                else:
+                    # Word too long, truncate by tiles
+                    current_line = self._truncate_to_tiles(word, max_tiles=current_width)
+            elif current_line_tiles + 1 + word_tiles <= current_width:
+                # Word fits on current line
+                current_line += " " + word
+            else:
+                # Start new line
+                lines.append(current_line)
+                if len(lines) >= max_lines:
+                    break
+                current_line = self._truncate_to_tiles(word, max_tiles=subsequent_width) if word_tiles > subsequent_width else word
                 current_width = subsequent_width
         
         # Don't forget the last line
