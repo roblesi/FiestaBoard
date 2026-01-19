@@ -60,7 +60,7 @@ export function TemplateEditorToolbar({
     <TooltipProvider>
       <div
         className={cn(
-          "flex items-center gap-1 p-2 border-b bg-muted/30",
+          "flex items-center gap-1 p-2 border-b bg-background",
           "flex-wrap",
           className
         )}
@@ -84,7 +84,7 @@ export function TemplateEditorToolbar({
                 disabled
                 className={cn(
                   "flex items-center justify-center p-1.5 rounded-md",
-                  "text-muted-foreground cursor-not-allowed opacity-50",
+                  "text-muted-foreground cursor-not-allowed opacity-40",
                   "border border-transparent"
                 )}
                 aria-label="Variables (no variables available)"
@@ -140,7 +140,7 @@ export function TemplateEditorToolbar({
         )}
 
         {/* Alignment Controls */}
-        <div className="flex items-center gap-0.5 rounded-md border overflow-hidden">
+        <div className="flex items-center gap-0.5 rounded-md border border-border/50 overflow-hidden bg-background">
           <Tooltip>
             <TooltipTrigger asChild>
               <button
@@ -149,8 +149,8 @@ export function TemplateEditorToolbar({
                 className={cn(
                   'px-2 py-1.5 transition-colors',
                   currentAlignment === 'left'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'hover:bg-muted text-muted-foreground'
+                    ? 'bg-muted/70 text-foreground'
+                    : 'hover:bg-muted/50 text-muted-foreground'
                 )}
                 aria-label="Align left"
               >
@@ -166,10 +166,10 @@ export function TemplateEditorToolbar({
                 type="button"
                 onClick={() => handleAlignmentClick('center')}
                 className={cn(
-                  'px-2 py-1.5 border-x transition-colors',
+                  'px-2 py-1.5 border-x border-border/50 transition-colors',
                   currentAlignment === 'center'
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'hover:bg-muted text-muted-foreground'
+                    ? 'bg-muted/70 text-foreground'
+                    : 'hover:bg-muted/50 text-muted-foreground'
                 )}
                 aria-label="Align center"
               >
@@ -187,8 +187,8 @@ export function TemplateEditorToolbar({
                 className={cn(
                   'px-2 py-1.5 transition-colors',
                   currentAlignment === 'right'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'hover:bg-muted text-muted-foreground'
+                    ? 'bg-muted/70 text-foreground'
+                    : 'hover:bg-muted/50 text-muted-foreground'
                 )}
                 aria-label="Align right"
               >

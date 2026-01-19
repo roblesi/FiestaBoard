@@ -42,9 +42,9 @@ export function ToolbarDropdown({ label, icon, children, className }: ToolbarDro
               onClick={() => setIsOpen(!isOpen)}
               className={cn(
                 "flex items-center justify-center p-1.5 rounded-md",
-                "hover:bg-accent hover:text-accent-foreground transition-colors",
+                "hover:bg-muted/50 transition-colors",
                 "border border-transparent",
-                isOpen && "bg-accent text-accent-foreground border-border",
+                isOpen && "bg-muted/70 border-border/50",
                 className
               )}
               aria-expanded={isOpen}
