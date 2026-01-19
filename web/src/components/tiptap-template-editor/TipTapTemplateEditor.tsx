@@ -300,7 +300,7 @@ export function TipTapTemplateEditor({
         <div className={cn(
           "border bg-background relative",
           showToolbar ? "rounded-b-md border-t-0" : "rounded-md"
-        )} style={{ padding: '0.5rem', paddingLeft: '2.5rem', overflow: 'visible' }}>
+        )} style={{ padding: '0.5rem', paddingLeft: '4rem', overflow: 'visible' }}>
             {/* Grid overlay - 22 columns × 6 rows matching board display */}
             <div 
               className="absolute pointer-events-none z-0"
@@ -442,6 +442,43 @@ export function TipTapTemplateEditor({
           justify-content: flex-end;
           pointer-events: none;
           padding-right: 0.5rem; /* Space between line number and content */
+        }
+        
+        /* Add alignment indicator next to line number */
+        .ProseMirror > p::after {
+          content: '';
+          position: absolute;
+          left: -1.25rem;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 0.75rem;
+          height: 0.75rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          pointer-events: none;
+          font-size: 0.7rem;
+          font-weight: 700;
+          color: hsl(var(--primary));
+          opacity: 0.8;
+          transition: opacity 0.2s;
+          font-family: 'Courier New', 'Courier', monospace;
+        }
+        
+        .ProseMirror > p[data-alignment="left"]::after {
+          content: 'L';
+        }
+        
+        .ProseMirror > p[data-alignment="center"]::after {
+          content: 'C';
+        }
+        
+        .ProseMirror > p[data-alignment="right"]::after {
+          content: 'R';
+        }
+        
+        .ProseMirror > p:hover::after {
+          opacity: 1;
         }
         
         /* Initialize counter */
@@ -622,66 +659,46 @@ export function TipTapTemplateEditor({
           text-align: left;
         }
         
-        /* Visual alignment indicators using pseudo-elements */
-        .ProseMirror > p::before {
+        /* Visual alignment guides - show where text aligns */
+        .ProseMirror > p[data-alignment="center"] {
+          position: relative;
+        }
+        
+        .ProseMirror > p[data-alignment="center"]::before {
           content: '';
           position: absolute;
-          left: 2px;
-          top: 50%;
-          transform: translateY(-50%);
-          width: 3px;
-          height: 12px;
-          border-radius: 2px;
-          opacity: 0.5;
-          transition: opacity 0.2s, width 0.2s;
-          pointer-events: none;
-          z-index: 1;
-        }
-        
-        /* Left alignment: vertical bar on the left */
-        .ProseMirror > p[data-alignment="left"]::before {
-          background-color: hsl(var(--primary));
-          left: 2px;
-          width: 3px;
-        }
-        
-        /* Center alignment: centered dot */
-        .ProseMirror > p[data-alignment="center"]::before {
-          background-color: hsl(var(--primary));
           left: 50%;
-          transform: translate(-50%, -50%);
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-        }
-        
-        /* Right alignment: vertical bar on the right */
-        .ProseMirror > p[data-alignment="right"]::before {
-          background-color: hsl(var(--primary));
-          right: 2px;
-          left: auto;
-          width: 3px;
-        }
-        
-        /* Increase opacity on hover for better visibility */
-        .ProseMirror > p:hover::before {
-          opacity: 0.8;
-        }
-        
-        /* Add subtle background tint for non-left alignments */
-        .ProseMirror > p[data-alignment="center"] {
-          background: linear-gradient(to right, 
-            transparent 0%, 
-            hsl(var(--primary) / 0.03) 48%, 
-            hsl(var(--primary) / 0.03) 52%, 
+          top: 0;
+          bottom: 0;
+          width: 1px;
+          background: linear-gradient(to bottom,
+            transparent 0%,
+            hsl(var(--primary) / 0.2) 20%,
+            hsl(var(--primary) / 0.2) 80%,
             transparent 100%);
+          transform: translateX(-50%);
+          pointer-events: none;
+          z-index: 0;
         }
         
         .ProseMirror > p[data-alignment="right"] {
-          background: linear-gradient(to right, 
-            transparent 0%, 
-            hsl(var(--primary) / 0.03) 85%, 
-            hsl(var(--primary) / 0.03) 100%);
+          position: relative;
+        }
+        
+        .ProseMirror > p[data-alignment="right"]::before {
+          content: '';
+          position: absolute;
+          right: 0;
+          top: 0;
+          bottom: 0;
+          width: 1px;
+          background: linear-gradient(to bottom,
+            transparent 0%,
+            hsl(var(--primary) / 0.2) 20%,
+            hsl(var(--primary) / 0.2) 80%,
+            transparent 100%);
+          pointer-events: none;
+          z-index: 0;
         }
       `}</style>
     </div>
