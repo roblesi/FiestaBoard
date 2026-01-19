@@ -1,3 +1,23 @@
+# Build stage - install dependencies with build tools
+FROM python:3.11-slim AS builder
+
+WORKDIR /app
+
+# Install build dependencies for compiling Python packages with C extensions
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    make \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install Python dependencies
+# Use BuildKit cache mount for pip cache to speed up installs
+COPY requirements.txt .
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir fastapi uvicorn[standard]
+
+# Production stage - runtime only, no build tools
 FROM python:3.11-slim
 
 # Version argument (injected at build time)
@@ -7,19 +27,9 @@ ENV VERSION=${VERSION}
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies including build tools for compiling Python packages
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    g++ \
-    make \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Install FastAPI and Uvicorn for API server
-RUN pip install --no-cache-dir fastapi uvicorn[standard]
+# Copy installed packages from builder stage
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
 COPY src/ ./src/
