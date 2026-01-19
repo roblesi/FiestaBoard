@@ -32,6 +32,8 @@ interface TipTapTemplateEditorProps {
   showAlignmentControls?: boolean;
   onLineAlignmentChange?: (lineIndex: number, alignment: LineAlignment) => void;
   lineAlignments?: LineAlignment[]; // Array of 6 alignments
+  onLineWrapChange?: (lineIndex: number, wrapEnabled: boolean) => void;
+  lineWrapEnabled?: boolean[]; // Array of 6 wrap states
   showToolbar?: boolean; // Show toolbar at top (default: true)
 }
 
@@ -47,6 +49,8 @@ export function TipTapTemplateEditor({
   showAlignmentControls = true,
   onLineAlignmentChange,
   lineAlignments = ['left', 'left', 'left', 'left', 'left', 'left'],
+  onLineWrapChange,
+  lineWrapEnabled = [false, false, false, false, false, false],
   showToolbar = true,
 }: TipTapTemplateEditorProps) {
   const editor = useEditor({
@@ -208,6 +212,46 @@ export function TipTapTemplateEditor({
     }
   }, [editor, lineAlignments]);
 
+  // Sync wrapEnabled state from props
+  useEffect(() => {
+    if (!editor) return;
+    
+    const { state } = editor;
+    const { doc } = state;
+    const tr = state.tr;
+    let modified = false;
+    
+    doc.descendants((node, pos) => {
+      if (node.type.name === 'templateParagraph') {
+        // Count which paragraph this is
+        let paragraphIndex = 0;
+        state.doc.nodesBetween(0, pos, (n) => {
+          if (n.type.name === 'templateParagraph') {
+            paragraphIndex++;
+          }
+        });
+        paragraphIndex--; // Adjust for current paragraph
+        
+        if (paragraphIndex >= 0 && paragraphIndex < BOARD_LINES) {
+          const expectedWrap = lineWrapEnabled[paragraphIndex] || false;
+          const currentWrap = node.attrs.wrapEnabled || false;
+          
+          if (currentWrap !== expectedWrap) {
+            tr.setNodeMarkup(pos, undefined, {
+              ...node.attrs,
+              wrapEnabled: expectedWrap,
+            });
+            modified = true;
+          }
+        }
+      }
+    });
+    
+    if (modified) {
+      editor.view.dispatch(tr);
+    }
+  }, [editor, lineWrapEnabled]);
+
   // Get current line index from cursor position
   const getCurrentLineIndex = useCallback((): number | null => {
     if (!editor) return null;
@@ -267,6 +311,43 @@ export function TipTapTemplateEditor({
     });
   }, [editor, getCurrentLineIndex, onLineAlignmentChange]);
 
+  // Handle wrap toggle
+  const handleWrapClick = useCallback(() => {
+    if (!editor) return;
+    
+    const lineIndex = getCurrentLineIndex();
+    if (lineIndex === null || lineIndex < 0 || lineIndex >= BOARD_LINES) {
+      return; // Can't apply wrap if no line is selected
+    }
+
+    // Toggle wrap for specific line
+    const { state } = editor;
+    const { doc } = state;
+    let paragraphCount = 0;
+    
+    doc.descendants((node, pos) => {
+      if (node.type.name === 'templateParagraph') {
+        if (paragraphCount === lineIndex) {
+          const currentWrap = node.attrs.wrapEnabled || false;
+          const newWrap = !currentWrap;
+          
+          const tr = state.tr;
+          tr.setNodeMarkup(pos, undefined, {
+            ...node.attrs,
+            wrapEnabled: newWrap,
+          });
+          editor.view.dispatch(tr);
+          
+          // Notify parent of wrap change
+          if (onLineWrapChange) {
+            onLineWrapChange(lineIndex, newWrap);
+          }
+        }
+        paragraphCount++;
+      }
+    });
+  }, [editor, getCurrentLineIndex, onLineWrapChange]);
+
   if (!editor) {
     return (
       <div className={cn('min-h-[9rem] border rounded-md p-2 bg-muted/30', className)}>
@@ -283,6 +364,9 @@ export function TipTapTemplateEditor({
   const currentAlignment = currentLineIndex !== null && currentLineIndex >= 0 && currentLineIndex < BOARD_LINES
     ? lineAlignments[currentLineIndex] || 'left'
     : 'left';
+  const currentWrapEnabled = currentLineIndex !== null && currentLineIndex >= 0 && currentLineIndex < BOARD_LINES
+    ? lineWrapEnabled[currentLineIndex] || false
+    : false;
 
   return (
     <div className={cn('relative', className)}>
@@ -291,8 +375,12 @@ export function TipTapTemplateEditor({
         <TemplateEditorToolbar
           editor={editor}
           currentAlignment={currentAlignment}
+          currentWrapEnabled={currentWrapEnabled}
           onAlignmentChange={(alignment) => {
             handleAlignmentClick(alignment);
+          }}
+          onWrapToggle={() => {
+            handleWrapClick();
           }}
         />
       )}
@@ -447,7 +535,7 @@ export function TipTapTemplateEditor({
           z-index: 1;
         }
         
-        /* Add alignment indicator next to line number */
+        /* Add alignment and wrap indicators next to line number */
         .ProseMirror > p::after {
           content: '';
           position: absolute;
@@ -478,6 +566,20 @@ export function TipTapTemplateEditor({
         
         .ProseMirror > p[data-alignment="right"]::after {
           content: 'R';
+        }
+        
+        /* Wrap indicator - show W badge when wrap is enabled */
+        .ProseMirror > p[data-wrap-enabled="true"]::after {
+          content: 'W';
+          color: hsl(var(--primary));
+          opacity: 0.9;
+        }
+        
+        /* When both alignment and wrap, show both (W takes priority, alignment shown via text-align) */
+        .ProseMirror > p[data-wrap-enabled="true"][data-alignment="left"]::after,
+        .ProseMirror > p[data-wrap-enabled="true"][data-alignment="center"]::after,
+        .ProseMirror > p[data-wrap-enabled="true"][data-alignment="right"]::after {
+          content: 'W';
         }
         
         .ProseMirror > p:hover::after {

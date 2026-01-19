@@ -21,14 +21,18 @@ import type { LineAlignment } from '../extensions/template-paragraph';
 interface TemplateEditorToolbarProps {
   editor: Editor | null;
   currentAlignment?: LineAlignment;
+  currentWrapEnabled?: boolean;
   onAlignmentChange?: (alignment: LineAlignment) => void;
+  onWrapToggle?: () => void;
   className?: string;
 }
 
 export function TemplateEditorToolbar({
   editor,
   currentAlignment = 'left',
+  currentWrapEnabled = false,
   onAlignmentChange,
+  onWrapToggle,
   className,
 }: TemplateEditorToolbarProps) {
   const { data: templateVars } = useQuery({
@@ -237,24 +241,25 @@ export function TemplateEditorToolbar({
           </ToolbarDropdown>
         )}
 
-        {/* Wrap Button */}
+        {/* Wrap Toggle Button */}
         <Tooltip>
           <TooltipTrigger asChild>
             <button
               type="button"
-              onClick={handleWrapClick}
+              onClick={onWrapToggle}
               className={cn(
                 "flex items-center justify-center p-1.5 rounded-md",
                 "hover:bg-muted/50 transition-colors",
-                "border border-transparent"
+                "border border-transparent",
+                currentWrapEnabled && "bg-muted/70 border-border/50"
               )}
-              aria-label="Wrap text"
+              aria-label="Toggle wrap for current line"
             >
-              <WrapText className="w-4 h-4" />
+              <WrapText className={cn("w-4 h-4", currentWrapEnabled && "text-primary")} />
             </button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Wrap selected text or apply wrap filter to variable</p>
+            <p>{currentWrapEnabled ? "Disable wrap for this line" : "Enable wrap for this line"}</p>
           </TooltipContent>
         </Tooltip>
 

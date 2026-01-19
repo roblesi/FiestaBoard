@@ -282,23 +282,30 @@ class TemplateEngine:
                 # This line was filled by wrap overflow, already set
                 continue
             
-            # Extract alignment directive
-            alignment, content = self._extract_alignment(line)
+            # Extract alignment and wrap directives
+            alignment, wrap_enabled, content = self._extract_alignment(line)
             
-            # Check if this line contains a |wrap filter
-            if '|wrap}}' in content or '|wrap|' in content:
-                # Find how many empty lines follow (for wrap overflow)
-                # A line is considered empty if it has no content after extracting alignment
+            # Check if wrap is enabled (either via {wrap} prefix or |wrap filter for backward compatibility)
+            has_wrap = wrap_enabled or '|wrap}}' in content or '|wrap|' in content
+            
+            if has_wrap:
+                # Calculate wrap capacity: count empty lines from current line to line 6
+                # This ensures we don't truncate content at the bottom
                 empty_count = 0
-                for j in range(i + 1, 6):
-                    _, line_content = self._extract_alignment(lines[j])
-                    if line_content.strip() == "":
-                        empty_count += 1
+                for j in range(i, 6):  # Start from current line (i) to line 6
+                    if j == i:
+                        # Current line counts as 1 line for wrap
+                        empty_count = 1
                     else:
-                        break
+                        # Check if line is empty (after extracting alignment and wrap)
+                        _, _, line_content = self._extract_alignment(lines[j])
+                        if line_content.strip() == "":
+                            empty_count += 1
+                        else:
+                            break  # Stop at first non-empty line
                 
-                # Render the wrap content
-                wrapped_lines = self._render_with_wrap(content, context, max_lines=1 + empty_count)
+                # Render the wrap content, respecting capacity
+                wrapped_lines = self._render_with_wrap(content, context, max_lines=empty_count)
                 
                 # Fill in the lines with alignment
                 for k, wrapped_line in enumerate(wrapped_lines):
@@ -846,20 +853,33 @@ class TemplateEngine:
         return COLOR_PATTERN.sub(replace_color, template)
     
     def _extract_alignment(self, line: str) -> tuple:
-        """Extract alignment directive from a line.
+        """Extract alignment and wrap directives from a line.
         
         Args:
-            line: Template line that may start with {left}, {center}, or {right}
+            line: Template line that may start with {wrap}, {left}, {center}, or {right}
             
         Returns:
-            Tuple of (alignment, content) where alignment is 'left', 'center', or 'right'
+            Tuple of (alignment, wrap_enabled, content) where:
+            - alignment is 'left', 'center', or 'right'
+            - wrap_enabled is True if {wrap} prefix is present
+            - content is the remaining line content
         """
-        match = ALIGNMENT_PATTERN.match(line)
+        remaining = line
+        wrap_enabled = False
+        
+        # Extract {wrap} prefix first
+        if remaining.startswith('{wrap}'):
+            wrap_enabled = True
+            remaining = remaining[6:]
+        
+        # Extract alignment prefix (can come after wrap)
+        match = ALIGNMENT_PATTERN.match(remaining)
         if match:
             alignment = match.group(1).lower()
-            content = line[match.end():]
-            return (alignment, content)
-        return ('left', line)
+            content = remaining[match.end():]
+            return (alignment, wrap_enabled, content)
+        
+        return ('left', wrap_enabled, remaining)
     
     def _apply_alignment(self, text: str, alignment: str, width: int = 22) -> str:
         """Apply alignment to rendered text.

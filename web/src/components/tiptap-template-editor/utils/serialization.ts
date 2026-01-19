@@ -18,11 +18,11 @@ export function parseTemplate(template: string): JSONContent {
   }
 
   const content: JSONContent[] = lines.map(line => {
-    const { alignment, content: lineContent } = extractAlignment(line);
+    const { alignment, wrapEnabled, content: lineContent } = extractAlignment(line);
     
     return {
       type: 'templateParagraph',
-      attrs: { alignment },
+      attrs: { alignment, wrapEnabled },
       content: lineContent ? parseLineContent(lineContent) : [],
     };
   });
@@ -47,9 +47,10 @@ export function serializeTemplate(doc: JSONContent): string {
     }
 
     const alignment = node.attrs?.alignment || 'left';
+    const wrapEnabled = node.attrs?.wrapEnabled || false;
     const content = serializeLineContent(node.content || []);
     
-    return applyAlignment(alignment, content);
+    return applyAlignment(alignment, wrapEnabled, content);
   });
 
   // Ensure exactly 6 lines
@@ -61,38 +62,62 @@ export function serializeTemplate(doc: JSONContent): string {
 }
 
 /**
- * Extract alignment directive from line
+ * Extract alignment and wrap directives from line
  */
-function extractAlignment(line: string): { alignment: string; content: string } {
-  if (line.startsWith('{center}')) {
-    return { alignment: 'center', content: line.slice(8) };
+function extractAlignment(line: string): { alignment: string; wrapEnabled: boolean; content: string } {
+  let remaining = line;
+  let alignment = 'left';
+  let wrapEnabled = false;
+  
+  // Extract wrap prefix
+  if (remaining.startsWith('{wrap}')) {
+    wrapEnabled = true;
+    remaining = remaining.slice(6);
   }
-  if (line.startsWith('{right}')) {
-    return { alignment: 'right', content: line.slice(7) };
+  
+  // Extract alignment prefix (can come after wrap)
+  if (remaining.startsWith('{center}')) {
+    alignment = 'center';
+    remaining = remaining.slice(8);
+  } else if (remaining.startsWith('{right}')) {
+    alignment = 'right';
+    remaining = remaining.slice(7);
+  } else if (remaining.startsWith('{left}')) {
+    alignment = 'left';
+    remaining = remaining.slice(6);
   }
-  if (line.startsWith('{left}')) {
-    return { alignment: 'left', content: line.slice(6) };
-  }
-  return { alignment: 'left', content: line };
+  
+  return { alignment, wrapEnabled, content: remaining };
 }
 
 /**
- * Apply alignment prefix to content
+ * Apply alignment and wrap prefixes to content
  */
-function applyAlignment(alignment: string, content: string): string {
+function applyAlignment(alignment: string, wrapEnabled: boolean, content: string): string {
   // Don't add prefix to empty lines
   if (!content) {
     return '';
   }
   
+  const prefixes: string[] = [];
+  
+  // Add wrap prefix first
+  if (wrapEnabled) {
+    prefixes.push('{wrap}');
+  }
+  
+  // Add alignment prefix
   switch (alignment) {
     case 'center':
-      return `{center}${content}`;
+      prefixes.push('{center}');
+      break;
     case 'right':
-      return `{right}${content}`;
-    default:
-      return content;
+      prefixes.push('{right}');
+      break;
+    // left is default, no prefix needed
   }
+  
+  return prefixes.join('') + content;
 }
 
 /**
@@ -225,7 +250,7 @@ function serializeLineContent(nodes: JSONContent[]): string {
         const { pluginId, field, filters } = node.attrs || {};
         let varStr = `{{${pluginId}.${field}`;
         if (filters && filters.length > 0) {
-          varStr += '|' + filters.map((f: any) => 
+          varStr += '|' + filters.map((f: { name: string; arg?: string }) => 
             f.arg ? `${f.name}:${f.arg}` : f.name
           ).join('|');
         }
@@ -255,7 +280,7 @@ function serializeLineContent(nodes: JSONContent[]): string {
 /**
  * Parse variable expression with filters
  */
-function parseVariable(expr: string): { varPath: string; filters: any[] } {
+function parseVariable(expr: string): { varPath: string; filters: Array<{ name: string; arg?: string }> } {
   const parts = expr.split('|');
   const varPath = parts[0].trim();
   const filters = parts.slice(1).map(f => {

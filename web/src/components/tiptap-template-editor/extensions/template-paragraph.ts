@@ -23,6 +23,18 @@ export const TemplateParagraph = Paragraph.extend({
           };
         },
       },
+      wrapEnabled: {
+        default: false,
+        parseHTML: element => element.getAttribute('data-wrap-enabled') === 'true',
+        renderHTML: attributes => {
+          if (attributes.wrapEnabled) {
+            return {
+              'data-wrap-enabled': 'true',
+            };
+          }
+          return {};
+        },
+      },
     };
   },
 
@@ -73,7 +85,7 @@ export const TemplateParagraph = Paragraph.extend({
                   return; // Don't split if already at 6 lines
                 }
                 
-                const result = editor.commands.splitBlock();
+                editor.commands.splitBlock();
                 
                 // Safety check: if we somehow exceeded 6 lines, trim back
                 const afterCount = editor.state.doc.content.childCount;

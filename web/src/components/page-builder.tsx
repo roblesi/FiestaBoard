@@ -34,39 +34,65 @@ import { useBoardSettings } from "@/hooks/use-board";
 type LineAlignment = "left" | "center" | "right";
 
 // Extract alignment prefix from a template line
-function extractAlignment(line: string): { alignment: LineAlignment; content: string } {
-  if (line.startsWith("{center}")) {
-    return { alignment: "center", content: line.slice(8) };
+function extractAlignment(line: string): { alignment: LineAlignment; wrapEnabled: boolean; content: string } {
+  let remaining = line;
+  let alignment: LineAlignment = "left";
+  let wrapEnabled = false;
+  
+  // Extract wrap prefix
+  if (remaining.startsWith("{wrap}")) {
+    wrapEnabled = true;
+    remaining = remaining.slice(6);
   }
-  if (line.startsWith("{right}")) {
-    return { alignment: "right", content: line.slice(7) };
+  
+  // Extract alignment prefix (can come after wrap)
+  if (remaining.startsWith("{center}")) {
+    alignment = "center";
+    remaining = remaining.slice(8);
+  } else if (remaining.startsWith("{right}")) {
+    alignment = "right";
+    remaining = remaining.slice(7);
+  } else if (remaining.startsWith("{left}")) {
+    alignment = "left";
+    remaining = remaining.slice(6);
   }
-  // Default to left (no prefix needed)
-  return { alignment: "left", content: line.startsWith("{left}") ? line.slice(6) : line };
+  
+  return { alignment, wrapEnabled, content: remaining };
 }
 
-// Apply alignment prefix to content
-function applyAlignment(alignment: LineAlignment, content: string): string {
-  // Remove any existing alignment prefix first
+// Apply alignment and wrap prefixes to content
+function applyAlignment(alignment: LineAlignment, wrapEnabled: boolean, content: string): string {
+  // Remove any existing prefixes first
   let cleanContent = content;
-  if (content.startsWith("{center}")) cleanContent = content.slice(8);
-  else if (content.startsWith("{right}")) cleanContent = content.slice(7);
-  else if (content.startsWith("{left}")) cleanContent = content.slice(6);
+  if (cleanContent.startsWith("{wrap}")) cleanContent = cleanContent.slice(6);
+  if (cleanContent.startsWith("{center}")) cleanContent = cleanContent.slice(8);
+  else if (cleanContent.startsWith("{right}")) cleanContent = cleanContent.slice(7);
+  else if (cleanContent.startsWith("{left}")) cleanContent = cleanContent.slice(6);
   
-  // Don't add alignment prefix to empty lines - they need to stay empty for |wrap to work
+  // Don't add prefixes to empty lines - they need to stay empty for wrap to work
   if (cleanContent === "") {
     return "";
   }
   
+  const prefixes: string[] = [];
+  
+  // Add wrap prefix first
+  if (wrapEnabled) {
+    prefixes.push("{wrap}");
+  }
+  
+  // Add alignment prefix
   switch (alignment) {
     case "center":
-      return `{center}${cleanContent}`;
+      prefixes.push("{center}");
+      break;
     case "right":
-      return `{right}${cleanContent}`;
-    case "left":
-    default:
-      return cleanContent; // Left is default, no prefix needed
+      prefixes.push("{right}");
+      break;
+    // left is default, no prefix needed
   }
+  
+  return prefixes.join("") + cleanContent;
 }
 
 
@@ -86,6 +112,7 @@ interface DraftData {
   name: string;
   templateLines: string[];
   lineAlignments: LineAlignment[];
+  lineWrapEnabled?: boolean[]; // Optional for backward compatibility
   timestamp: number;
 }
 
@@ -99,6 +126,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
   const [name, setName] = useState("");
   const [templateLines, setTemplateLines] = useState<string[]>(["", "", "", "", "", ""]);
   const [lineAlignments, setLineAlignments] = useState<LineAlignment[]>(["left", "left", "left", "left", "left", "left"]);
+  const [lineWrapEnabled, setLineWrapEnabled] = useState<boolean[]>([false, false, false, false, false, false]);
   const [preview, setPreview] = useState<string | null>(null);
   const [draftRestored, setDraftRestored] = useState(false);
 
@@ -128,15 +156,18 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
       setName(pageName);
       
       const rawLines = existingPage.template || ["", "", "", "", "", ""];
-      // Extract alignments and clean content from stored lines
+      // Extract alignments, wrap state, and clean content from stored lines
       const alignments: LineAlignment[] = [];
+      const wrapStates: boolean[] = [];
       const contents: string[] = [];
       for (let i = 0; i < 6; i++) {
-        const { alignment, content } = extractAlignment(rawLines[i] || "");
+        const { alignment, wrapEnabled, content } = extractAlignment(rawLines[i] || "");
         alignments.push(alignment);
+        wrapStates.push(wrapEnabled);
         contents.push(content);
       }
       setLineAlignments(alignments);
+      setLineWrapEnabled(wrapStates);
       setTemplateLines(contents);
       // Initialize debounced state immediately when loading
       setDebouncedLineAlignments(alignments);
@@ -156,6 +187,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
               setName(draft.name || "");
               setTemplateLines(draft.templateLines || ["", "", "", "", "", ""]);
               setLineAlignments(draft.lineAlignments || ["left", "left", "left", "left", "left", "left"]);
+              setLineWrapEnabled(draft.lineWrapEnabled || [false, false, false, false, false, false]);
               setDebouncedTemplateLines(draft.templateLines || ["", "", "", "", "", ""]);
               setDebouncedLineAlignments(draft.lineAlignments || ["left", "left", "left", "left", "left", "left"]);
               setDraftRestored(true);
@@ -205,6 +237,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
           name,
           templateLines,
           lineAlignments,
+          lineWrapEnabled,
           timestamp: Date.now(),
         };
         localStorage.setItem(draftKey, JSON.stringify(draft));
@@ -215,7 +248,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
     }, 1000); // Save draft 1 second after last change
     
     return () => clearTimeout(timeoutId);
-  }, [name, templateLines, lineAlignments, pageId, existingPage]);
+  }, [name, templateLines, lineAlignments, lineWrapEnabled, pageId, existingPage]);
 
 
   // Auto-resize textareas when content changes
@@ -231,9 +264,9 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
     return () => clearTimeout(timer);
   }, [templateLines]);
 
-  // Build template lines with alignment prefixes applied
+  // Build template lines with alignment and wrap prefixes applied
   const getTemplateWithAlignments = (): string[] => {
-    return templateLines.map((content, i) => applyAlignment(lineAlignments[i], content));
+    return templateLines.map((content, i) => applyAlignment(lineAlignments[i], lineWrapEnabled[i], content));
   };
 
   // Get raw text representation (6 lines joined by newlines)
@@ -511,26 +544,35 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
               <TipTapTemplateEditor
                 value={getTemplateWithAlignments().join('\n')}
                 onChange={(newValue) => {
-                  // Parse the template string back into lines and alignments
+                  // Parse the template string back into lines, alignments, and wrap states
                   const lines = newValue.split('\n').slice(0, 6);
                   const newLines: string[] = [];
                   const newAlignments: LineAlignment[] = [];
+                  const newWrapStates: boolean[] = [];
                   
                   for (let i = 0; i < 6; i++) {
                     const line = lines[i] || '';
-                    const { alignment, content } = extractAlignment(line);
+                    const { alignment, wrapEnabled, content } = extractAlignment(line);
                     newLines.push(content);
                     newAlignments.push(alignment);
+                    newWrapStates.push(wrapEnabled);
                   }
                   
                   setTemplateLines(newLines);
                   setLineAlignments(newAlignments);
+                  setLineWrapEnabled(newWrapStates);
                 }}
                 lineAlignments={lineAlignments}
+                lineWrapEnabled={lineWrapEnabled}
                 onLineAlignmentChange={(lineIndex, alignment) => {
                   const newAlignments = [...lineAlignments];
                   newAlignments[lineIndex] = alignment;
                   setLineAlignments(newAlignments);
+                }}
+                onLineWrapChange={(lineIndex, wrapEnabled) => {
+                  const newWrapStates = [...lineWrapEnabled];
+                  newWrapStates[lineIndex] = wrapEnabled;
+                  setLineWrapEnabled(newWrapStates);
                 }}
                 placeholder="Type template syntax like {{weather.temp}} or {{red}} for color tiles"
                 showAlignmentControls={true}
