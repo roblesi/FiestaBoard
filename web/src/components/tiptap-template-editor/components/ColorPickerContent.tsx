@@ -35,7 +35,7 @@ export function ColorPickerContent({ onInsert }: ColorPickerContentProps) {
             <button
               key={colorName}
               type="button"
-              onClick={() => onInsert(`{${colorName}}`)}
+              onClick={() => onInsert(`{{${colorName}}}`)}
               style={{ backgroundColor: colorInfo.bg }}
               className={cn(
                 "h-10 rounded-md text-xs font-medium transition-all hover:scale-105 hover:shadow-md",

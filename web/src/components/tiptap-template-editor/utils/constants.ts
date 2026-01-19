@@ -1,0 +1,44 @@
+/**
+ * Constants for TipTap Template Editor
+ * Maps template syntax to FiestaBoard hardware constraints
+ */
+
+// FiestaBoard color codes (63-70)
+export const BOARD_COLORS = {
+  red: 63,
+  orange: 64,
+  yellow: 65,
+  green: 66,
+  blue: 67,
+  violet: 68,
+  purple: 68, // alias
+  white: 69,
+  black: 70,
+} as const;
+
+export type BoardColorName = keyof typeof BOARD_COLORS;
+
+// Symbol shortcuts to actual FiestaBoard characters
+// Based on SYMBOL_CHARS from src/templates/engine.py
+export const SYMBOL_CHARS: Record<string, string> = {
+  sun: "*",
+  star: "*",
+  cloud: "O",
+  rain: "/",
+  snow: "*",
+  storm: "!",
+  fog: "-",
+  partly: "%",
+  heart: "<3",
+  check: "+",
+  x: "X",
+};
+
+export type SymbolName = keyof typeof SYMBOL_CHARS;
+
+// Board dimensions
+export const BOARD_WIDTH = 22; // characters per line
+export const BOARD_LINES = 6; // total lines
+
+// Special variable name
+export const FILL_SPACE_VAR = "fill_space";

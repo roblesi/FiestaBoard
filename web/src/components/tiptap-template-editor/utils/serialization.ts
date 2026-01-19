@@ -233,8 +233,8 @@ function serializeLineContent(nodes: JSONContent[]): string {
         return varStr;
       
       case 'colorTile':
-        // Use single bracket syntax for colors: {red} instead of {{red}}
-        return `{${node.attrs?.color || 'red'}}`;
+        // Use double bracket syntax for colors to match user input: {{red}}
+        return `{{${node.attrs?.color || 'red'}}}`;
       
       case 'fillSpace':
         return `{{${FILL_SPACE_VAR}}}`;
