@@ -10,19 +10,26 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 interface ToolbarDropdownProps {
   label: string;
   icon?: React.ReactNode;
-  children: React.ReactNode;
+  children: React.ReactNode | ((close: () => void) => React.ReactNode);
   className?: string;
+  onClose?: () => void;
 }
 
-export function ToolbarDropdown({ label, icon, children, className }: ToolbarDropdownProps) {
+export function ToolbarDropdown({ label, icon, children, className, onClose }: ToolbarDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  const handleClose = () => {
+    setIsOpen(false);
+    onClose?.();
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
+        onClose?.();
       }
     }
 
@@ -30,7 +37,7 @@ export function ToolbarDropdown({ label, icon, children, className }: ToolbarDro
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [isOpen]);
+  }, [isOpen, onClose]);
 
   return (
     <TooltipProvider>
@@ -64,7 +71,7 @@ export function ToolbarDropdown({ label, icon, children, className }: ToolbarDro
         
         {isOpen && (
           <div className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-md shadow-lg">
-            {children}
+            {typeof children === 'function' ? children(handleClose) : children}
           </div>
         )}
       </div>

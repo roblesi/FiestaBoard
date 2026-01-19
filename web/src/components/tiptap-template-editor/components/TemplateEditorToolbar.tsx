@@ -69,9 +69,14 @@ export function TemplateEditorToolbar({
             label="Variables"
             icon={<Code2 className="w-4 h-4" />}
           >
-            <VariablePickerContent
-              onInsert={handleInsert}
-            />
+            {(close) => (
+              <VariablePickerContent
+                onInsert={(variable) => {
+                  handleInsert(variable);
+                  close();
+                }}
+              />
+            )}
           </ToolbarDropdown>
         ) : (
           <Tooltip>
@@ -101,7 +106,14 @@ export function TemplateEditorToolbar({
             label="Colors"
             icon={<Palette className="w-4 h-4" />}
           >
-            <ColorPickerContent onInsert={handleInsert} />
+            {(close) => (
+              <ColorPickerContent 
+                onInsert={(color) => {
+                  handleInsert(color);
+                  close();
+                }} 
+              />
+            )}
           </ToolbarDropdown>
         )}
 
@@ -111,10 +123,15 @@ export function TemplateEditorToolbar({
             label="Formatting"
             icon={<Type className="w-4 h-4" />}
           >
-            <FormattingPickerContent
-              formatting={templateVars.formatting}
-              onInsert={handleInsert}
-            />
+            {(close) => (
+              <FormattingPickerContent
+                formatting={templateVars.formatting}
+                onInsert={(formatting) => {
+                  handleInsert(formatting);
+                  close();
+                }}
+              />
+            )}
           </ToolbarDropdown>
         )}
 
@@ -124,10 +141,15 @@ export function TemplateEditorToolbar({
             label="Filters"
             icon={<Filter className="w-4 h-4" />}
           >
-            <FilterPickerContent
-              filters={templateVars.filters}
-              onInsert={handleInsert}
-            />
+            {(close) => (
+              <FilterPickerContent
+                filters={templateVars.filters}
+                onInsert={(filter) => {
+                  handleInsert(filter);
+                  close();
+                }}
+              />
+            )}
           </ToolbarDropdown>
         )}
 

@@ -19,24 +19,10 @@ interface ColorTileNodeViewProps {
   selected: boolean;
 }
 
-// Color name to needsDarkX mapping
-const COLOR_CONTRAST: Record<string, boolean> = {
-  red: false,
-  orange: false,
-  yellow: true, // needs dark X
-  green: true,  // needs dark X
-  blue: false,
-  violet: false,
-  purple: false,
-  white: true,  // needs dark X
-  black: false,
-};
-
 export function ColorTileNodeView({ node, deleteNode, selected }: ColorTileNodeViewProps) {
   const { color, code } = node.attrs;
   const colorKey = color.toLowerCase() as keyof typeof FIESTABOARD_COLORS;
   const bgColor = FIESTABOARD_COLORS[colorKey] || FIESTABOARD_COLORS.red;
-  const needsDarkX = COLOR_CONTRAST[color.toLowerCase()] || false;
 
   // Match board display styling with 3D effect
   const boxShadow = `
@@ -62,11 +48,14 @@ export function ColorTileNodeView({ node, deleteNode, selected }: ColorTileNodeV
       data-drag-handle
       style={{ 
         backgroundColor: bgColor,
-        width: '1.2rem',
-        height: '1.2rem',
-        maxHeight: '1.2rem',
+        width: '1ch',
+        height: '1.4rem',
+        maxHeight: '1.4rem',
+        minHeight: '1.4rem',
         boxShadow,
         flexShrink: 0,
+        display: 'inline-block',
+        verticalAlign: 'middle',
       }}
       title={`${color} tile (code ${code})`}
     >
