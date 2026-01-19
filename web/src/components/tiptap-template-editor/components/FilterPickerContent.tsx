@@ -88,6 +88,39 @@ export function FilterPickerContent({ filters, editor, onInsert }: FilterPickerC
         editor.view.dispatch(tr);
         editor.chain().focus().run();
       }
+    } else if (filterName === 'wrap' && selection.from !== selection.to) {
+      // For wrap filter, if text is selected, wrap it in a wrappedText node
+      const selectedText = state.doc.textBetween(selection.from, selection.to);
+      
+      if (selectedText.trim().length > 0) {
+        // Check if selection is already inside a wrappedText node
+        let isInWrappedText = false;
+        depth = $from.depth;
+        while (depth > 0) {
+          const node = $from.node(depth);
+          if (node.type.name === 'wrappedText') {
+            isInWrappedText = true;
+            break;
+          }
+          depth--;
+        }
+        
+        if (!isInWrappedText) {
+          // Replace selection with wrappedText node
+          editor.chain()
+            .focus()
+            .deleteSelection()
+            .insertContent({
+              type: 'wrappedText',
+              attrs: {
+                text: selectedText,
+              },
+            })
+            .run();
+        }
+      } else {
+        onInsert?.(`|${filterName}`);
+      }
     } else {
       // No variable selected, just insert the filter text
       onInsert?.(`|${filterName}`);

@@ -242,6 +242,10 @@ function serializeLineContent(nodes: JSONContent[]): string {
       case 'symbol':
         return `{${node.attrs?.symbol || 'sun'}}`;
       
+      case 'wrappedText':
+        // Serialize wrapped text as plain text (wrap is handled at render time)
+        return node.attrs?.text || '';
+      
       default:
         return '';
     }

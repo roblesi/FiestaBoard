@@ -16,6 +16,7 @@ import { VariableNode } from './extensions/variable-node';
 import { ColorTileNode } from './extensions/color-tile-node';
 import { FillSpaceNode } from './extensions/fill-space-node';
 import { SymbolNode } from './extensions/symbol-node';
+import { WrappedTextNode } from './extensions/wrapped-text-node';
 import { parseTemplate, serializeTemplate } from './utils/serialization';
 import { BOARD_LINES, BOARD_WIDTH } from './utils/constants';
 import { AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
@@ -74,6 +75,7 @@ export function TipTapTemplateEditor({
       ColorTileNode,
       FillSpaceNode,
       SymbolNode,
+      WrappedTextNode,
     ],
     content: parseTemplate(value || ''),
     editorProps: {
@@ -601,7 +603,8 @@ export function TipTapTemplateEditor({
         .ProseMirror [data-type="variable"],
         .ProseMirror [data-type="color-tile"],
         .ProseMirror [data-type="symbol"],
-        .ProseMirror [data-type="fill-space"] {
+        .ProseMirror [data-type="fill-space"],
+        .ProseMirror [data-type="wrapped-text"] {
           max-height: 1.4rem !important;
           height: auto !important;
           line-height: 1.4rem;
@@ -636,7 +639,8 @@ export function TipTapTemplateEditor({
         .ProseMirror [data-type="variable"],
         .ProseMirror [data-type="color-tile"],
         .ProseMirror [data-type="symbol"],
-        .ProseMirror [data-type="fill-space"] {
+        .ProseMirror [data-type="fill-space"],
+        .ProseMirror [data-type="wrapped-text"] {
           text-transform: none;
         }
         

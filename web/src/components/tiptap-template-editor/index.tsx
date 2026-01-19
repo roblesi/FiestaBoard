@@ -9,6 +9,7 @@ import { VariableNode } from './extensions/variable-node';
 import { ColorTileNode } from './extensions/color-tile-node';
 import { FillSpaceNode } from './extensions/fill-space-node';
 import { SymbolNode } from './extensions/symbol-node';
+import { WrappedTextNode } from './extensions/wrapped-text-node';
 import { parseTemplate, serializeTemplate } from './utils/serialization';
 import { BOARD_LINES } from './utils/constants';
 
@@ -65,6 +66,7 @@ export function TipTapTemplateEditor({
       ColorTileNode,
       FillSpaceNode,
       SymbolNode,
+      WrappedTextNode,
     ],
     content: parseTemplate(value || ''),
     editorProps: {

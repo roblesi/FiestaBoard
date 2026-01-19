@@ -14,6 +14,7 @@ import { VariableNode } from './extensions/variable-node';
 import { ColorTileNode } from './extensions/color-tile-node';
 import { FillSpaceNode } from './extensions/fill-space-node';
 import { SymbolNode } from './extensions/symbol-node';
+import { WrappedTextNode } from './extensions/wrapped-text-node';
 import { parseTemplate, serializeTemplate } from './utils/serialization';
 import { useEffect } from 'react';
 import { cn } from '@/lib/utils';
@@ -71,6 +72,7 @@ export function TipTapTemplateLineEditor({
       ColorTileNode,
       FillSpaceNode,
       SymbolNode,
+      WrappedTextNode,
     ],
     content: parseTemplate(value || ''),
     editorProps: {
