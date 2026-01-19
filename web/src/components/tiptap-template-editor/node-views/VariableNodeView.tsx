@@ -27,7 +27,7 @@ export function VariableNodeView({ node, deleteNode, selected }: VariableNodeVie
     <NodeViewWrapper
       as="span"
       className={cn(
-        'inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-medium cursor-grab select-none',
+        'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium cursor-grab select-none',
         'border transition-all duration-150',
         'bg-indigo-500/15 border-indigo-500/30 text-indigo-700 dark:text-indigo-300',
         'hover:bg-indigo-500/20',
@@ -47,7 +47,7 @@ export function VariableNodeView({ node, deleteNode, selected }: VariableNodeVie
 
       {/* Filters */}
       {filters && filters.length > 0 && (
-        <span className="flex items-center gap-0.5">
+        <span className="flex items-center gap-0.5 ml-0.5">
           {filters.map((filter, idx) => (
             <span
               key={idx}
@@ -64,7 +64,7 @@ export function VariableNodeView({ node, deleteNode, selected }: VariableNodeVie
       {/* Max length indicator (on hover) */}
       {maxLength && (
         <span
-          className="text-[10px] opacity-0 group-hover:opacity-50 transition-opacity"
+          className="text-[10px] opacity-0 group-hover:opacity-50 transition-opacity ml-0.5"
           title={`Max length: ${maxLength} characters`}
         >
           ~{maxLength}
@@ -79,7 +79,7 @@ export function VariableNodeView({ node, deleteNode, selected }: VariableNodeVie
           e.stopPropagation();
           deleteNode();
         }}
-        className="rounded-full hover:bg-black/10 dark:hover:bg-white/10 p-0.5 -mr-1 ml-0 transition-colors"
+        className="rounded-full hover:bg-black/10 dark:hover:bg-white/10 p-0.5 -mr-1 ml-0.5 transition-colors"
         tabIndex={-1}
         aria-label={`Remove ${pluginId}.${field} variable`}
       >
