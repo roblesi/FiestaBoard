@@ -33,6 +33,7 @@ export function VariableNodeView({ node, deleteNode, selected }: VariableNodeVie
         'hover:bg-indigo-500/20',
         'active:cursor-grabbing',
         'max-h-[1.2rem] h-auto',
+        'mr-0.5', // Small space after the tag
         selected && 'ring-2 ring-indigo-500 ring-offset-1',
       )}
       contentEditable={false}
@@ -78,7 +79,7 @@ export function VariableNodeView({ node, deleteNode, selected }: VariableNodeVie
           e.stopPropagation();
           deleteNode();
         }}
-        className="ml-0.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 p-0.5 -mr-1 transition-colors"
+        className="rounded-full hover:bg-black/10 dark:hover:bg-white/10 p-0.5 -mr-1 transition-colors"
         tabIndex={-1}
         aria-label={`Remove ${pluginId}.${field} variable`}
       >
