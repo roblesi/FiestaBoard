@@ -335,7 +335,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
       <div className="flex-1 min-h-0 w-full max-w-full overflow-x-hidden">
         {/* Main Editor */}
         <Card className="flex flex-col min-h-0 w-full max-w-full overflow-x-hidden">
-          <CardHeader className="pb-3 flex-shrink-0 px-4 sm:px-6">
+          <CardHeader className="pb-2 flex-shrink-0 px-4 sm:px-6">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base sm:text-lg flex items-center gap-2">
                 <Wand2 className="h-4 w-4" />
@@ -380,7 +380,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
             </div>
           </CardHeader>
 
-          <CardContent className="flex flex-col flex-1 min-h-0 space-y-4 overflow-y-auto overflow-x-hidden px-3 sm:px-4 md:px-6">
+          <CardContent className="flex flex-col flex-1 min-h-0 space-y-4 overflow-y-auto overflow-x-hidden px-3 sm:px-4 md:px-6 pt-4">
             {/* Page name */}
             <div className="space-y-1.5">
               <label className="text-xs sm:text-sm font-medium">Page Name</label>
