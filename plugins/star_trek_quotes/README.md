@@ -9,30 +9,64 @@ The Star Trek Quotes plugin displays inspirational and memorable quotes from Sta
 ## Template Variables
 
 ```
-{{star_trek.quote}}        # The quote text
-{{star_trek.character}}    # Character name (e.g., "Picard")
-{{star_trek.series}}       # Series code (TNG, VOYAGER, DS9)
-{{star_trek.series_color}} # Color tile based on series
+{{star_trek_quotes.quote}}        # The quote text
+{{star_trek_quotes.character}}    # Character name (e.g., "Picard")
+{{star_trek_quotes.series}}       # Series code (TNG, VOYAGER, DS9)
+{{star_trek_quotes.series_color}} # Color tile based on series
 ```
 
 ## Example Templates
 
-### Quote with Attribution
+### Centered Quote with Attribution (Recommended)
+
+Use the `|wrap` filter to automatically word-wrap quotes across multiple lines:
 
 ```
-{{star_trek.quote|wrap}}
+{center}{{star_trek_quotes.quote|wrap}}
 
 
-- {{star_trek.character}}
+
+
+{center}- {{star_trek_quotes.character}}
 ```
+
+This displays as:
+```
+   Make it so.
+     - Picard
+```
+
+Or for longer quotes:
+```
+ It is possible to
+commit no mistakes and
+    still lose.
+     - Picard
+```
+
+**Tip:** The `|wrap` filter fills empty lines below it, and `{center}` centers each line.
 
 ### With Series Color
 
 ```
-{{star_trek.series_color}} {{star_trek.series}}
-{{star_trek.quote|wrap}}
+{center}{{star_trek_quotes.series_color}} {{star_trek_quotes.series}}
 
-- {{star_trek.character}}
+{center}{{star_trek_quotes.quote|wrap}}
+
+
+
+{center}- {{star_trek_quotes.character}}
+```
+
+### Left-Aligned (No Centering)
+
+```
+{{star_trek_quotes.quote|wrap}}
+
+
+
+
+- {{star_trek_quotes.character}}
 ```
 
 ## Configuration

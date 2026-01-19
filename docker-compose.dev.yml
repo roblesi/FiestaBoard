@@ -20,8 +20,6 @@ services:
       - ./tests:/app/tests
       - ./scripts:/app/scripts
       - ./plugins:/app/plugins
-      # Mount plugins directory
-      - ./plugins:/app/plugins
     logging:
       driver: "json-file"
       options:
