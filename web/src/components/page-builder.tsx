@@ -341,16 +341,16 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
                 <Wand2 className="h-4 w-4" />
                 {pageId ? "Edit Page" : "Create Page"}
               </CardTitle>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 {/* Save button */}
                 <Button
-                  size="sm"
-                  className="h-9"
+                  size="icon"
+                  className="h-9 w-9"
                   onClick={() => saveMutation.mutate()}
                   disabled={!name.trim() || saveMutation.isPending}
+                  title={saveMutation.isPending ? "Saving..." : "Save Page"}
                 >
-                  <Save className="h-4 w-4 mr-1.5" />
-                  {saveMutation.isPending ? "Saving..." : "Save"}
+                  <Save className="h-4 w-4" />
                 </Button>
                 
                 {/* Delete button - only show when editing */}
@@ -361,6 +361,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
                         variant="ghost" 
                         size="icon" 
                         className="h-9 w-9 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        title="Delete Page"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -384,7 +385,13 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
                     </AlertDialogContent>
                   </AlertDialog>
                 )}
-                <Button variant="ghost" size="icon" className="h-9 w-9" onClick={onClose}>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-9 w-9" 
+                  onClick={onClose}
+                  title="Close"
+                >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
