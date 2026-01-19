@@ -10,19 +10,15 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++
 
 # Copy package files for dependency installation
-# Using package-lock.json ensures reproducible builds and better caching
-COPY web/package.json web/package-lock.json* ./
+COPY web/package.json ./
 
 # Install ALL dependencies (needed for build)
-# Use BuildKit cache mount for npm cache to speed up installs
-# Use npm ci when lockfile exists, fallback to npm install for native modules
+# Use npm install (not ci) to properly install native modules for Alpine's musl libc
 # lightningcss and @next/swc need musl-specific binaries
+# Note: package-lock.json is intentionally NOT copied to allow npm to resolve
+# platform-specific optional dependencies correctly for Alpine Linux
 RUN --mount=type=cache,target=/root/.npm \
-    if [ -f package-lock.json ]; then \
-      npm ci --legacy-peer-deps --no-audit; \
-    else \
-      npm install --legacy-peer-deps --no-audit; \
-    fi
+    npm install --legacy-peer-deps --no-audit
 
 # Copy source files
 COPY web/ ./
