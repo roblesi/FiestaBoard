@@ -344,6 +344,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
               <div className="flex items-center gap-1">
                 {/* Save button */}
                 <Button
+                  variant="ghost"
                   size="icon"
                   className="h-9 w-9"
                   onClick={() => saveMutation.mutate()}
