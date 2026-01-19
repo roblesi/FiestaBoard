@@ -338,18 +338,20 @@ export function TipTapTemplateEditor({
           });
           editor.view.dispatch(tr);
           
-          // Notify parent of wrap change first (updates state immediately)
+          // Notify parent of wrap change (updates state immediately)
           if (onLineWrapChange) {
             onLineWrapChange(lineIndex, newWrap);
           }
           
-          // Trigger onChange to ensure serialized template includes wrap state
-          // Use setTimeout to ensure transaction is fully applied
-          setTimeout(() => {
-            const doc = editor.getJSON();
-            const serialized = serializeTemplate(doc);
-            onChange(serialized);
-          }, 0);
+          // Manually trigger onChange to ensure wrap state is included in serialization
+          // Use requestAnimationFrame to ensure transaction is fully applied and DOM is updated
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              const doc = editor.getJSON();
+              const templateString = serializeTemplate(doc);
+              onChange(templateString);
+            });
+          });
         }
         paragraphCount++;
       }
