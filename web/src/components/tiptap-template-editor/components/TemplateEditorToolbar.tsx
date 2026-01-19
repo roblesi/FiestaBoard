@@ -15,6 +15,7 @@ import { ColorPickerContent } from './ColorPickerContent';
 import { FormattingPickerContent } from './FormattingPickerContent';
 import { FilterPickerContent } from './FilterPickerContent';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { LineAlignment } from '../extensions/template-paragraph';
 
 interface TemplateEditorToolbarProps {
@@ -49,109 +50,155 @@ export function TemplateEditorToolbar({
     }
   };
 
+  // Check if variables are available
+  const hasVariables = templateVars?.variables && Object.keys(templateVars.variables).length > 0;
+  const hasColors = templateVars?.colors && Object.keys(templateVars.colors).length > 0;
+  const hasFormatting = templateVars?.formatting && Object.keys(templateVars.formatting).length > 0;
+  const hasFilters = templateVars?.filters && templateVars.filters.length > 0;
+
   return (
-    <div
-      className={cn(
-        "flex items-center gap-2 p-2 border-b bg-muted/30",
-        "flex-wrap",
-        className
-      )}
-    >
-      {/* Variables Dropdown */}
-      <ToolbarDropdown
-        label="Variables"
-        icon={<Code2 className="w-4 h-4" />}
+    <TooltipProvider>
+      <div
+        className={cn(
+          "flex items-center gap-1 p-2 border-b bg-muted/30",
+          "flex-wrap",
+          className
+        )}
       >
-        <VariablePickerContent
-          onInsert={handleInsert}
-          onOpenFullPicker={onOpenFullPicker}
-        />
-      </ToolbarDropdown>
+        {/* Variables Dropdown */}
+        {hasVariables ? (
+          <ToolbarDropdown
+            label="Variables"
+            icon={<Code2 className="w-4 h-4" />}
+          >
+            <VariablePickerContent
+              onInsert={handleInsert}
+              onOpenFullPicker={onOpenFullPicker}
+            />
+          </ToolbarDropdown>
+        ) : (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                disabled
+                className={cn(
+                  "flex items-center justify-center p-1.5 rounded-md",
+                  "text-muted-foreground cursor-not-allowed opacity-50",
+                  "border border-transparent"
+                )}
+                aria-label="Variables (no variables available)"
+              >
+                <Code2 className="w-4 h-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>No template variables available. Configure plugins in Settings.</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
 
-      {/* Colors Dropdown */}
-      {templateVars?.colors && Object.keys(templateVars.colors).length > 0 && (
-        <ToolbarDropdown
-          label="Colors"
-          icon={<Palette className="w-4 h-4" />}
-        >
-          <ColorPickerContent onInsert={handleInsert} />
-        </ToolbarDropdown>
-      )}
+        {/* Colors Dropdown */}
+        {hasColors && (
+          <ToolbarDropdown
+            label="Colors"
+            icon={<Palette className="w-4 h-4" />}
+          >
+            <ColorPickerContent onInsert={handleInsert} />
+          </ToolbarDropdown>
+        )}
 
-      {/* Formatting Dropdown */}
-      {templateVars?.formatting && Object.keys(templateVars.formatting).length > 0 && (
-        <ToolbarDropdown
-          label="Formatting"
-          icon={<Type className="w-4 h-4" />}
-        >
-          <FormattingPickerContent
-            formatting={templateVars.formatting}
-            onInsert={handleInsert}
-          />
-        </ToolbarDropdown>
-      )}
+        {/* Formatting Dropdown */}
+        {hasFormatting && (
+          <ToolbarDropdown
+            label="Formatting"
+            icon={<Type className="w-4 h-4" />}
+          >
+            <FormattingPickerContent
+              formatting={templateVars.formatting}
+              onInsert={handleInsert}
+            />
+          </ToolbarDropdown>
+        )}
 
-      {/* Filters Dropdown */}
-      {templateVars?.filters && templateVars.filters.length > 0 && (
-        <ToolbarDropdown
-          label="Filters"
-          icon={<Filter className="w-4 h-4" />}
-        >
-          <FilterPickerContent
-            filters={templateVars.filters}
-            onInsert={handleInsert}
-          />
-        </ToolbarDropdown>
-      )}
+        {/* Filters Dropdown */}
+        {hasFilters && (
+          <ToolbarDropdown
+            label="Filters"
+            icon={<Filter className="w-4 h-4" />}
+          >
+            <FilterPickerContent
+              filters={templateVars.filters}
+              onInsert={handleInsert}
+            />
+          </ToolbarDropdown>
+        )}
 
-      {/* Divider */}
-      <div className="h-6 w-px bg-border mx-1" />
+        {/* Divider */}
+        {(hasVariables || hasColors || hasFormatting || hasFilters) && (
+          <div className="h-6 w-px bg-border mx-1" />
+        )}
 
-      {/* Alignment Controls */}
-      <div className="flex items-center gap-0.5 rounded-md border overflow-hidden">
-        <button
-          type="button"
-          onClick={() => handleAlignmentClick('left')}
-          className={cn(
-            'px-3 py-1.5 text-xs transition-colors',
-            currentAlignment === 'left'
-              ? 'bg-primary text-primary-foreground'
-              : 'hover:bg-muted text-muted-foreground'
-          )}
-          title="Align left"
-          aria-label="Align left"
-        >
-          <AlignLeft className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => handleAlignmentClick('center')}
-          className={cn(
-            'px-3 py-1.5 text-xs border-x transition-colors',
-            currentAlignment === 'center'
-              ? 'bg-primary text-primary-foreground border-primary'
-              : 'hover:bg-muted text-muted-foreground'
-          )}
-          title="Align center"
-          aria-label="Align center"
-        >
-          <AlignCenter className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => handleAlignmentClick('right')}
-          className={cn(
-            'px-3 py-1.5 text-xs transition-colors',
-            currentAlignment === 'right'
-              ? 'bg-primary text-primary-foreground'
-              : 'hover:bg-muted text-muted-foreground'
-          )}
-          title="Align right"
-          aria-label="Align right"
-        >
-          <AlignRight className="w-4 h-4" />
-        </button>
+        {/* Alignment Controls */}
+        <div className="flex items-center gap-0.5 rounded-md border overflow-hidden">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={() => handleAlignmentClick('left')}
+                className={cn(
+                  'px-2 py-1.5 transition-colors',
+                  currentAlignment === 'left'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-muted text-muted-foreground'
+                )}
+                aria-label="Align left"
+              >
+                <AlignLeft className="w-4 h-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Align left</TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={() => handleAlignmentClick('center')}
+                className={cn(
+                  'px-2 py-1.5 border-x transition-colors',
+                  currentAlignment === 'center'
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'hover:bg-muted text-muted-foreground'
+                )}
+                aria-label="Align center"
+              >
+                <AlignCenter className="w-4 h-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Align center</TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={() => handleAlignmentClick('right')}
+                className={cn(
+                  'px-2 py-1.5 transition-colors',
+                  currentAlignment === 'right'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-muted text-muted-foreground'
+                )}
+                aria-label="Align right"
+              >
+                <AlignRight className="w-4 h-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Align right</TooltipContent>
+          </Tooltip>
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }
