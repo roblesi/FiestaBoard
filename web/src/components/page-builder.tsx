@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { BoardDisplay } from "@/components/board-display";
 import { TipTapTemplateEditor } from "@/components/tiptap-template-editor/TipTapTemplateEditor";
 import { toast } from "sonner";
@@ -76,6 +77,18 @@ interface PageBuilderProps {
   onSave?: () => void;
 }
 
+// Draft storage key helper
+function getDraftKey(pageId?: string): string {
+  return `fiestaboard-page-draft-${pageId || 'new'}`;
+}
+
+interface DraftData {
+  name: string;
+  templateLines: string[];
+  lineAlignments: LineAlignment[];
+  timestamp: number;
+}
+
 export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
   const queryClient = useQueryClient();
 
@@ -87,6 +100,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
   const [templateLines, setTemplateLines] = useState<string[]>(["", "", "", "", "", ""]);
   const [lineAlignments, setLineAlignments] = useState<LineAlignment[]>(["left", "left", "left", "left", "left", "left"]);
   const [preview, setPreview] = useState<string | null>(null);
+  const [draftRestored, setDraftRestored] = useState(false);
 
   // Debounced state (for expensive operations)
   const [debouncedTemplateLines, setDebouncedTemplateLines] = useState<string[]>(["", "", "", "", "", ""]);
@@ -103,9 +117,13 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
   });
 
 
-  // Load existing page data
+  // Load draft or existing page data
   useEffect(() => {
     if (existingPage) {
+      // Clear draft when loading existing page
+      const draftKey = getDraftKey(pageId);
+      localStorage.removeItem(draftKey);
+      
       const pageName = existingPage.name;
       setName(pageName);
       
@@ -123,8 +141,38 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
       // Initialize debounced state immediately when loading
       setDebouncedLineAlignments(alignments);
       setDebouncedTemplateLines(contents);
+    } else if (!pageId && !loadingPage) {
+      // Try to load draft for new page
+      const draftKey = getDraftKey();
+      try {
+        const draftJson = localStorage.getItem(draftKey);
+        if (draftJson) {
+          const draft: DraftData = JSON.parse(draftJson);
+            // Only restore if draft is less than 7 days old
+            const draftAge = Date.now() - draft.timestamp;
+            const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
+            
+            if (draftAge < maxAge) {
+              setName(draft.name || "");
+              setTemplateLines(draft.templateLines || ["", "", "", "", "", ""]);
+              setLineAlignments(draft.lineAlignments || ["left", "left", "left", "left", "left", "left"]);
+              setDebouncedTemplateLines(draft.templateLines || ["", "", "", "", "", ""]);
+              setDebouncedLineAlignments(draft.lineAlignments || ["left", "left", "left", "left", "left", "left"]);
+              setDraftRestored(true);
+              
+              // Auto-dismiss the alert after 5 seconds
+              setTimeout(() => setDraftRestored(false), 5000);
+          } else {
+            // Draft too old, remove it
+            localStorage.removeItem(draftKey);
+          }
+        }
+      } catch {
+        // Invalid draft data, remove it
+        localStorage.removeItem(draftKey);
+      }
     }
-  }, [existingPage]);
+  }, [existingPage, pageId, loadingPage]);
 
 
   useEffect(() => {
@@ -140,6 +188,34 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
     }, 300);
     return () => clearTimeout(timeoutId);
   }, [lineAlignments]);
+
+  // Auto-save draft to localStorage (debounced)
+  useEffect(() => {
+    const draftKey = getDraftKey(pageId);
+    
+    // Don't save draft if we just loaded an existing page
+    if (existingPage) {
+      return;
+    }
+    
+    // Debounce draft saving
+    const timeoutId = setTimeout(() => {
+      try {
+        const draft: DraftData = {
+          name,
+          templateLines,
+          lineAlignments,
+          timestamp: Date.now(),
+        };
+        localStorage.setItem(draftKey, JSON.stringify(draft));
+      } catch (error) {
+        // Ignore localStorage errors (quota exceeded, etc.)
+        console.warn("Failed to save draft:", error);
+      }
+    }, 1000); // Save draft 1 second after last change
+    
+    return () => clearTimeout(timeoutId);
+  }, [name, templateLines, lineAlignments, pageId, existingPage]);
 
 
   // Auto-resize textareas when content changes
@@ -212,6 +288,14 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
       }
     },
     onSuccess: (data) => {
+      // Clear draft on successful save
+      const draftKey = getDraftKey(pageId || data.id);
+      localStorage.removeItem(draftKey);
+      // Also clear the 'new' draft if this was a new page
+      if (!pageId) {
+        localStorage.removeItem(getDraftKey());
+      }
+      
       // Invalidate pages list
       queryClient.invalidateQueries({ queryKey: queryKeys.pages });
       
@@ -400,6 +484,15 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
           </CardHeader>
 
           <CardContent className="flex flex-col flex-1 min-h-0 space-y-4 overflow-y-auto overflow-x-hidden px-3 sm:px-4 md:px-6 pt-2">
+            {/* Draft restored notification */}
+            {draftRestored && (
+              <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+                <AlertDescription className="text-sm text-blue-900 dark:text-blue-100">
+                  Draft restored from your previous session. Your work has been automatically saved.
+                </AlertDescription>
+              </Alert>
+            )}
+            
             {/* Page name */}
             <div className="space-y-1.5">
               <label className="text-xs sm:text-sm font-medium">Page Name</label>
@@ -450,7 +543,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
                 <div className="flex justify-center">
                   <BoardDisplay 
                     message={preview} 
-                    isLoading={previewMutation.isPending}
+                    isLoading={previewMutation.isPending && debouncedTemplateLines.some(line => line.trim().length > 0)}
                     size="md"
                     boardType={boardSettings?.board_type ?? "black"}
                   />
