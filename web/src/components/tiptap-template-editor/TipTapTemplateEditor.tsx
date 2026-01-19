@@ -426,9 +426,9 @@ export function TipTapTemplateEditor({
           counter-increment: line-number;
         }
         
-        /* Add line numbers using CSS counter */
+        /* Add line numbers using CSS counter - must always show */
         .ProseMirror > p::before {
-          content: counter(line-number);
+          content: counter(line-number) !important;
           position: absolute;
           left: -2.5rem;
           width: 2rem;
@@ -442,6 +442,7 @@ export function TipTapTemplateEditor({
           justify-content: flex-end;
           pointer-events: none;
           padding-right: 0.5rem; /* Space between line number and content */
+          z-index: 1;
         }
         
         /* Add alignment indicator next to line number */
@@ -487,13 +488,6 @@ export function TipTapTemplateEditor({
         }
         
         /* Ensure empty paragraphs are visible and maintain height */
-        .ProseMirror > p:empty::after {
-          content: '';
-          display: inline-block;
-          width: 1ch;
-          height: 1.4rem;
-        }
-        
         .ProseMirror > p:empty {
           min-height: 1.5rem !important;
           height: 1.5rem !important;
@@ -501,8 +495,14 @@ export function TipTapTemplateEditor({
         }
         
         /* Show a visible cursor placeholder on empty lines when editor is focused */
-        .ProseMirror-focused > p:empty::before,
-        .ProseMirror:focus-within > p:empty::before {
+        /* Use a separate element for cursor to avoid conflicting with line numbers */
+        .ProseMirror-focused > p:empty,
+        .ProseMirror:focus-within > p:empty {
+          position: relative;
+        }
+        
+        .ProseMirror-focused > p:empty::after,
+        .ProseMirror:focus-within > p:empty::after {
           content: '';
           position: absolute;
           left: 6px;
@@ -512,11 +512,12 @@ export function TipTapTemplateEditor({
           background-color: hsl(var(--primary));
           animation: blink 1s step-end infinite;
           pointer-events: none;
+          z-index: 0;
         }
         
         /* Make it a block cursor on the currently selected empty line */
-        .ProseMirror-focused > p:empty:has(+ *):first-of-type::before,
-        .ProseMirror > p:empty:focus-within::before {
+        .ProseMirror-focused > p:empty:has(+ *):first-of-type::after,
+        .ProseMirror > p:empty:focus-within::after {
           width: 1ch;
           background-color: hsl(var(--primary) / 0.3);
           border: 2px solid hsl(var(--primary));
@@ -664,41 +665,47 @@ export function TipTapTemplateEditor({
           position: relative;
         }
         
-        .ProseMirror > p[data-alignment="center"]::before {
-          content: '';
-          position: absolute;
-          left: 50%;
-          top: 0;
-          bottom: 0;
-          width: 1px;
-          background: linear-gradient(to bottom,
-            transparent 0%,
-            hsl(var(--primary) / 0.2) 20%,
-            hsl(var(--primary) / 0.2) 80%,
-            transparent 100%);
-          transform: translateX(-50%);
-          pointer-events: none;
-          z-index: 0;
+        /* Visual alignment guides - use a wrapper div approach via CSS */
+        .ProseMirror > p[data-alignment="center"] {
+          position: relative;
+          background-image: 
+            linear-gradient(to bottom,
+              transparent 0%,
+              hsl(var(--primary) / 0.15) calc(50% - 0.5px),
+              hsl(var(--primary) / 0.15) calc(50% + 0.5px),
+              transparent 100%),
+            repeating-linear-gradient(
+              to right,
+              transparent 0,
+              transparent calc(1ch - 0.5px),
+              hsl(var(--muted) / 0.05) calc(1ch - 0.5px),
+              hsl(var(--muted) / 0.05) calc(1ch + 0.5px),
+              transparent calc(1ch + 0.5px)
+            );
+          background-size: 1px 100%, auto;
+          background-position: center, 0 0;
+          background-repeat: no-repeat, repeat;
         }
         
         .ProseMirror > p[data-alignment="right"] {
           position: relative;
-        }
-        
-        .ProseMirror > p[data-alignment="right"]::before {
-          content: '';
-          position: absolute;
-          right: 0;
-          top: 0;
-          bottom: 0;
-          width: 1px;
-          background: linear-gradient(to bottom,
-            transparent 0%,
-            hsl(var(--primary) / 0.2) 20%,
-            hsl(var(--primary) / 0.2) 80%,
-            transparent 100%);
-          pointer-events: none;
-          z-index: 0;
+          background-image: 
+            linear-gradient(to bottom,
+              transparent 0%,
+              hsl(var(--primary) / 0.15) calc(50% - 0.5px),
+              hsl(var(--primary) / 0.15) calc(50% + 0.5px),
+              transparent 100%),
+            repeating-linear-gradient(
+              to right,
+              transparent 0,
+              transparent calc(1ch - 0.5px),
+              hsl(var(--muted) / 0.05) calc(1ch - 0.5px),
+              hsl(var(--muted) / 0.05) calc(1ch + 0.5px),
+              transparent calc(1ch + 0.5px)
+            );
+          background-size: 1px 100%, auto;
+          background-position: right, 0 0;
+          background-repeat: no-repeat, repeat;
         }
       `}</style>
     </div>
