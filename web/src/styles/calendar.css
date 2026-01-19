@@ -1,0 +1,472 @@
+/**
+ * react-big-calendar overrides for shadcn/ui theme compatibility
+ * Uses CSS variables from shadcn's design system for seamless light/dark mode support
+ */
+
+/* ===== Wrapper ===== */
+.schedule-calendar-wrapper {
+  width: 100%;
+}
+
+/* ===== Container & General ===== */
+.schedule-calendar-container {
+  --rbc-border-color: hsl(var(--border));
+  --rbc-grid-line: rgba(128, 128, 128, 0.15);
+  --rbc-grid-line-hour: rgba(128, 128, 128, 0.3);
+  --rbc-bg-color: hsl(var(--background));
+  --rbc-text-color: hsl(var(--foreground));
+  --rbc-muted-color: hsl(var(--muted-foreground));
+  --rbc-primary-color: hsl(var(--primary));
+  
+  /* Full height - no scrolling */
+  width: 100%;
+}
+
+.schedule-calendar-container .rbc-calendar {
+  font-family: inherit;
+  color: var(--rbc-text-color);
+  background: var(--rbc-bg-color);
+}
+
+/* ===== Hide All-Day Section ===== */
+.schedule-calendar-container .rbc-allday-cell {
+  display: none !important;
+}
+
+.schedule-calendar-container .rbc-time-header-content > .rbc-row.rbc-row-resource {
+  display: none !important;
+}
+
+.schedule-calendar-container .rbc-time-view .rbc-time-header .rbc-row:last-child {
+  display: none;
+}
+
+/* ===== Time Column / Gutter ===== */
+.schedule-calendar-container .rbc-time-gutter {
+  background: var(--rbc-bg-color);
+}
+
+.schedule-calendar-container .rbc-time-gutter .rbc-timeslot-group {
+  border-bottom: 1px solid var(--rbc-grid-line-hour);
+}
+
+.schedule-calendar-container .rbc-label {
+  color: var(--rbc-muted-color);
+  font-size: 0.6rem;
+  font-weight: 500;
+  padding: 0 4px;
+}
+
+/* ===== Header Row (Day Names) ===== */
+.schedule-calendar-container .rbc-header {
+  background: transparent;
+  border-bottom: 1px solid var(--rbc-grid-line-hour);
+  border-left: 1px solid var(--rbc-grid-line) !important;
+  padding: 0.4rem 0.25rem;
+  font-weight: 600;
+  font-size: 0.7rem;
+  color: var(--rbc-muted-color);
+}
+
+.schedule-calendar-container .rbc-header:first-child {
+  border-left: none !important;
+}
+
+/* ===== Main Calendar Border ===== */
+.schedule-calendar-container .rbc-time-view {
+  border: 1px solid var(--rbc-border-color);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+/* ===== Time Content Area ===== */
+.schedule-calendar-container .rbc-time-content {
+  border-top: 1px solid var(--rbc-grid-line-hour);
+  overflow: visible !important;
+  max-height: none !important;
+}
+
+/* ===== Day Columns - Vertical Lines ===== */
+.schedule-calendar-container .rbc-day-slot {
+  border-left: 1px solid var(--rbc-grid-line);
+}
+
+.schedule-calendar-container .rbc-day-slot:first-child {
+  border-left: none;
+}
+
+/* ===== Time Slots - Compact for 24 hours ===== */
+/* Reset all default borders first */
+.schedule-calendar-container .rbc-timeslot-group,
+.schedule-calendar-container .rbc-time-slot {
+  border: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+  border-left: none !important;
+  border-right: none !important;
+}
+
+.schedule-calendar-container .rbc-timeslot-group {
+  border-bottom: 1px solid var(--rbc-grid-line-hour) !important;
+  min-height: 28px; /* Compact to fit 24 hours */
+}
+
+.schedule-calendar-container .rbc-time-slot {
+  min-height: 7px;
+  box-sizing: border-box;
+}
+
+/* 15-minute tick marks within day columns */
+.schedule-calendar-container .rbc-day-slot .rbc-time-slot {
+  border-bottom: 1px solid var(--rbc-grid-line) !important;
+}
+
+/* Last slot in each group doesn't need bottom border (hour border handles it) */
+.schedule-calendar-container .rbc-day-slot .rbc-time-slot:last-child {
+  border-bottom: none !important;
+}
+
+/* ===== Click-to-Create Hover Effect ===== */
+.schedule-calendar-container .rbc-day-slot .rbc-time-slot {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.schedule-calendar-container .rbc-day-slot .rbc-time-slot:hover {
+  background-color: hsl(var(--primary) / 0.05);
+}
+
+/* Selection box when dragging to create */
+.schedule-calendar-container .rbc-slot-selection {
+  background-color: hsl(var(--primary) / 0.15);
+  border: 2px dashed hsl(var(--primary) / 0.5);
+  border-radius: 0.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.schedule-calendar-container .rbc-slot-selection::after {
+  content: '+ New Schedule';
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: hsl(var(--primary));
+  opacity: 0.8;
+}
+
+.schedule-calendar-container .rbc-slot-selecting {
+  cursor: crosshair;
+}
+
+/* ===== Today Indicator (subtle since this is a template) ===== */
+.schedule-calendar-container .rbc-today {
+  background-color: hsl(var(--primary) / 0.02);
+}
+
+.schedule-calendar-container .rbc-header.rbc-today {
+  color: var(--rbc-primary-color);
+}
+
+/* ===== Current Time Indicator - hide for template view ===== */
+.schedule-calendar-container .rbc-current-time-indicator {
+  display: none;
+}
+
+/* ===== Events ===== */
+.schedule-calendar-container .rbc-event {
+  background-color: transparent;
+  border: none;
+  border-radius: 0.25rem;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.schedule-calendar-container .rbc-event:hover {
+  transform: scale(1.01);
+  box-shadow: 0 2px 8px hsl(var(--foreground) / 0.08);
+}
+
+.schedule-calendar-container .rbc-event:focus {
+  outline: 2px solid var(--rbc-primary-color);
+  outline-offset: 2px;
+}
+
+.schedule-calendar-container .rbc-event-label {
+  display: none;
+}
+
+.schedule-calendar-container .rbc-event-content {
+  height: 100%;
+}
+
+/* ===== Custom Event Styles ===== */
+.schedule-event-content {
+  font-size: 0.65rem;
+  line-height: 1.1;
+}
+
+.schedule-event-conflict .schedule-event-content {
+  border: 2px solid hsl(var(--destructive)) !important;
+  background-color: hsl(var(--destructive) / 0.1) !important;
+}
+
+.schedule-event-disabled .schedule-event-content {
+  opacity: 0.6;
+}
+
+/* ===== Events Container ===== */
+.schedule-calendar-container .rbc-day-slot .rbc-events-container {
+  margin-right: 2px;
+}
+
+
+/* ===== Hide Default Toolbar ===== */
+.schedule-calendar-container .rbc-toolbar {
+  display: none;
+}
+
+/* ===== Overlapping Events ===== */
+.schedule-calendar-container .rbc-event-overlaps {
+  box-shadow: -1px 1px 5px hsl(var(--foreground) / 0.05);
+}
+
+/* ===== Drag and Drop Styles ===== */
+.schedule-calendar-container .rbc-addons-dnd .rbc-event {
+  transition: opacity 0.15s ease;
+}
+
+.schedule-calendar-container .rbc-addons-dnd-dragging {
+  opacity: 0.7;
+}
+
+.schedule-calendar-container .rbc-addons-dnd-drag-preview {
+  opacity: 0.5;
+  border: 2px dashed var(--rbc-primary-color);
+  border-radius: 0.375rem;
+}
+
+/* Resize handles */
+.schedule-calendar-container .rbc-addons-dnd .rbc-addons-dnd-resize-ns-anchor {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 10px;
+  cursor: ns-resize;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.schedule-calendar-container .rbc-addons-dnd .rbc-addons-dnd-resize-ns-anchor:first-child {
+  top: 0;
+}
+
+.schedule-calendar-container .rbc-addons-dnd .rbc-addons-dnd-resize-ns-anchor:last-child {
+  bottom: 0;
+}
+
+.schedule-calendar-container .rbc-addons-dnd .rbc-addons-dnd-resize-ns-anchor::after {
+  content: '';
+  width: 24px;
+  height: 3px;
+  background: hsl(var(--foreground) / 0.25);
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.schedule-calendar-container .rbc-event:hover .rbc-addons-dnd-resize-ns-anchor::after {
+  opacity: 1;
+}
+
+.schedule-calendar-container .rbc-addons-dnd .rbc-addons-dnd-resize-ns-anchor:hover::after {
+  background: hsl(var(--primary));
+  opacity: 1;
+}
+
+.schedule-calendar-container .rbc-addons-dnd .rbc-addons-dnd-resize-ns-icon {
+  display: none;
+}
+
+.schedule-calendar-container .rbc-addons-dnd .rbc-event {
+  cursor: grab;
+}
+
+.schedule-calendar-container .rbc-addons-dnd .rbc-event:active {
+  cursor: grabbing;
+}
+
+.schedule-calendar-container .rbc-addons-dnd-resizing .rbc-addons-dnd-resize-ns-anchor::after {
+  background: hsl(var(--primary));
+  opacity: 1;
+}
+
+/* ===== Clean up header area ===== */
+.schedule-calendar-container .rbc-time-header {
+  border-bottom: none;
+}
+
+.schedule-calendar-container .rbc-time-header-gutter {
+  border-bottom: 1px solid var(--rbc-grid-line-hour);
+}
+
+.schedule-calendar-container .rbc-time-header-content {
+  border-left: none;
+}
+
+/* ===== Mobile: 3-Day View ===== */
+@media (max-width: 767px) {
+
+  /* Hide all day columns by default on mobile */
+  .schedule-calendar-container.schedule-calendar-mobile .rbc-time-header-content .rbc-row .rbc-header,
+  .schedule-calendar-container.schedule-calendar-mobile .rbc-time-content > .rbc-day-slot {
+    display: none;
+  }
+
+  /* 
+   * Day slot nth-child is offset by 1 because rbc-time-gutter is the first child
+   * Header nth-child starts at 1 (no gutter in header row)
+   * Sun=header(1)/slot(2), Mon=header(2)/slot(3), etc.
+   */
+
+  /* Start Day 0 (Sun-Tue): headers 1-3, slots 2-4 */
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="0"] .rbc-time-header-content .rbc-row .rbc-header:nth-child(1),
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="0"] .rbc-time-header-content .rbc-row .rbc-header:nth-child(2),
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="0"] .rbc-time-header-content .rbc-row .rbc-header:nth-child(3) {
+    display: flex;
+    flex: 1;
+  }
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="0"] .rbc-time-content > .rbc-day-slot:nth-child(2),
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="0"] .rbc-time-content > .rbc-day-slot:nth-child(3),
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="0"] .rbc-time-content > .rbc-day-slot:nth-child(4) {
+    display: flex;
+    flex: 1;
+  }
+
+  /* Start Day 1 (Mon-Wed): headers 2-4, slots 3-5 */
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="1"] .rbc-time-header-content .rbc-row .rbc-header:nth-child(2),
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="1"] .rbc-time-header-content .rbc-row .rbc-header:nth-child(3),
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="1"] .rbc-time-header-content .rbc-row .rbc-header:nth-child(4) {
+    display: flex;
+    flex: 1;
+  }
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="1"] .rbc-time-content > .rbc-day-slot:nth-child(3),
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="1"] .rbc-time-content > .rbc-day-slot:nth-child(4),
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="1"] .rbc-time-content > .rbc-day-slot:nth-child(5) {
+    display: flex;
+    flex: 1;
+  }
+
+  /* Start Day 2 (Tue-Thu): headers 3-5, slots 4-6 */
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="2"] .rbc-time-header-content .rbc-row .rbc-header:nth-child(3),
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="2"] .rbc-time-header-content .rbc-row .rbc-header:nth-child(4),
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="2"] .rbc-time-header-content .rbc-row .rbc-header:nth-child(5) {
+    display: flex;
+    flex: 1;
+  }
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="2"] .rbc-time-content > .rbc-day-slot:nth-child(4),
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="2"] .rbc-time-content > .rbc-day-slot:nth-child(5),
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="2"] .rbc-time-content > .rbc-day-slot:nth-child(6) {
+    display: flex;
+    flex: 1;
+  }
+
+  /* Start Day 3 (Wed-Fri): headers 4-6, slots 5-7 */
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="3"] .rbc-time-header-content .rbc-row .rbc-header:nth-child(4),
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="3"] .rbc-time-header-content .rbc-row .rbc-header:nth-child(5),
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="3"] .rbc-time-header-content .rbc-row .rbc-header:nth-child(6) {
+    display: flex;
+    flex: 1;
+  }
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="3"] .rbc-time-content > .rbc-day-slot:nth-child(5),
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="3"] .rbc-time-content > .rbc-day-slot:nth-child(6),
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="3"] .rbc-time-content > .rbc-day-slot:nth-child(7) {
+    display: flex;
+    flex: 1;
+  }
+
+  /* Start Day 4 (Thu-Sat): headers 5-7, slots 6-8 */
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="4"] .rbc-time-header-content .rbc-row .rbc-header:nth-child(5),
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="4"] .rbc-time-header-content .rbc-row .rbc-header:nth-child(6),
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="4"] .rbc-time-header-content .rbc-row .rbc-header:nth-child(7) {
+    display: flex;
+    flex: 1;
+  }
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="4"] .rbc-time-content > .rbc-day-slot:nth-child(6),
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="4"] .rbc-time-content > .rbc-day-slot:nth-child(7),
+  .schedule-calendar-container.schedule-calendar-mobile[data-start-day="4"] .rbc-time-content > .rbc-day-slot:nth-child(8) {
+    display: flex;
+    flex: 1;
+  }
+
+  /* Mobile styling adjustments */
+  .schedule-calendar-container .rbc-header {
+    padding: 0.35rem 0.15rem;
+    font-size: 0.65rem;
+  }
+
+  .schedule-calendar-container .rbc-label {
+    font-size: 0.5rem;
+    padding: 0 2px;
+  }
+
+  .schedule-calendar-container .rbc-timeslot-group {
+    min-height: 24px;
+  }
+
+  .schedule-event-content {
+    font-size: 0.55rem;
+    padding: 1px 3px !important;
+  }
+
+  .schedule-event-content .text-\[10px\] {
+    font-size: 0.5rem !important;
+  }
+
+  .schedule-event-content .text-\[9px\] {
+    display: none;
+  }
+
+  /* Larger touch targets for mobile */
+  .schedule-calendar-container .rbc-addons-dnd .rbc-addons-dnd-resize-ns-anchor {
+    height: 14px;
+  }
+
+  .schedule-calendar-container .rbc-addons-dnd .rbc-addons-dnd-resize-ns-anchor::after {
+    opacity: 0.5;
+  }
+
+  .schedule-calendar-container .rbc-slot-selection::after {
+    content: '+';
+    font-size: 0.9rem;
+  }
+
+  .schedule-calendar-container .rbc-day-slot .rbc-events-container {
+    margin-right: 1px;
+  }
+}
+
+/* ===== Touch Device Optimizations ===== */
+@media (hover: none) and (pointer: coarse) {
+  /* Always show resize handles on touch devices */
+  .schedule-calendar-container .rbc-addons-dnd .rbc-addons-dnd-resize-ns-anchor::after {
+    opacity: 0.5;
+  }
+
+  /* Larger hit area for touch */
+  .schedule-calendar-container .rbc-day-slot .rbc-time-slot {
+    min-height: 8px;
+  }
+
+  /* Remove hover effects that don't work on touch */
+  .schedule-calendar-container .rbc-day-slot .rbc-time-slot:hover {
+    background-color: transparent;
+  }
+
+  /* Make selection more visible on touch */
+  .schedule-calendar-container .rbc-slot-selection {
+    background-color: hsl(var(--primary) / 0.2);
+  }
+}

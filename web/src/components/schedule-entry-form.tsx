@@ -16,6 +16,11 @@ interface ScheduleEntryFormProps {
   pages: Array<{ id: string; name: string }>;
   onSubmit: (data: ScheduleCreate | ScheduleUpdate) => Promise<void>;
   onCancel: () => void;
+  // Optional prefill values (used when creating from calendar slot selection)
+  prefillStartTime?: string;
+  prefillEndTime?: string;
+  prefillDayPattern?: DayPattern;
+  prefillCustomDays?: string[];
 }
 
 // Generate 15-minute interval times
@@ -33,14 +38,32 @@ const generateTimeOptions = () => {
 
 const TIME_OPTIONS = generateTimeOptions();
 
-export function ScheduleEntryForm({ schedule, pages, onSubmit, onCancel }: ScheduleEntryFormProps) {
+export function ScheduleEntryForm({
+  schedule,
+  pages,
+  onSubmit,
+  onCancel,
+  prefillStartTime,
+  prefillEndTime,
+  prefillDayPattern,
+  prefillCustomDays,
+}: ScheduleEntryFormProps) {
   const isEdit = Boolean(schedule);
   
+  // Use schedule values if editing, prefill values if creating from calendar, or defaults
   const [pageId, setPageId] = useState(schedule?.page_id || "");
-  const [startTime, setStartTime] = useState(schedule?.start_time || "09:00");
-  const [endTime, setEndTime] = useState(schedule?.end_time || "17:00");
-  const [dayPattern, setDayPattern] = useState<DayPattern>(schedule?.day_pattern || "all");
-  const [customDays, setCustomDays] = useState<string[]>(schedule?.custom_days || []);
+  const [startTime, setStartTime] = useState(
+    schedule?.start_time || prefillStartTime || "09:00"
+  );
+  const [endTime, setEndTime] = useState(
+    schedule?.end_time || prefillEndTime || "17:00"
+  );
+  const [dayPattern, setDayPattern] = useState<DayPattern>(
+    schedule?.day_pattern || prefillDayPattern || "all"
+  );
+  const [customDays, setCustomDays] = useState<string[]>(
+    schedule?.custom_days || prefillCustomDays || []
+  );
   const [enabled, setEnabled] = useState(schedule?.enabled !== false);
   
   const [error, setError] = useState<string | null>(null);
