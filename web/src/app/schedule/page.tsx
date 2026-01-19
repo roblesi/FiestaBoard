@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,16 +20,46 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ScheduleEntryForm } from "@/components/schedule-entry-form";
 import { PagePickerDialog } from "@/components/page-picker-dialog";
-import { Plus, Edit, Trash2, AlertCircle, Calendar, CheckCircle2, AlertTriangle } from "lucide-react";
-import { api, type ScheduleEntry, type ScheduleCreate, type ScheduleUpdate } from "@/lib/api";
+import { ScheduleListView, ScheduleCalendarView } from "./components";
+import { Plus, AlertCircle, CheckCircle2, AlertTriangle, List, CalendarDays } from "lucide-react";
+import { api, type ScheduleEntry, type ScheduleCreate, type ScheduleUpdate, type DayPattern } from "@/lib/api";
 import { toast } from "sonner";
+import { extractTimeFromDate, getDayNameFromDate } from "@/lib/schedule-calendar";
+
+type ViewMode = "list" | "calendar";
+
+const SCHEDULE_VIEW_MODE_KEY = "schedule-view-mode";
 
 export default function SchedulePage() {
   const queryClient = useQueryClient();
+  
+  // Initialize viewMode from localStorage if available
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(SCHEDULE_VIEW_MODE_KEY);
+      if (saved === "list" || saved === "calendar") {
+        return saved;
+      }
+    }
+    return "list";
+  });
+  
+  // Persist viewMode to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem(SCHEDULE_VIEW_MODE_KEY, viewMode);
+  }, [viewMode]);
   const [showForm, setShowForm] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<ScheduleEntry | null>(null);
   const [deleteScheduleId, setDeleteScheduleId] = useState<string | null>(null);
   const [showDefaultPageSelector, setShowDefaultPageSelector] = useState(false);
+  
+  // Pre-fill data when creating from calendar slot selection
+  const [prefillData, setPrefillData] = useState<{
+    startTime?: string;
+    endTime?: string;
+    dayPattern?: DayPattern;
+    customDays?: string[];
+  } | null>(null);
 
   // Fetch schedules
   const { data: schedulesData, isLoading } = useQuery({
@@ -71,6 +100,7 @@ export default function SchedulePage() {
       queryClient.invalidateQueries({ queryKey: ["schedules", "validation"] });
       toast.success("Schedule created");
       setShowForm(false);
+      setPrefillData(null);
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to create schedule");
@@ -130,31 +160,59 @@ export default function SchedulePage() {
     }
   };
 
-  const handleEdit = (schedule: ScheduleEntry) => {
+  const handleEdit = useCallback((schedule: ScheduleEntry) => {
     setEditingSchedule(schedule);
+    setPrefillData(null);
     setShowForm(true);
-  };
+  }, []);
 
-  const handleDelete = (id: string) => {
+  const handleDelete = useCallback((id: string) => {
     setDeleteScheduleId(id);
-  };
+  }, []);
+
+  const handleAdd = useCallback(() => {
+    setEditingSchedule(null);
+    setPrefillData(null);
+    setShowForm(true);
+  }, []);
 
   const handleCloseForm = () => {
     setShowForm(false);
     setEditingSchedule(null);
+    setPrefillData(null);
   };
 
-  const formatDays = (schedule: ScheduleEntry): string => {
-    if (schedule.day_pattern === "all") return "All days";
-    if (schedule.day_pattern === "weekdays") return "Mon-Fri";
-    if (schedule.day_pattern === "weekends") return "Sat-Sun";
-    if (schedule.day_pattern === "custom" && schedule.custom_days) {
-      return schedule.custom_days
-        .map((d) => d.slice(0, 3).charAt(0).toUpperCase() + d.slice(1, 3))
-        .join(", ");
-    }
-    return "";
-  };
+  // Handle calendar slot selection (clicking on empty time)
+  const handleSlotSelect = useCallback((start: Date, end: Date) => {
+    const startTime = extractTimeFromDate(start);
+    const endTime = extractTimeFromDate(end);
+    const dayName = getDayNameFromDate(start);
+    
+    setPrefillData({
+      startTime,
+      endTime,
+      dayPattern: "custom",
+      customDays: [dayName],
+    });
+    setEditingSchedule(null);
+    setShowForm(true);
+  }, []);
+
+  // Handle calendar event click
+  const handleEventClick = useCallback((schedule: ScheduleEntry) => {
+    handleEdit(schedule);
+  }, [handleEdit]);
+
+  // Handle calendar event time change (drag/resize)
+  const handleEventTimeChange = useCallback(
+    (scheduleId: string, startTime: string, endTime: string) => {
+      updateSchedule.mutate({
+        id: scheduleId,
+        data: { start_time: startTime, end_time: endTime },
+      });
+    },
+    [updateSchedule]
+  );
 
   const getPageName = (pageId: string): string => {
     return pagesData?.pages.find((p) => p.id === pageId)?.name || pageId;
@@ -167,8 +225,6 @@ export default function SchedulePage() {
     const weekends = ["saturday", "sunday"];
     const allDays = [...weekdays, ...weekends];
     
-    // Check for common patterns
-    const sortedDays = [...days].sort();
     const hasAllWeekdays = weekdays.every(d => days.includes(d));
     const hasAllWeekends = weekends.every(d => days.includes(d));
     const hasAllDays = allDays.every(d => days.includes(d));
@@ -177,7 +233,6 @@ export default function SchedulePage() {
     if (hasAllWeekdays && days.length === 5) return "Weekdays";
     if (hasAllWeekends && days.length === 2) return "Weekends";
     
-    // For other combinations, show abbreviated day names
     return days
       .map(d => d.slice(0, 3).charAt(0).toUpperCase() + d.slice(1, 3))
       .join(", ");
@@ -195,6 +250,7 @@ export default function SchedulePage() {
   }
 
   const schedules = schedulesData?.schedules || [];
+  const pages = pagesData?.pages || [];
   const defaultPageId = schedulesData?.default_page_id;
   const scheduleEnabled = schedulesData?.enabled || false;
   const hasOverlaps = (validation?.overlaps?.length || 0) > 0;
@@ -273,7 +329,6 @@ export default function SchedulePage() {
                     <div className="mt-2 space-y-1 text-xs opacity-90">
                       <div className="font-semibold">Time gaps:</div>
                       {validation.gaps.map((gap, i) => {
-                        // Skip gaps with missing data
                         if (!gap?.days || !gap?.start_time || !gap?.end_time) return null;
                         
                         return (
@@ -318,67 +373,62 @@ export default function SchedulePage() {
           </CardContent>
         </Card>
 
-        {/* Schedule List */}
-        <Card className="mb-6">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">Schedule Entries</CardTitle>
-              <Button size="sm" onClick={() => setShowForm(true)}>
-                <Plus className="h-4 w-4 mr-1" />
-                Add Schedule
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {schedules.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No schedules created yet</p>
-                <p className="text-sm mt-1">Click "Add Schedule" to get started</p>
+        {/* View Toggle */}
+        <div className="flex items-center justify-center sm:justify-start mb-4">
+          <div className="flex items-center gap-1 bg-muted p-1 rounded-md">
+            <Button
+              variant={viewMode === "list" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("list")}
+              className="px-3"
+            >
+              <List className="h-4 w-4 mr-1.5" />
+              List
+            </Button>
+            <Button
+              variant={viewMode === "calendar" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("calendar")}
+              className="px-3"
+            >
+              <CalendarDays className="h-4 w-4 mr-1.5" />
+              Calendar
+            </Button>
+          </div>
+        </div>
+
+        {/* Schedule View - List or Calendar */}
+        {viewMode === "list" ? (
+          <ScheduleListView
+            schedules={schedules}
+            pages={pages}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onAdd={handleAdd}
+          />
+        ) : (
+          <Card className="mb-6">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <CardTitle className="text-lg">Schedule Calendar</CardTitle>
+                <Button size="sm" onClick={handleAdd} className="w-full sm:w-auto">
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Schedule
+                </Button>
               </div>
-            ) : (
-              <div className="space-y-3">
-                {schedules.map((schedule) => {
-                  const page = pagesData?.pages.find((p) => p.id === schedule.page_id);
-                  return (
-                    <div
-                      key={schedule.id}
-                      className="flex items-center justify-between p-4 border rounded-lg"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium">{page?.name || schedule.page_id}</span>
-                          {!schedule.enabled && (
-                            <Badge variant="secondary">Disabled</Badge>
-                          )}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {schedule.start_time} - {schedule.end_time} • {formatDays(schedule)}
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleEdit(schedule)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleDelete(schedule.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent>
+              <ScheduleCalendarView
+                schedules={schedules}
+                pages={pages}
+                overlaps={validation?.overlaps}
+                onEventClick={handleEventClick}
+                onSlotSelect={handleSlotSelect}
+                onEventTimeChange={handleEventTimeChange}
+              />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Form Dialog */}
         {showForm && pagesData && (
@@ -393,6 +443,10 @@ export default function SchedulePage() {
                   pages={pagesData.pages.map((p) => ({ id: p.id, name: p.name }))}
                   onSubmit={handleSubmit}
                   onCancel={handleCloseForm}
+                  prefillStartTime={prefillData?.startTime}
+                  prefillEndTime={prefillData?.endTime}
+                  prefillDayPattern={prefillData?.dayPattern}
+                  prefillCustomDays={prefillData?.customDays}
                 />
               </CardContent>
             </Card>
