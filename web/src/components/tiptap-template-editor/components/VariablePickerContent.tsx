@@ -3,7 +3,7 @@
  */
 "use client";
 
-import { useQuery, useDeferredValue, useMemo } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { api } from "@/lib/api";
@@ -33,7 +33,6 @@ const COMPLEX_CATEGORIES = ['baywheels', 'muni', 'traffic', 'weather', 'stocks',
 
 function VariablePill({
   label,
-  value,
   onInsert,
 }: {
   label: string;
