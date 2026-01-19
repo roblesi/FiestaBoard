@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { VariablePicker } from "@/components/variable-picker";
 import { BoardDisplay } from "@/components/board-display";
+import { TipTapTemplateEditor } from "@/components/tiptap-template-editor/TipTapTemplateEditor";
 import {
   Sheet,
   SheetContent,
@@ -457,7 +458,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
   }, [debouncedTemplateLines, debouncedLineAlignments]);
 
   // Insert variable/text - appends to the active line
-  // Note: Drag-and-drop insertion is handled by TemplateLineEditor directly
+  // Note: Drag-and-drop insertion is handled by TipTapLineEditor directly
   const insertAtEnd = (text: string) => {
     const lineIndex = activeLineIndex ?? 0;
     const newLines = [...templateLines];
@@ -564,112 +565,36 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
                 </div>
               </div>
 
-              {/* Template lines */}
-              <div className="flex flex-col gap-2 sm:gap-2 w-full">
-                  {templateLines.map((line, i) => {
-                    const maxLengths = variablesData?.max_lengths || {};
-                    // Use debounced state for warnings to reduce expensive calculations
-                    const debouncedLine = debouncedTemplateLines[i] || "";
-                    const warning = getLineLengthWarning(debouncedLine, maxLengths);
-                    const alignment = lineAlignments[i];
-                    
-                    return (
-                      <div key={i} className="flex items-start w-full min-w-0">
-                        <span className="text-xs text-muted-foreground w-5 shrink-0 flex items-start justify-end pr-1.5 pt-2">
-                          {i + 1}
-                        </span>
-                        {/* Combined input + alignment buttons container */}
-                        <div className="flex flex-1 min-w-0">
-                          <div className="flex-1 relative min-w-0">
-                            <textarea
-                              value={line}
-                              onChange={(e) => {
-                                const newLines = [...templateLines];
-                                newLines[i] = e.target.value;
-                                setTemplateLines(newLines);
-                                
-                                // Auto-resize on change
-                                const target = e.target as HTMLTextAreaElement;
-                                target.style.height = 'auto';
-                                target.style.height = `${target.scrollHeight}px`;
-                              }}
-                              onFocus={() => setActiveLineIndex(i)}
-                              placeholder={`Line ${i + 1} - Use {{variable}} syntax`}
-                              rows={1}
-                              className={`w-full min-w-0 min-h-[2.25rem] sm:min-h-[2rem] px-2 sm:px-3 py-1.5 text-sm font-mono rounded-l border-y border-l bg-background transition-colors focus:outline-none resize-none whitespace-pre-wrap break-all ${
-                                activeLineIndex === i 
-                                  ? "border-primary ring-1 ring-primary" 
-                                  : warning.hasWarning 
-                                    ? "border-yellow-500" 
-                                    : "border-input"
-                              }`}
-                              style={{
-                                height: 'auto',
-                                minHeight: '2.25rem',
-                              }}
-                            />
-                            {warning.hasWarning && (
-                              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none" title={`Line may render up to ${warning.maxLength} chars (max 22)`}>
-                                <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-fiesta-yellow" />
-                              </div>
-                            )}
-                          </div>
-                          {/* Alignment toggle - joined to input */}
-                          <div className="flex rounded-r border-y border-r bg-muted/30 overflow-hidden shrink-0 self-start min-h-[2.25rem] sm:min-h-[2rem]">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const newAlignments = [...lineAlignments];
-                                newAlignments[i] = "left";
-                                setLineAlignments(newAlignments);
-                              }}
-                              className={`px-2 flex items-center justify-center transition-colors ${
-                                alignment === "left" 
-                                  ? "bg-primary text-primary-foreground" 
-                                  : "hover:bg-muted text-muted-foreground"
-                              }`}
-                              title="Align left"
-                            >
-                              <AlignLeft className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const newAlignments = [...lineAlignments];
-                                newAlignments[i] = "center";
-                                setLineAlignments(newAlignments);
-                              }}
-                              className={`px-2 flex items-center justify-center border-x transition-colors ${
-                                alignment === "center" 
-                                  ? "bg-primary text-primary-foreground border-primary" 
-                                  : "hover:bg-muted text-muted-foreground"
-                              }`}
-                              title="Align center"
-                            >
-                              <AlignCenter className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const newAlignments = [...lineAlignments];
-                                newAlignments[i] = "right";
-                                setLineAlignments(newAlignments);
-                              }}
-                              className={`px-2 flex items-center justify-center transition-colors ${
-                                alignment === "right" 
-                                  ? "bg-primary text-primary-foreground" 
-                                  : "hover:bg-muted text-muted-foreground"
-                              }`}
-                              title="Align right"
-                            >
-                              <AlignRight className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+              {/* Single 6-line template editor */}
+              <TipTapTemplateEditor
+                value={getTemplateWithAlignments().join('\n')}
+                onChange={(newValue) => {
+                  // Parse the template string back into lines and alignments
+                  const lines = newValue.split('\n').slice(0, 6);
+                  const newLines: string[] = [];
+                  const newAlignments: LineAlignment[] = [];
+                  
+                  for (let i = 0; i < 6; i++) {
+                    const line = lines[i] || '';
+                    const { alignment, content } = extractAlignment(line);
+                    newLines.push(content);
+                    newAlignments.push(alignment);
+                  }
+                  
+                  setTemplateLines(newLines);
+                  setLineAlignments(newAlignments);
+                }}
+                lineAlignments={lineAlignments}
+                onLineAlignmentChange={(lineIndex, alignment) => {
+                  const newAlignments = [...lineAlignments];
+                  newAlignments[lineIndex] = alignment;
+                  setLineAlignments(newAlignments);
+                }}
+                placeholder="Type template syntax like {{weather.temp}} or {{red}} for color tiles"
+                showAlignmentControls={true}
+                showToolbar={true}
+                onOpenFullPicker={() => setShowMobileVariablePicker(true)}
+              />
 
               {/* Live preview */}
               <div className="mt-4">
