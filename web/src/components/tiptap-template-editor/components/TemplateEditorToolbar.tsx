@@ -144,6 +144,7 @@ export function TemplateEditorToolbar({
             {(close) => (
               <FilterPickerContent
                 filters={templateVars.filters}
+                editor={editor}
                 onInsert={(filter) => {
                   handleInsert(filter);
                   close();

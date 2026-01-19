@@ -1,17 +1,21 @@
 /**
  * Filter Picker Content - Filter options for toolbar
+ * Can apply filters to selected variables or insert filter text
  */
 "use client";
 
+import { Editor } from '@tiptap/react';
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { AlertCircle } from "lucide-react";
 
 interface FilterPickerContentProps {
   filters: string[];
-  onInsert: (filter: string) => void;
+  editor: Editor | null;
+  onInsert?: (filter: string) => void;
 }
 
-export function FilterPickerContent({ filters, onInsert }: FilterPickerContentProps) {
+export function FilterPickerContent({ filters, editor, onInsert }: FilterPickerContentProps) {
   if (filters.length === 0) {
     return (
       <div className="p-3 text-sm text-muted-foreground">
@@ -20,29 +24,136 @@ export function FilterPickerContent({ filters, onInsert }: FilterPickerContentPr
     );
   }
 
+  const handleFilterClick = (filterName: string) => {
+    if (!editor) {
+      onInsert?.(`|${filterName}`);
+      return;
+    }
+
+    const { state } = editor;
+    const { selection } = state;
+    const { $from } = selection;
+
+    // Check if selection is inside or on a variable node
+    let variableNode = null;
+    let variablePos = null;
+
+    // Walk up the node tree to find if we're inside a variable node
+    let depth = $from.depth;
+    while (depth > 0) {
+      const node = $from.node(depth);
+      if (node.type.name === 'variable') {
+        variableNode = node;
+        variablePos = $from.before(depth);
+        break;
+      }
+      depth--;
+    }
+
+    // Also check if selection spans a variable node
+    if (!variableNode) {
+      state.doc.nodesBetween(selection.from, selection.to, (node, pos) => {
+        if (node.type.name === 'variable') {
+          variableNode = node;
+          variablePos = pos;
+          return false; // Stop searching
+        }
+      });
+    }
+
+    if (variableNode && variablePos !== null) {
+      // Apply filter to the selected variable
+      const currentFilters = variableNode.attrs.filters || [];
+      const filterNameOnly = filterName.split(':')[0]; // Extract name from "pad:3"
+      
+      // Check if filter already exists
+      const filterExists = currentFilters.some((f: { name: string }) => f.name === filterNameOnly);
+      
+      if (!filterExists) {
+        // Parse filter (handle pad:3, truncate:5, etc.)
+        const filterParts = filterName.split(':');
+        const newFilter = {
+          name: filterParts[0],
+          arg: filterParts[1] || undefined,
+        };
+        
+        const updatedFilters = [...currentFilters, newFilter];
+        
+        // Update the variable node with the new filter
+        const tr = state.tr;
+        tr.setNodeMarkup(variablePos, undefined, {
+          ...variableNode.attrs,
+          filters: updatedFilters,
+        });
+        editor.view.dispatch(tr);
+        editor.chain().focus().run();
+      }
+    } else {
+      // No variable selected, just insert the filter text
+      onInsert?.(`|${filterName}`);
+    }
+  };
+
+  // Check if a variable is currently selected or cursor is on a variable
+  const hasVariableSelected = editor ? (() => {
+    const { state } = editor;
+    const { selection } = state;
+    const { $from } = selection;
+    
+    // Walk up the node tree to find if we're inside a variable node
+    let depth = $from.depth;
+    while (depth > 0) {
+      const node = $from.node(depth);
+      if (node.type.name === 'variable') {
+        return true;
+      }
+      depth--;
+    }
+    
+    // Check if selection spans a variable node
+    let found = false;
+    state.doc.nodesBetween(selection.from, selection.to, (node) => {
+      if (node.type.name === 'variable') {
+        found = true;
+        return false;
+      }
+    });
+    return found;
+  })() : false;
+
   return (
     <div className="p-2 min-w-[250px]">
+      {!hasVariableSelected && editor && (
+        <div className="mb-2 p-2 bg-muted/50 rounded-md text-xs text-muted-foreground flex items-start gap-2">
+          <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+          <span>Select a variable first to apply a filter, or click to insert filter text.</span>
+        </div>
+      )}
       <div className="space-y-2">
-        {filters.map((filter) => (
-          <button
-            key={filter}
-            type="button"
-            onClick={() => onInsert(`|${filter}`)}
-            className={cn(
-              "w-full text-left px-3 py-2 rounded-md text-sm",
-              "hover:bg-accent hover:text-accent-foreground transition-colors",
-              "flex items-center gap-2"
-            )}
-          >
-            <Badge variant="secondary" className="font-mono text-xs">
-              |{filter}
-            </Badge>
-            <span className="text-xs text-muted-foreground">
-              {filter === 'wrap' && 'Wraps long text across multiple lines'}
-              {filter === 'pad' && 'Pads text to specified width'}
-            </span>
-          </button>
-        ))}
+        {filters.map((filter) => {
+          const filterName = filter.split(':')[0];
+          return (
+            <button
+              key={filter}
+              type="button"
+              onClick={() => handleFilterClick(filter)}
+              className={cn(
+                "w-full text-left px-3 py-2 rounded-md text-sm",
+                "hover:bg-accent hover:text-accent-foreground transition-colors",
+                "flex items-center gap-2"
+              )}
+            >
+              <Badge variant="secondary" className="font-mono text-xs">
+                |{filter}
+              </Badge>
+              <span className="text-xs text-muted-foreground">
+                {filterName === 'wrap' && 'Wraps long text across multiple lines'}
+                {filterName === 'pad' && 'Pads text to specified width'}
+                {filterName === 'truncate' && 'Truncates text to specified length'}
+              </span>
+            </button>
+          );
+        })}
       </div>
       <div className="mt-3 pt-3 border-t text-xs text-muted-foreground space-y-1">
         <p>Example: {"{{weather.temperature|pad:3}}"}</p>
