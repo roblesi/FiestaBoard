@@ -412,6 +412,9 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
       return api.renderTemplate(template);
     },
     onSuccess: (data) => {
+      console.log('Preview response:', data);
+      console.log('Rendered string:', data.rendered);
+      console.log('Rendered lines:', data.lines);
       setPreview(data.rendered);
       
       // If changes occurred while this preview was rendering, trigger another preview
