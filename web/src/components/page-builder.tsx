@@ -15,6 +15,7 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { toast } from "sonner";
+import { queryKeys } from "@/hooks/use-board";
 import {
   Wand2,
   X,
@@ -347,15 +348,21 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
         return api.createPage(payload);
       }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       // Invalidate pages list
-      queryClient.invalidateQueries({ queryKey: ["pages"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.pages });
       
       // Invalidate the specific page and its preview to bust the cache
-      if (pageId) {
-        queryClient.invalidateQueries({ queryKey: ["page", pageId] });
-        queryClient.invalidateQueries({ queryKey: ["pagePreview", pageId] });
+      // Use the returned page ID for new pages, or the existing pageId for updates
+      const targetPageId = pageId || data.id;
+      if (targetPageId) {
+        queryClient.invalidateQueries({ queryKey: ["page", targetPageId] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.pagePreview(targetPageId) });
       }
+      
+      // If this page is currently active, refresh the active page data
+      queryClient.invalidateQueries({ queryKey: queryKeys.activePage });
+      queryClient.invalidateQueries({ queryKey: queryKeys.status });
       
       toast.success(pageId ? "Page updated" : "Page created");
       onSave?.();
@@ -370,18 +377,18 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
   const deleteMutation = useMutation({
     mutationFn: () => api.deletePage(pageId!),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["pages"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.pages });
       
       // Invalidate the specific page and its preview to bust the cache
       if (pageId) {
         queryClient.invalidateQueries({ queryKey: ["page", pageId] });
-        queryClient.invalidateQueries({ queryKey: ["pagePreview", pageId] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.pagePreview(pageId) });
       }
       
       // Also invalidate active page if it was updated
       if (data.active_page_updated) {
-        queryClient.invalidateQueries({ queryKey: ["active-page"] });
-        queryClient.invalidateQueries({ queryKey: ["status"] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.activePage });
+        queryClient.invalidateQueries({ queryKey: queryKeys.status });
       }
       
       // Show appropriate message

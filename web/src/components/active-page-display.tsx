@@ -184,10 +184,12 @@ export function ActivePageDisplay() {
     enabled: !!activePageId
   });
   
-  // Default to first page if no active page is set
+  // Default to first page if no active page is set (only in manual mode)
   const pages = useMemo(() => pagesData?.pages || [], [pagesData]);
   useEffect(() => {
-    if (!isLoadingActivePage && !isLoadingPages && !activePageId && pages.length > 0) {
+    // Only auto-select first page in manual mode, not in schedule mode
+    // In schedule mode, null activePageId means a gap with no default (intentional)
+    if (!scheduleEnabled && !isLoadingActivePage && !isLoadingPages && !activePageId && pages.length > 0) {
       const firstPage = pages[0];
       setActivePageMutation.mutate(firstPage.id, {
         onSuccess: (result) => {
@@ -202,7 +204,7 @@ export function ActivePageDisplay() {
         }
       });
     }
-  }, [isLoadingActivePage, isLoadingPages, activePageId, pages, setActivePageMutation]);
+  }, [scheduleEnabled, isLoadingActivePage, isLoadingPages, activePageId, pages, setActivePageMutation]);
   
   // Use transition for non-urgent updates to improve perceived performance
   const [isPending, startTransition] = useTransition();
