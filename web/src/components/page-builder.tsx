@@ -445,8 +445,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
     }, 500); // 500ms debounce
 
     return () => clearTimeout(timeoutId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedTemplateLines, debouncedLineAlignments]);
+  }, [debouncedTemplateLines, debouncedLineAlignments, debouncedLineWrapEnabled]);
 
 
   if (pageId && loadingPage) {
