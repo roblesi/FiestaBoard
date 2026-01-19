@@ -1,7 +1,19 @@
 """Integration tests for multi-stop/route features."""
 
 import pytest
+import tempfile
+from pathlib import Path
+from datetime import datetime, time
+from unittest.mock import Mock, patch
 from src.templates.engine import TemplateEngine
+from src.main import DisplayService
+from src.schedules.models import ScheduleCreate
+from src.schedules.service import ScheduleService
+from src.schedules.storage import ScheduleStorage
+from src.settings.service import SettingsService
+from src.pages.models import Page, PageCreate
+from src.pages.service import PageService
+from src.pages.storage import PageStorage
 
 
 class TestMuniIntegration:
@@ -212,4 +224,270 @@ class TestBackwardCompatibility:
         # Old template should still work
         result = engine.render("{{traffic.formatted}}", context)
         assert "DOWNTOWN: 25m" in result
+
+
+class TestScheduleModeIntegration:
+    """Test schedule mode integration with DisplayService."""
+    
+    @pytest.fixture
+    def temp_files(self):
+        """Create temporary storage files."""
+        pages_file = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='_pages.json')
+        schedules_file = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='_schedules.json')
+        settings_file = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='_settings.json')
+        
+        pages_path = pages_file.name
+        schedules_path = schedules_file.name
+        settings_path = settings_file.name
+        
+        pages_file.close()
+        schedules_file.close()
+        settings_file.close()
+        
+        yield {
+            'pages': pages_path,
+            'schedules': schedules_path,
+            'settings': settings_path
+        }
+        
+        # Cleanup
+        Path(pages_path).unlink(missing_ok=True)
+        Path(schedules_path).unlink(missing_ok=True)
+        Path(settings_path).unlink(missing_ok=True)
+    
+    @pytest.fixture
+    def services(self, temp_files):
+        """Create service instances with temporary storage."""
+        page_storage = PageStorage(storage_file=temp_files['pages'])
+        page_service = PageService(storage=page_storage)
+        
+        schedule_storage = ScheduleStorage(storage_file=temp_files['schedules'])
+        schedule_service = ScheduleService(storage=schedule_storage)
+        
+        settings_service = SettingsService(settings_file=temp_files['settings'])
+        
+        return {
+            'page': page_service,
+            'schedule': schedule_service,
+            'settings': settings_service
+        }
+    
+    def test_manual_mode_uses_manual_active_page(self, services):
+        """Test that manual mode uses the manual active page setting."""
+        page_service = services['page']
+        settings_service = services['settings']
+        
+        # Create two pages
+        page1 = page_service.create_page(PageCreate(
+            name="Manual Page",
+            type="template",
+            template=["Manual Active Page", "", "", "", "", ""]
+        ))
+        page2 = page_service.create_page(PageCreate(
+            name="Scheduled Page",
+            type="template",
+            template=["This is scheduled", "", "", "", "", ""]
+        ))
+        
+        # Set manual active page
+        settings_service.set_active_page_id(page1.id)
+        
+        # Ensure schedule mode is disabled (default)
+        assert not settings_service.is_schedule_enabled()
+        
+        # Create a DisplayService instance with mocked board client
+        with patch('src.main.BoardClient') as mock_board_client:
+            mock_client_instance = Mock()
+            mock_client_instance.read_current_message.return_value = None
+            mock_client_instance.send_characters.return_value = (True, True)
+            mock_board_client.return_value = mock_client_instance
+            
+            with patch('src.main.get_page_service', return_value=page_service):
+                with patch('src.main.get_settings_service', return_value=settings_service):
+                    with patch('src.main.get_schedule_service', return_value=services['schedule']):
+                        service = DisplayService()
+                        service.vb_client = mock_client_instance
+                        
+                        # Check active page (should use manual page1)
+                        result = service.check_and_send_active_page(dev_mode=True)
+                        
+                        # Verify it used page1 (manual), not page2
+                        assert service._last_active_page_id == page1.id
+    
+    def test_schedule_mode_uses_scheduled_page(self, services):
+        """Test that schedule mode uses the schedule-based page selection."""
+        page_service = services['page']
+        schedule_service = services['schedule']
+        settings_service = services['settings']
+        
+        # Create two pages
+        page1 = page_service.create_page(PageCreate(
+            name="Manual Page",
+            type="template",
+            template=["Manual Active Page", "", "", "", "", ""]
+        ))
+        page2 = page_service.create_page(PageCreate(
+            name="Scheduled Page",
+            type="template",
+            template=["This is scheduled", "", "", "", "", ""]
+        ))
+        
+        # Set manual active page to page1
+        settings_service.set_active_page_id(page1.id)
+        
+        # Create a schedule for page2 (Monday 9am-5pm)
+        schedule_service.create_schedule(ScheduleCreate(
+            page_id=page2.id,
+            start_time="09:00",
+            end_time="17:00",
+            day_pattern="custom",
+            custom_days=["monday"],
+            enabled=True
+        ))
+        
+        # Enable schedule mode
+        settings_service.set_schedule_enabled(True)
+        
+        # Create a DisplayService instance with mocked board client
+        with patch('src.main.BoardClient') as mock_board_client:
+            mock_client_instance = Mock()
+            mock_client_instance.read_current_message.return_value = None
+            mock_client_instance.send_characters.return_value = (True, True)
+            mock_board_client.return_value = mock_client_instance
+            
+            with patch('src.main.get_page_service', return_value=page_service):
+                with patch('src.main.get_settings_service', return_value=settings_service):
+                    with patch('src.main.get_schedule_service', return_value=schedule_service):
+                        # Mock datetime to be Monday 12:00 (within schedule)
+                        mock_now = Mock()
+                        mock_now.time.return_value = time(12, 0)
+                        mock_now.strftime.return_value = "Monday"
+                        
+                        with patch('src.main.datetime') as mock_datetime:
+                            mock_datetime.now.return_value = mock_now
+                            
+                            service = DisplayService()
+                            service.vb_client = mock_client_instance
+                            
+                            # Check active page (should use scheduled page2, not manual page1)
+                            result = service.check_and_send_active_page(dev_mode=True)
+                            
+                            # Verify it used page2 (scheduled), not page1 (manual)
+                            assert service._last_active_page_id == page2.id
+    
+    def test_schedule_mode_with_no_match_uses_default(self, services):
+        """Test that schedule mode uses default page when no schedule matches."""
+        page_service = services['page']
+        schedule_service = services['schedule']
+        settings_service = services['settings']
+        
+        # Create pages
+        default_page = page_service.create_page(PageCreate(
+            name="Default Page",
+            type="template",
+            template=["Default for gaps", "", "", "", "", ""]
+        ))
+        scheduled_page = page_service.create_page(PageCreate(
+            name="Scheduled Page",
+            type="template",
+            template=["Scheduled content", "", "", "", "", ""]
+        ))
+        
+        # Set default page in schedules
+        schedule_service.set_default_page(default_page.id)
+        
+        # Create a schedule for Monday 9am-5pm only
+        schedule_service.create_schedule(ScheduleCreate(
+            page_id=scheduled_page.id,
+            start_time="09:00",
+            end_time="17:00",
+            day_pattern="custom",
+            custom_days=["monday"],
+            enabled=True
+        ))
+        
+        # Enable schedule mode
+        settings_service.set_schedule_enabled(True)
+        
+        # Create a DisplayService instance with mocked board client
+        with patch('src.main.BoardClient') as mock_board_client:
+            mock_client_instance = Mock()
+            mock_client_instance.read_current_message.return_value = None
+            mock_client_instance.send_characters.return_value = (True, True)
+            mock_board_client.return_value = mock_client_instance
+            
+            with patch('src.main.get_page_service', return_value=page_service):
+                with patch('src.main.get_settings_service', return_value=settings_service):
+                    with patch('src.main.get_schedule_service', return_value=schedule_service):
+                        # Mock datetime to be Monday 20:00 (outside schedule, should use default)
+                        mock_now = Mock()
+                        mock_now.time.return_value = time(20, 0)
+                        mock_now.strftime.return_value = "Monday"
+                        
+                        with patch('src.main.datetime') as mock_datetime:
+                            mock_datetime.now.return_value = mock_now
+                            
+                            service = DisplayService()
+                            service.vb_client = mock_client_instance
+                            
+                            # Check active page (should use default page)
+                            result = service.check_and_send_active_page(dev_mode=True)
+                            
+                            # Verify it used the default page
+                            assert service._last_active_page_id == default_page.id
+    
+    def test_schedule_mode_with_no_match_and_no_default(self, services):
+        """Test that schedule mode returns False when no match and no default."""
+        page_service = services['page']
+        schedule_service = services['schedule']
+        settings_service = services['settings']
+        
+        # Create a scheduled page
+        scheduled_page = page_service.create_page(PageCreate(
+            name="Scheduled Page",
+            type="template",
+            template=["Scheduled content", "", "", "", "", ""]
+        ))
+        
+        # Create a schedule for Monday 9am-5pm only
+        schedule_service.create_schedule(ScheduleCreate(
+            page_id=scheduled_page.id,
+            start_time="09:00",
+            end_time="17:00",
+            day_pattern="custom",
+            custom_days=["monday"],
+            enabled=True
+        ))
+        
+        # DO NOT set a default page
+        
+        # Enable schedule mode
+        settings_service.set_schedule_enabled(True)
+        
+        # Create a DisplayService instance with mocked board client
+        with patch('src.main.BoardClient') as mock_board_client:
+            mock_client_instance = Mock()
+            mock_client_instance.read_current_message.return_value = None
+            mock_board_client.return_value = mock_client_instance
+            
+            with patch('src.main.get_page_service', return_value=page_service):
+                with patch('src.main.get_settings_service', return_value=settings_service):
+                    with patch('src.main.get_schedule_service', return_value=schedule_service):
+                        # Mock datetime to be Tuesday 12:00 (no schedule for Tuesday)
+                        mock_now = Mock()
+                        mock_now.time.return_value = time(12, 0)
+                        mock_now.strftime.return_value = "Tuesday"
+                        
+                        with patch('src.main.datetime') as mock_datetime:
+                            mock_datetime.now.return_value = mock_now
+                            
+                            service = DisplayService()
+                            service.vb_client = mock_client_instance
+                            
+                            # Check active page (should return False - no page available)
+                            result = service.check_and_send_active_page(dev_mode=True)
+                            
+                            # Verify it returned False and didn't send
+                            assert result is False
+                            assert service._last_active_page_id is None
 

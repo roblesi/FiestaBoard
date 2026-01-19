@@ -4,6 +4,7 @@ import logging
 import sys
 import time
 import signal
+from datetime import datetime
 from typing import Optional
 
 import schedule
@@ -14,6 +15,7 @@ from .board_chars import BoardChars
 from .text_to_board import text_to_board_array, format_board_array_preview
 from .settings.service import get_settings_service
 from .pages.service import get_page_service
+from .schedules.service import get_schedule_service
 
 # Configure logging
 logging.basicConfig(
@@ -114,6 +116,9 @@ class DisplayService:
     def check_and_send_active_page(self, dev_mode: bool = False) -> bool:
         """Check the active page and send to board if content changed.
         
+        Respects schedule mode - uses schedule-based page selection when enabled,
+        otherwise falls back to manual active page setting.
+        
         Args:
             dev_mode: If True, don't actually send to board
             
@@ -123,11 +128,28 @@ class DisplayService:
         try:
             settings_service = get_settings_service()
             page_service = get_page_service()
+            schedule_service = get_schedule_service()
             
-            active_page_id = settings_service.get_active_page_id()
+            # Determine active page based on schedule mode
+            if settings_service.is_schedule_enabled():
+                # Schedule mode: Use schedule service to determine page
+                now = datetime.now()
+                current_time = now.time()
+                current_day = now.strftime("%A").lower()  # monday, tuesday, etc.
+                
+                active_page_id = schedule_service.get_active_page_id(current_time, current_day)
+                
+                if active_page_id:
+                    logger.debug(f"Schedule mode: Active page determined by schedule: {active_page_id}")
+                else:
+                    logger.debug(f"Schedule mode: No matching schedule for {current_day} {current_time.strftime('%H:%M')}")
+            else:
+                # Manual mode: Use manual active page setting
+                active_page_id = settings_service.get_active_page_id()
+                logger.debug(f"Manual mode: Using manual active page: {active_page_id}")
             
-            # No active page set - try to default to first page
-            if not active_page_id:
+            # No active page set - try to default to first page (manual mode only)
+            if not active_page_id and not settings_service.is_schedule_enabled():
                 pages = page_service.list_pages()
                 if pages:
                     active_page_id = pages[0].id
@@ -136,6 +158,11 @@ class DisplayService:
                 else:
                     logger.debug("No active page and no pages available")
                     return False
+            
+            # If schedule mode but no page (gap without default), don't update board
+            if not active_page_id:
+                logger.debug("No active page available (schedule gap with no default)")
+                return False
             
             # Get the page for transition settings
             page = page_service.get_page(active_page_id)
