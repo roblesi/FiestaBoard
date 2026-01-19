@@ -5,29 +5,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { VariablePicker } from "@/components/variable-picker";
 import { BoardDisplay } from "@/components/board-display";
 import { TipTapTemplateEditor } from "@/components/tiptap-template-editor/TipTapTemplateEditor";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { queryKeys } from "@/hooks/use-board";
 import {
   Wand2,
   X,
   Save,
-  Info,
-  Code2,
   AlertTriangle,
   Trash2,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
   ChevronDown,
 } from "lucide-react";
 import {
@@ -103,41 +90,7 @@ function applyAlignment(alignment: LineAlignment, content: string): string {
   }
 }
 
-// Calculate max possible rendered length of a template line
-function calculateMaxLineLength(line: string, maxLengths: Record<string, number>): number {
-  // If line has |wrap, it handles overflow automatically
-  if (line.includes("|wrap}}") || line.includes("|wrap|")) {
-    return 22;
-  }
 
-  let result = line;
-
-  // Remove color markers from user input (double brackets in template, single brackets after render)
-  // In templates users type {{red}}, but we count them the same as the rendered {63}
-  result = result.replace(/\{\{(red|orange|yellow|green|blue|violet|purple|white|black|6[3-9]|70)\}\}/gi, "C");
-  result = result.replace(/\{\{\/(red|orange|yellow|green|blue|violet|purple|white|black)?\}\}/gi, "");
-
-  // Replace symbols with placeholder (1-2 chars)
-  result = result.replace(/\{(sun|star|cloud|rain|snow|storm|fog|partly|heart|check|x)\}/gi, "XX");
-
-  // Replace variables with their max length
-  result = result.replace(/\{\{([^}]+)\}\}/g, (match, expr) => {
-    const varPart = expr.split("|")[0].trim().toLowerCase();
-    const maxLen = maxLengths[varPart] || 10;
-    return "X".repeat(maxLen);
-  });
-
-  return result.length;
-}
-
-// Get line length warning info
-function getLineLengthWarning(line: string, maxLengths: Record<string, number>): { hasWarning: boolean; maxLength: number } {
-  const maxLength = calculateMaxLineLength(line, maxLengths);
-  return {
-    hasWarning: maxLength > 22,
-    maxLength,
-  };
-}
 
 interface PageBuilderProps {
   pageId?: string; // If provided, edit existing page
@@ -156,8 +109,6 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
   const [templateLines, setTemplateLines] = useState<string[]>(["", "", "", "", "", ""]);
   const [lineAlignments, setLineAlignments] = useState<LineAlignment[]>(["left", "left", "left", "left", "left", "left"]);
   const [preview, setPreview] = useState<string | null>(null);
-  const [showMobileVariablePicker, setShowMobileVariablePicker] = useState(false);
-  const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null);
   
   // Transition settings state (immediate)
   const [transitionStrategy, setTransitionStrategy] = useState<string | null>(null);
@@ -166,12 +117,8 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
   const [isTransitionOpen, setIsTransitionOpen] = useState(false);
 
   // Debounced state (for expensive operations)
-  const [debouncedName, setDebouncedName] = useState("");
   const [debouncedTemplateLines, setDebouncedTemplateLines] = useState<string[]>(["", "", "", "", "", ""]);
   const [debouncedLineAlignments, setDebouncedLineAlignments] = useState<LineAlignment[]>(["left", "left", "left", "left", "left", "left"]);
-  const [debouncedTransitionStrategy, setDebouncedTransitionStrategy] = useState<string | null>(null);
-  const [debouncedTransitionIntervalMs, setDebouncedTransitionIntervalMs] = useState<number | null>(null);
-  const [debouncedTransitionStepSize, setDebouncedTransitionStepSize] = useState<number | null>(null);
 
   // Track if we need to re-preview after current mutation completes
   const needsRePreview = useRef(false);
@@ -183,19 +130,12 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
     enabled: !!pageId,
   });
 
-  // Fetch template variables for helper
-  const { data: variablesData } = useQuery({
-    queryKey: ["template-variables"],
-    queryFn: () => api.getTemplateVariables(),
-  });
 
   // Load existing page data
   useEffect(() => {
     if (existingPage) {
       const pageName = existingPage.name;
       setName(pageName);
-      // Initialize debounced state immediately when loading (no debounce needed)
-      setDebouncedName(pageName);
       
       const rawLines = existingPage.template || ["", "", "", "", "", ""];
       // Extract alignments and clean content from stored lines
@@ -219,10 +159,6 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
       setTransitionStrategy(strategy);
       setTransitionIntervalMs(intervalMs);
       setTransitionStepSize(stepSize);
-      // Initialize debounced state immediately when loading
-      setDebouncedTransitionStrategy(strategy);
-      setDebouncedTransitionIntervalMs(intervalMs);
-      setDebouncedTransitionStepSize(stepSize);
       
       // Open transition accordion if page has custom transition settings
       if (existingPage.transition_strategy) {
@@ -231,13 +167,6 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
     }
   }, [existingPage]);
 
-  // Sync immediate state to debounced state (300ms debounce)
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setDebouncedName(name);
-    }, 300);
-    return () => clearTimeout(timeoutId);
-  }, [name]);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -253,26 +182,6 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
     return () => clearTimeout(timeoutId);
   }, [lineAlignments]);
 
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setDebouncedTransitionStrategy(transitionStrategy);
-    }, 300);
-    return () => clearTimeout(timeoutId);
-  }, [transitionStrategy]);
-
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setDebouncedTransitionIntervalMs(transitionIntervalMs);
-    }, 300);
-    return () => clearTimeout(timeoutId);
-  }, [transitionIntervalMs]);
-
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setDebouncedTransitionStepSize(transitionStepSize);
-    }, 300);
-    return () => clearTimeout(timeoutId);
-  }, [transitionStepSize]);
 
   // Auto-resize textareas when content changes
   useEffect(() => {
@@ -457,14 +366,6 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedTemplateLines, debouncedLineAlignments]);
 
-  // Insert variable/text - appends to the active line
-  // Note: Drag-and-drop insertion is handled by TipTapLineEditor directly
-  const insertAtEnd = (text: string) => {
-    const lineIndex = activeLineIndex ?? 0;
-    const newLines = [...templateLines];
-    newLines[lineIndex] = newLines[lineIndex] + text;
-    setTemplateLines(newLines);
-  };
 
   if (pageId && loadingPage) {
     return (
@@ -478,7 +379,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
 
   return (
     <>
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-3 sm:gap-4 md:gap-6 flex-1 min-h-0 w-full max-w-full overflow-x-hidden">
+      <div className="flex-1 min-h-0 w-full max-w-full overflow-x-hidden">
         {/* Main Editor */}
         <Card className="flex flex-col min-h-0 w-full max-w-full overflow-x-hidden">
           <CardHeader className="pb-3 flex-shrink-0 px-4 sm:px-6">
@@ -488,16 +389,6 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
                 {pageId ? "Edit Page" : "Create Page"}
               </CardTitle>
               <div className="flex items-center gap-2">
-                {/* Mobile variable picker toggle */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="lg:hidden h-9 px-3"
-                  onClick={() => setShowMobileVariablePicker(true)}
-                >
-                  <Code2 className="h-4 w-4 mr-1.5" />
-                  <span className="text-xs">Variables</span>
-                </Button>
                 {/* Delete button - only show when editing */}
                 {pageId && (
                   <AlertDialog>
@@ -551,20 +442,6 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
 
             {/* Template line editors */}
             <div className="space-y-3">
-              <label className="text-xs sm:text-sm font-medium">Template Lines</label>
-
-              {/* Helper text */}
-              <div className="p-2 sm:p-3 bg-muted/50 rounded-md text-xs space-y-2">
-                <div className="flex items-start gap-2 text-muted-foreground">
-                  <Info className="h-3 w-3 mt-0.5 shrink-0" />
-                  <span>Type template syntax like {"{{weather.temp}}"} or {"{{red}}"} for color tiles. Click variables in sidebar to insert them.</span>
-                </div>
-                <div className="flex items-start gap-2 text-muted-foreground">
-                  <Info className="h-3 w-3 mt-0.5 shrink-0" />
-                  <span><strong>|wrap filter:</strong> Use {"{{variable|wrap}}"} for long text. Leave consecutive empty lines below for text to wrap into.</span>
-                </div>
-              </div>
-
               {/* Single 6-line template editor */}
               <TipTapTemplateEditor
                 value={getTemplateWithAlignments().join('\n')}
@@ -593,7 +470,6 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
                 placeholder="Type template syntax like {{weather.temp}} or {{red}} for color tiles"
                 showAlignmentControls={true}
                 showToolbar={true}
-                onOpenFullPicker={() => setShowMobileVariablePicker(true)}
               />
 
               {/* Live preview */}
@@ -745,64 +621,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
           </CardContent>
         </Card>
 
-        {/* Desktop Variable Picker Sidebar */}
-        <div className="hidden lg:flex flex-col min-h-0">
-          <VariablePicker 
-            onInsert={insertAtEnd}
-            showColors={true}
-            showSymbols={false}
-          />
-        </div>
       </div>
-
-      {/* Mobile Variable Picker Sheet */}
-      <Sheet open={showMobileVariablePicker} onOpenChange={setShowMobileVariablePicker}>
-        <SheetContent 
-          side="bottom" 
-          className="h-[95vh] max-h-[95vh] p-0 flex flex-col overflow-hidden rounded-t-2xl [&>button]:hidden"
-        >
-          {/* Drag handle */}
-          <div className="flex-shrink-0 pt-3 pb-2 flex justify-center">
-            <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full" />
-          </div>
-          
-          <SheetHeader className="flex-shrink-0 px-4 py-2 border-b">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <SheetTitle>Template Variables</SheetTitle>
-                <SheetDescription className="text-xs mt-1">
-                  Tap a variable to insert it at Line {(activeLineIndex ?? 0) + 1}
-                </SheetDescription>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 -mr-2"
-                onClick={() => setShowMobileVariablePicker(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </SheetHeader>
-          
-          {/* Scrollable content area */}
-          <div 
-            className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
-            style={{ WebkitOverflowScrolling: 'touch' }}
-          >
-            <div className="p-4">
-              <VariablePicker 
-                onInsert={(text) => {
-                  insertAtEnd(text);
-                  setShowMobileVariablePicker(false);
-                }}
-                showColors={true}
-                showSymbols={false}
-              />
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
     </>
   );
 }

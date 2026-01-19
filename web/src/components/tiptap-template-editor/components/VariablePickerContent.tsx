@@ -12,7 +12,6 @@ import { Code2, Home, Bike, TrainFront, Car, TrendingUp, Trophy, Plane } from "l
 
 interface VariablePickerContentProps {
   onInsert: (variable: string) => void;
-  onOpenFullPicker?: () => void;
 }
 
 // Icon mapping for categories
@@ -54,7 +53,7 @@ function VariablePill({
   );
 }
 
-export function VariablePickerContent({ onInsert, onOpenFullPicker }: VariablePickerContentProps) {
+export function VariablePickerContent({ onInsert }: VariablePickerContentProps) {
   const { data: templateVars, isLoading } = useQuery({
     queryKey: ["template-variables"],
     queryFn: api.getTemplateVariables,
@@ -131,16 +130,6 @@ export function VariablePickerContent({ onInsert, onOpenFullPicker }: VariablePi
                 </div>
               )}
 
-              {(isComplex || hasNested) && onOpenFullPicker && (
-                <button
-                  type="button"
-                  onClick={onOpenFullPicker}
-                  className="text-xs text-primary hover:underline flex items-center gap-1 mt-1"
-                >
-                  <Code2 className="h-3 w-3" />
-                  View all {category} variables
-                </button>
-              )}
             </div>
           );
         })}

@@ -32,7 +32,6 @@ interface TipTapTemplateEditorProps {
   onLineAlignmentChange?: (lineIndex: number, alignment: LineAlignment) => void;
   lineAlignments?: LineAlignment[]; // Array of 6 alignments
   showToolbar?: boolean; // Show toolbar at top (default: true)
-  onOpenFullPicker?: () => void; // Callback to open full variable picker
 }
 
 /**
@@ -48,7 +47,6 @@ export function TipTapTemplateEditor({
   onLineAlignmentChange,
   lineAlignments = ['left', 'left', 'left', 'left', 'left', 'left'],
   showToolbar = true,
-  onOpenFullPicker,
 }: TipTapTemplateEditorProps) {
   const editor = useEditor({
     immediatelyRender: false,
@@ -294,7 +292,6 @@ export function TipTapTemplateEditor({
           onAlignmentChange={(alignment) => {
             handleAlignmentClick(alignment);
           }}
-          onOpenFullPicker={onOpenFullPicker}
         />
       )}
       

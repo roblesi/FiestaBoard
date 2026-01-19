@@ -22,7 +22,6 @@ interface TemplateEditorToolbarProps {
   editor: Editor | null;
   currentAlignment?: LineAlignment;
   onAlignmentChange?: (alignment: LineAlignment) => void;
-  onOpenFullPicker?: () => void;
   className?: string;
 }
 
@@ -30,7 +29,6 @@ export function TemplateEditorToolbar({
   editor,
   currentAlignment = 'left',
   onAlignmentChange,
-  onOpenFullPicker,
   className,
 }: TemplateEditorToolbarProps) {
   const { data: templateVars } = useQuery({
@@ -73,7 +71,6 @@ export function TemplateEditorToolbar({
           >
             <VariablePickerContent
               onInsert={handleInsert}
-              onOpenFullPicker={onOpenFullPicker}
             />
           </ToolbarDropdown>
         ) : (
