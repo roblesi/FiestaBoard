@@ -62,7 +62,7 @@ docker-compose*.yml
 .cursor/
 
 # Test files
-tests/
+# Note: tests/ is NOT excluded because API Dockerfile needs it to run tests in container
 *.test.js
 *.test.ts
 *.test.tsx
