@@ -9,13 +9,20 @@ WORKDIR /app
 # Install build dependencies for native modules (lightningcss, swc)
 RUN apk add --no-cache python3 make g++
 
-# Copy only package.json (not lockfile) to let npm resolve correct native deps for Alpine
-COPY web/package.json ./
+# Copy package files for dependency installation
+# Using package-lock.json ensures reproducible builds and better caching
+COPY web/package.json web/package-lock.json* ./
 
 # Install ALL dependencies (needed for build)
-# Use npm install (not ci) to properly install native modules for Alpine's musl libc
+# Use BuildKit cache mount for npm cache to speed up installs
+# Use npm ci when lockfile exists, fallback to npm install for native modules
 # lightningcss and @next/swc need musl-specific binaries
-RUN npm install --legacy-peer-deps --no-audit
+RUN --mount=type=cache,target=/root/.npm \
+    if [ -f package-lock.json ]; then \
+      npm ci --legacy-peer-deps --no-audit; \
+    else \
+      npm install --legacy-peer-deps --no-audit; \
+    fi
 
 # Copy source files
 COPY web/ ./
