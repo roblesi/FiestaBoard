@@ -13,9 +13,7 @@ import {
   Wand2,
   X,
   Save,
-  AlertTriangle,
   Trash2,
-  ChevronDown,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -29,27 +27,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { api, PageCreate, PageUpdate, PageType } from "@/lib/api";
-import { cn } from "@/lib/utils";
 import { useBoardSettings } from "@/hooks/use-board";
-
-// Transition strategy display names
-const STRATEGY_LABELS: Record<string, string> = {
-  column: "Wave (Left to Right)",
-  "reverse-column": "Drift (Right to Left)",
-  "edges-to-center": "Curtain (Outside In)",
-  row: "Row (Top to Bottom)",
-  diagonal: "Diagonal (Corner to Corner)",
-  random: "Random",
-};
-
-const AVAILABLE_STRATEGIES = [
-  "column",
-  "reverse-column",
-  "edges-to-center",
-  "row",
-  "diagonal",
-  "random",
-];
 
 // Alignment type for template lines
 type LineAlignment = "left" | "center" | "right";
@@ -109,12 +87,6 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
   const [templateLines, setTemplateLines] = useState<string[]>(["", "", "", "", "", ""]);
   const [lineAlignments, setLineAlignments] = useState<LineAlignment[]>(["left", "left", "left", "left", "left", "left"]);
   const [preview, setPreview] = useState<string | null>(null);
-  
-  // Transition settings state (immediate)
-  const [transitionStrategy, setTransitionStrategy] = useState<string | null>(null);
-  const [transitionIntervalMs, setTransitionIntervalMs] = useState<number | null>(null);
-  const [transitionStepSize, setTransitionStepSize] = useState<number | null>(null);
-  const [isTransitionOpen, setIsTransitionOpen] = useState(false);
 
   // Debounced state (for expensive operations)
   const [debouncedTemplateLines, setDebouncedTemplateLines] = useState<string[]>(["", "", "", "", "", ""]);
@@ -151,19 +123,6 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
       // Initialize debounced state immediately when loading
       setDebouncedLineAlignments(alignments);
       setDebouncedTemplateLines(contents);
-      
-      // Load transition settings
-      const strategy = existingPage.transition_strategy ?? null;
-      const intervalMs = existingPage.transition_interval_ms ?? null;
-      const stepSize = existingPage.transition_step_size ?? null;
-      setTransitionStrategy(strategy);
-      setTransitionIntervalMs(intervalMs);
-      setTransitionStepSize(stepSize);
-      
-      // Open transition accordion if page has custom transition settings
-      if (existingPage.transition_strategy) {
-        setIsTransitionOpen(true);
-      }
     }
   }, [existingPage]);
 
@@ -240,9 +199,6 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
         const payload: PageUpdate = {
           name,
           template: linesWithAlignments,
-          transition_strategy: transitionStrategy,
-          transition_interval_ms: transitionIntervalMs,
-          transition_step_size: transitionStepSize,
         };
         return api.updatePage(pageId, payload);
       } else {
@@ -251,9 +207,6 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
           name,
           type: "template" as PageType,
           template: linesWithAlignments,
-          transition_strategy: transitionStrategy,
-          transition_interval_ms: transitionIntervalMs,
-          transition_step_size: transitionStepSize,
         };
         return api.createPage(payload);
       }
@@ -485,122 +438,6 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
                 </div>
               </div>
 
-              {/* Transition Settings - Collapsible */}
-              <div className="mt-4 border rounded-lg overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => setIsTransitionOpen(!isTransitionOpen)}
-                  className="flex items-center justify-between w-full px-4 py-3 text-left bg-muted/30 hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <Wand2 className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Transition Settings</span>
-                    {transitionStrategy && (
-                      <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                        {STRATEGY_LABELS[transitionStrategy] || transitionStrategy}
-                      </span>
-                    )}
-                  </div>
-                  <ChevronDown
-                    className={cn(
-                      "h-4 w-4 text-muted-foreground transition-transform duration-200",
-                      isTransitionOpen && "rotate-180"
-                    )}
-                  />
-                </button>
-                
-                <div
-                  className={cn(
-                    "overflow-hidden transition-all duration-200",
-                    isTransitionOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
-                  )}
-                >
-                  <div className="p-4 space-y-4 border-t">
-                    <p className="text-xs text-muted-foreground">
-                      Control how the board animates when displaying this page. Leave empty to use instant updates.
-                    </p>
-                    
-                    {/* Warning note */}
-                    {transitionStrategy && (transitionIntervalMs ?? 0) > 500 && (
-                      <div className="flex items-start gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs text-amber-600 dark:text-amber-400">
-                        <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                        <span>
-                          <strong>Heads up:</strong> Slow transitions (especially with delays) can cause a queue buildup if pages change faster than they animate. Consider using faster settings for rotations with short durations.
-                        </span>
-                      </div>
-                    )}
-                    
-                    {/* Strategy selector */}
-                    <div className="space-y-2">
-                      <label className="text-xs sm:text-sm font-medium">Animation Style</label>
-                      <select
-                        value={transitionStrategy || ""}
-                        onChange={(e) => setTransitionStrategy(e.target.value || null)}
-                        className="w-full h-10 sm:h-9 px-3 text-sm rounded-md border bg-background"
-                      >
-                        <option value="">None (Instant)</option>
-                        {AVAILABLE_STRATEGIES.map((s) => (
-                          <option key={s} value={s}>
-                            {STRATEGY_LABELS[s] || s}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Interval slider */}
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <label className="text-xs sm:text-sm font-medium">Step Interval</label>
-                        <span className="text-xs sm:text-sm text-muted-foreground">
-                          {transitionIntervalMs ? `${transitionIntervalMs}ms` : "Fast"}
-                        </span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max="2000"
-                        step="100"
-                        value={transitionIntervalMs || 0}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value);
-                          setTransitionIntervalMs(val === 0 ? null : val);
-                        }}
-                        className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-muted"
-                        disabled={!transitionStrategy}
-                      />
-                      <p className="text-[10px] sm:text-xs text-muted-foreground">
-                        Delay between animation steps
-                      </p>
-                    </div>
-
-                    {/* Step size */}
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <label className="text-xs sm:text-sm font-medium">Step Size</label>
-                        <span className="text-xs sm:text-sm text-muted-foreground">
-                          {transitionStepSize || 1} {transitionStepSize === 1 || !transitionStepSize ? "column" : "columns"}
-                        </span>
-                      </div>
-                      <input
-                        type="range"
-                        min="1"
-                        max="11"
-                        step="1"
-                        value={transitionStepSize || 1}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value);
-                          setTransitionStepSize(val === 1 ? null : val);
-                        }}
-                        className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-muted"
-                        disabled={!transitionStrategy}
-                      />
-                      <p className="text-[10px] sm:text-xs text-muted-foreground">
-                        Columns/rows animated at once
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* Actions */}
