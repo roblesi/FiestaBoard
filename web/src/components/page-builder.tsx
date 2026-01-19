@@ -137,6 +137,9 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
 
   // Track if we need to re-preview after current mutation completes
   const needsRePreview = useRef(false);
+  
+  // Track if we're manually updating wrap to prevent onChange from overwriting state
+  const isUpdatingWrap = useRef(false);
 
   // Fetch existing page if editing
   const { data: existingPage, isLoading: loadingPage } = useQuery({
@@ -563,6 +566,11 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
               <TipTapTemplateEditor
                 value={getTemplateWithAlignments().join('\n')}
                 onChange={(newValue) => {
+                  // Skip parsing if we're manually updating wrap (to prevent state overwrite)
+                  if (isUpdatingWrap.current) {
+                    return;
+                  }
+                  
                   // Parse the template string back into lines, alignments, and wrap states
                   const lines = newValue.split('\n').slice(0, 6);
                   const newLines: string[] = [];
@@ -589,9 +597,17 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
                   setLineAlignments(newAlignments);
                 }}
                 onLineWrapChange={(lineIndex, wrapEnabled) => {
+                  // Set flag to prevent onChange from overwriting state
+                  isUpdatingWrap.current = true;
+                  
                   const newWrapStates = [...lineWrapEnabled];
                   newWrapStates[lineIndex] = wrapEnabled;
                   setLineWrapEnabled(newWrapStates);
+                  
+                  // Clear flag after state is updated
+                  setTimeout(() => {
+                    isUpdatingWrap.current = false;
+                  }, 100);
                 }}
                 placeholder="Type template syntax like {{weather.temp}} or {{red}} for color tiles"
                 showAlignmentControls={true}
