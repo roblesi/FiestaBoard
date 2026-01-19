@@ -517,8 +517,31 @@ class TemplateEngine:
                 if word_tiles <= current_width:
                     current_line = word
                 else:
-                    # Word too long, truncate by tiles
-                    current_line = self._truncate_to_tiles(word, max_tiles=current_width)
+                    # Word too long - break it across multiple lines
+                    remaining_word = word
+                    while remaining_word and len(lines) < max_lines:
+                        # Try to fit as much as possible on current line
+                        chars_to_take = 0
+                        test_line = ""
+                        for char in remaining_word:
+                            test_line += char
+                            if self._count_tiles(test_line) > current_width:
+                                break
+                            chars_to_take += 1
+                        
+                        if chars_to_take > 0:
+                            current_line = remaining_word[:chars_to_take]
+                            remaining_word = remaining_word[chars_to_take:]
+                            lines.append(current_line)
+                            if len(lines) >= max_lines:
+                                break
+                            current_line = ""
+                            current_width = subsequent_width
+                        else:
+                            # Can't fit even one character (shouldn't happen, but handle it)
+                            break
+                    # Set current_line to any remaining part
+                    current_line = remaining_word if remaining_word else ""
             elif current_line_tiles + 1 + word_tiles <= current_width:
                 # Word fits on current line
                 current_line += " " + word
@@ -527,7 +550,33 @@ class TemplateEngine:
                 lines.append(current_line)
                 if len(lines) >= max_lines:
                     break
-                current_line = self._truncate_to_tiles(word, max_tiles=subsequent_width) if word_tiles > subsequent_width else word
+                # Try to fit word on new line
+                if word_tiles <= subsequent_width:
+                    current_line = word
+                else:
+                    # Word too long - break it across multiple lines
+                    remaining_word = word
+                    current_line = ""
+                    current_width = subsequent_width
+                    while remaining_word and len(lines) < max_lines:
+                        chars_to_take = 0
+                        test_line = ""
+                        for char in remaining_word:
+                            test_line += char
+                            if self._count_tiles(test_line) > current_width:
+                                break
+                            chars_to_take += 1
+                        
+                        if chars_to_take > 0:
+                            current_line = remaining_word[:chars_to_take]
+                            remaining_word = remaining_word[chars_to_take:]
+                            lines.append(current_line)
+                            if len(lines) >= max_lines:
+                                break
+                            current_line = ""
+                        else:
+                            break
+                    current_line = remaining_word if remaining_word else ""
                 current_width = subsequent_width
         
         # Don't forget the last line
