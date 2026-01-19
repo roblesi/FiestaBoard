@@ -9,7 +9,7 @@
 
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { TemplateParagraph } from './extensions/template-paragraph';
 import { VariableNode } from './extensions/variable-node';
@@ -134,6 +134,10 @@ export function TipTapTemplateEditor({
       },
     },
     onUpdate: ({ editor }) => {
+      // Skip onChange if we're manually updating wrap (to prevent state overwrite)
+      if (isUpdatingWrap.current) {
+        return;
+      }
       const doc = editor.getJSON();
       const templateString = serializeTemplate(doc);
       onChange(templateString);
@@ -338,6 +342,9 @@ export function TipTapTemplateEditor({
           });
           editor.view.dispatch(tr);
           
+          // Set flag to prevent onUpdate from overwriting state
+          isUpdatingWrap.current = true;
+          
           // Notify parent of wrap change (updates state immediately)
           if (onLineWrapChange) {
             onLineWrapChange(lineIndex, newWrap);
@@ -350,6 +357,8 @@ export function TipTapTemplateEditor({
               const doc = editor.getJSON();
               const templateString = serializeTemplate(doc);
               onChange(templateString);
+              // Clear flag after onChange is called
+              isUpdatingWrap.current = false;
             });
           });
         }
