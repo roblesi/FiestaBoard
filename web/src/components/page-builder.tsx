@@ -133,6 +133,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
   // Debounced state (for expensive operations)
   const [debouncedTemplateLines, setDebouncedTemplateLines] = useState<string[]>(["", "", "", "", "", ""]);
   const [debouncedLineAlignments, setDebouncedLineAlignments] = useState<LineAlignment[]>(["left", "left", "left", "left", "left", "left"]);
+  const [debouncedLineWrapEnabled, setDebouncedLineWrapEnabled] = useState<boolean[]>([false, false, false, false, false, false]);
 
   // Track if we need to re-preview after current mutation completes
   const needsRePreview = useRef(false);
@@ -171,6 +172,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
       setTemplateLines(contents);
       // Initialize debounced state immediately when loading
       setDebouncedLineAlignments(alignments);
+      setDebouncedLineWrapEnabled(wrapStates);
       setDebouncedTemplateLines(contents);
     } else if (!pageId && !loadingPage) {
       // Try to load draft for new page
@@ -190,6 +192,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
               setLineWrapEnabled(draft.lineWrapEnabled || [false, false, false, false, false, false]);
               setDebouncedTemplateLines(draft.templateLines || ["", "", "", "", "", ""]);
               setDebouncedLineAlignments(draft.lineAlignments || ["left", "left", "left", "left", "left", "left"]);
+              setDebouncedLineWrapEnabled(draft.lineWrapEnabled || [false, false, false, false, false, false]);
               setDraftRestored(true);
               
               // Auto-dismiss the alert after 5 seconds
@@ -220,6 +223,13 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
     }, 300);
     return () => clearTimeout(timeoutId);
   }, [lineAlignments]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedLineWrapEnabled(lineWrapEnabled);
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [lineWrapEnabled]);
 
   // Auto-save draft to localStorage (debounced)
   useEffect(() => {
@@ -290,13 +300,15 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
     
     for (let i = 0; i < 6; i++) {
       const line = lines[i] || "";
-      const { alignment, content } = extractAlignment(line);
+      const { alignment, wrapEnabled, content } = extractAlignment(line);
       newAlignments.push(alignment);
+      newWrapStates.push(wrapEnabled);
       newContents.push(content);
     }
     
     setTemplateLines(newContents);
     setLineAlignments(newAlignments);
+    setLineWrapEnabled(newWrapStates);
   };
 
   // Save mutation
@@ -388,7 +400,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
 
   // Build template lines with alignment prefixes applied (using debounced state for preview)
   const getDebouncedTemplateWithAlignments = (): string[] => {
-    return debouncedTemplateLines.map((content, i) => applyAlignment(debouncedLineAlignments[i], content));
+    return debouncedTemplateLines.map((content, i) => applyAlignment(debouncedLineAlignments[i], debouncedLineWrapEnabled[i], content));
   };
 
   // Preview mutation
