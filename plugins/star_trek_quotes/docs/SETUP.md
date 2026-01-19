@@ -170,6 +170,12 @@ Create a centered quote display:
 
 **Tip:** The `|wrap` filter automatically word-wraps long quotes across multiple lines, and `{center}` centers each line on the display.
 
+### Display Example
+
+![Star Trek Quotes Display](./star-trek-quotes-display.png)
+
+*Example showing a centered quote with character attribution on the FiestaBoard.*
+
 ## Common Configurations
 
 ### Equal Distribution
