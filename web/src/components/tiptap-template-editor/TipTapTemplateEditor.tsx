@@ -53,6 +53,9 @@ export function TipTapTemplateEditor({
   lineWrapEnabled = [false, false, false, false, false, false],
   showToolbar = true,
 }: TipTapTemplateEditorProps) {
+  // Track if we're manually updating wrap to prevent onChange from overwriting state
+  const isUpdatingWrap = useRef(false);
+  
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
