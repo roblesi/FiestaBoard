@@ -162,28 +162,27 @@ const CharTile = memo(function CharTile({ token, size = "md", boardType = "black
   if (token.type === "color") {
     const bgColor = ALL_COLOR_CODES[token.code] || BOARD_COLORS.black;
     
-    // Size-responsive margins for color blocks
-    const colorMargins = {
-      sm: { top: 3, bottom: 4, horizontal: 1 }, // Small previews stay fixed
-      md: { top: 6, bottom: 8, horizontal: 2 }, // Standard size for responsive boards
-      lg: { top: 8, bottom: 10, horizontal: 3 }, // Larger boards
-    };
-    
-    const margins = colorMargins[size];
-    const totalVertical = margins.top + margins.bottom;
-    const totalHorizontal = margins.horizontal * 2;
+    // Responsive margin classes using CSS custom properties
+    // For sm size: fixed margins (no responsive needed)
+    // For md size: responsive margins matching tile size progression (20px → 28px → 34px → 40px)
+    // For lg size: responsive margins matching tile size progression (26px → 34px → 40px → 46px)
+    const marginClasses = size === "sm"
+      ? "[--color-margin-top:3px] [--color-margin-bottom:4px] [--color-margin-h:1px]"
+      : size === "md"
+      ? "[--color-margin-top:3px] sm:[--color-margin-top:4px] md:[--color-margin-top:5px] lg:[--color-margin-top:6px] [--color-margin-bottom:4px] sm:[--color-margin-bottom:6px] md:[--color-margin-bottom:7px] lg:[--color-margin-bottom:8px] [--color-margin-h:1px] sm:[--color-margin-h:2px]"
+      : "[--color-margin-top:4px] sm:[--color-margin-top:5px] md:[--color-margin-top:6px] lg:[--color-margin-top:8px] [--color-margin-bottom:5px] sm:[--color-margin-bottom:7px] md:[--color-margin-bottom:8px] lg:[--color-margin-bottom:10px] [--color-margin-h:2px] md:[--color-margin-h:3px]";
     
     return (
-      <div className={`${sizeClasses[size]} flex items-center justify-center`}>
+      <div className={`${sizeClasses[size]} ${marginClasses} flex items-center justify-center`}>
         <div 
           className={`relative rounded-[3px] overflow-hidden`}
           style={{ 
-            marginTop: `${margins.top}px`,
-            marginBottom: `${margins.bottom}px`,
-            marginLeft: `${margins.horizontal}px`,
-            marginRight: `${margins.horizontal}px`,
-            width: `calc(100% - ${totalHorizontal}px)`,
-            height: `calc(100% - ${totalVertical}px)`,
+            marginTop: "var(--color-margin-top)",
+            marginBottom: "var(--color-margin-bottom)",
+            marginLeft: "var(--color-margin-h)",
+            marginRight: "var(--color-margin-h)",
+            width: "calc(100% - (var(--color-margin-h) * 2))",
+            height: "calc(100% - (var(--color-margin-top) + var(--color-margin-bottom)))",
             backgroundColor: bgColor,
             boxShadow: `
               0 2px 4px rgba(0,0,0,0.3),
