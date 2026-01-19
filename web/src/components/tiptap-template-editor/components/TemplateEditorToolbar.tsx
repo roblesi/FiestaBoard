@@ -6,7 +6,7 @@
 
 import { Editor } from '@tiptap/react';
 import { useQuery } from '@tanstack/react-query';
-import { AlignLeft, AlignCenter, AlignRight, Code2, Palette, Type, Filter } from 'lucide-react';
+import { AlignLeft, AlignCenter, AlignRight, Code2, Palette, Type, Filter, WrapText } from 'lucide-react';
 import { api } from '@/lib/api';
 import { insertTemplateContent } from '../utils/insertion';
 import { ToolbarDropdown } from './ToolbarDropdown';
@@ -45,6 +45,89 @@ export function TemplateEditorToolbar({
   const handleAlignmentClick = (alignment: LineAlignment) => {
     if (onAlignmentChange) {
       onAlignmentChange(alignment);
+    }
+  };
+
+  const handleWrapClick = () => {
+    if (!editor) return;
+
+    const { state } = editor;
+    const { selection } = state;
+    const { $from } = selection;
+
+    // Check if selection is inside or on a variable node
+    let variableNode = null;
+    let variablePos = null;
+
+    // Walk up the node tree to find if we're inside a variable node
+    let depth = $from.depth;
+    while (depth > 0) {
+      const node = $from.node(depth);
+      if (node.type.name === 'variable') {
+        variableNode = node;
+        variablePos = $from.before(depth);
+        break;
+      }
+      depth--;
+    }
+
+    // Also check if selection spans a variable node
+    if (!variableNode) {
+      state.doc.nodesBetween(selection.from, selection.to, (node, pos) => {
+        if (node.type.name === 'variable') {
+          variableNode = node;
+          variablePos = pos;
+          return false; // Stop searching
+        }
+      });
+    }
+
+    if (variableNode && variablePos !== null) {
+      // Apply wrap filter to the selected variable
+      const currentFilters = variableNode.attrs.filters || [];
+      const filterExists = currentFilters.some((f: { name: string }) => f.name === 'wrap');
+      
+      if (!filterExists) {
+        const updatedFilters = [...currentFilters, { name: 'wrap' }];
+        const tr = state.tr;
+        tr.setNodeMarkup(variablePos, undefined, {
+          ...variableNode.attrs,
+          filters: updatedFilters,
+        });
+        editor.view.dispatch(tr);
+        editor.chain().focus().run();
+      }
+    } else if (selection.from !== selection.to) {
+      // For wrap filter, if text is selected, wrap it in a wrappedText node
+      const selectedText = state.doc.textBetween(selection.from, selection.to);
+      
+      if (selectedText.trim().length > 0) {
+        // Check if selection is already inside a wrappedText node
+        let isInWrappedText = false;
+        depth = $from.depth;
+        while (depth > 0) {
+          const node = $from.node(depth);
+          if (node.type.name === 'wrappedText') {
+            isInWrappedText = true;
+            break;
+          }
+          depth--;
+        }
+        
+        if (!isInWrappedText) {
+          // Replace selection with wrappedText node
+          editor.chain()
+            .focus()
+            .deleteSelection()
+            .insertContent({
+              type: 'wrappedText',
+              attrs: {
+                text: selectedText,
+              },
+            })
+            .run();
+        }
+      }
     }
   };
 
@@ -153,6 +236,27 @@ export function TemplateEditorToolbar({
             )}
           </ToolbarDropdown>
         )}
+
+        {/* Wrap Button */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={handleWrapClick}
+              className={cn(
+                "flex items-center justify-center p-1.5 rounded-md",
+                "hover:bg-muted/50 transition-colors",
+                "border border-transparent"
+              )}
+              aria-label="Wrap text"
+            >
+              <WrapText className="w-4 h-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Wrap selected text or apply wrap filter to variable</p>
+          </TooltipContent>
+        </Tooltip>
 
         {/* Divider */}
         {(hasVariables || hasColors || hasFormatting || hasFilters) && (
