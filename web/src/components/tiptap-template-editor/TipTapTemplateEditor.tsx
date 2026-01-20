@@ -101,6 +101,9 @@ export function TipTapTemplateEditor({
           className
         ),
         'data-placeholder': placeholder,
+        'role': 'textbox',
+        'aria-label': 'Template editor',
+        'aria-multiline': 'true',
       },
       handleKeyDown: (view, event) => {
         // Let the extension handle Enter key logic

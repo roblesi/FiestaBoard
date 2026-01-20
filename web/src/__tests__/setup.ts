@@ -58,6 +58,51 @@ Object.defineProperty(window, "matchMedia", {
   })),
 });
 
+// Mock DOM APIs needed by ProseMirror/TipTap
+if (typeof document !== 'undefined') {
+  // Mock elementFromPoint for ProseMirror position calculations
+  document.elementFromPoint = vi.fn(() => null);
+  document.elementsFromPoint = vi.fn(() => []);
+  
+  // Mock caretPositionFromPoint (alternative to caretRangeFromPoint)
+  (document as any).caretPositionFromPoint = vi.fn(() => null);
+  
+  // Mock caretRangeFromPoint for position calculations
+  if (!document.caretRangeFromPoint) {
+    (document as any).caretRangeFromPoint = vi.fn(() => null);
+  }
+}
+
+// Mock getClientRects and getBoundingClientRect for all elements
+const mockRect = {
+  x: 0,
+  y: 0,
+  width: 100,
+  height: 20,
+  top: 0,
+  right: 100,
+  bottom: 20,
+  left: 0,
+  toJSON: () => ({}),
+};
+
+const mockDOMRect = () => mockRect;
+
+if (typeof Element !== 'undefined') {
+  Element.prototype.getClientRects = vi.fn(() => [mockRect] as any);
+  Element.prototype.getBoundingClientRect = vi.fn(mockDOMRect);
+}
+
+if (typeof Range !== 'undefined') {
+  Range.prototype.getClientRects = vi.fn(() => [mockRect] as any);
+  Range.prototype.getBoundingClientRect = vi.fn(mockDOMRect);
+}
+
+// Mock scrollIntoView
+if (typeof Element !== 'undefined') {
+  Element.prototype.scrollIntoView = vi.fn();
+}
+
 // Setup MSW
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterAll(() => server.close());
