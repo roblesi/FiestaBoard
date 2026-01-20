@@ -56,7 +56,7 @@ describe('TemplateParagraph Enter Key Behavior', () => {
     expect(lastParagraph?.content.size).toBe(0);
     
     // Place cursor in the middle of first line (which has content)
-    editor.commands.setTextSelection(3); // After "Hel"
+    editor.commands.setTextSelection(4); // After "Hel" (position counts: 1=start of para, 2=after H, 3=after He, 4=after Hel)
     
     // Simulate Enter key press
     const { state } = editor;
@@ -78,21 +78,26 @@ describe('TemplateParagraph Enter Key Behavior', () => {
     expect(lastLineIsEmpty).toBe(true);
     
     // Manually trigger the Enter behavior - delete last paragraph
-    const tr = state.tr;
-    // Calculate position of last paragraph (start at 1 for doc opening tag)
+    // Calculate the position range of the last paragraph
     const lastIndex = state.doc.childCount - 1;
-    let lastPos = 1;
+    let posBeforeLast = 0;
     for (let i = 0; i < lastIndex; i++) {
-      lastPos += state.doc.child(i).nodeSize;
+      posBeforeLast += state.doc.child(i).nodeSize;
     }
-    // Delete the last paragraph
-    const lastParagraphSize = state.doc.child(lastIndex).nodeSize;
-    tr.delete(lastPos, lastPos + lastParagraphSize);
+    // The position after all previous nodes is where the last node starts
+    const from = posBeforeLast;
+    const to = from + state.doc.child(lastIndex).nodeSize;
+    
+    const tr = state.tr;
+    tr.delete(from, to);
     editor.view.dispatch(tr);
     
     // Now should have 5 lines
     const { doc: docAfterDelete } = editor.state;
     expect(docAfterDelete.content.childCount).toBe(5);
+    
+    // Reset cursor to position 4 (after "Hel")
+    editor.commands.setTextSelection(4);
     
     // Now try to split
     editor.commands.splitBlock();
@@ -130,16 +135,18 @@ describe('TemplateParagraph Enter Key Behavior', () => {
     expect(lastParagraph?.content.size).toBe(0);
     
     // Delete last line
-    const tr = state.tr;
-    // Calculate position of last paragraph (start at 1 for doc opening tag)
+    // Calculate the position range of the last paragraph
     const lastIndex = state.doc.childCount - 1;
-    let lastPos = 1;
+    let posBeforeLast = 0;
     for (let i = 0; i < lastIndex; i++) {
-      lastPos += state.doc.child(i).nodeSize;
+      posBeforeLast += state.doc.child(i).nodeSize;
     }
-    // Delete the last paragraph
-    const lastParagraphSize = state.doc.child(lastIndex).nodeSize;
-    tr.delete(lastPos, lastPos + lastParagraphSize);
+    // The position after all previous nodes is where the last node starts
+    const from = posBeforeLast;
+    const to = from + state.doc.child(lastIndex).nodeSize;
+    
+    const tr = state.tr;
+    tr.delete(from, to);
     editor.view.dispatch(tr);
     
     // Should now have 5 lines
@@ -160,17 +167,22 @@ describe('TemplateParagraph Enter Key Behavior', () => {
     expect(lastParagraph?.content.size).toBeGreaterThan(0);
     
     // Place cursor on first line
-    editor.commands.setTextSelection(1);
+    editor.commands.setTextSelection(2); // Position 2 is inside first paragraph's text
     
-    const currentParagraph = state.selection.$from.node(state.selection.$from.depth);
+    // Verify we're in a paragraph with content
+    const { state: currentState } = editor;
+    const currentParagraph = currentState.selection.$from.node(currentState.selection.$from.depth);
     const hasContent = currentParagraph.content.size > 0;
     expect(hasContent).toBe(true);
     
-    // Try to split - should work (but won't create 7th line)
-    const initialLineCount = state.doc.content.childCount;
-    editor.commands.splitBlock();
+    // Try to split - the extension should block this since we're at 6 lines with content
+    const initialLineCount = currentState.doc.content.childCount;
     
-    // Should still have 6 lines (can't exceed limit)
+    // Simulate Enter key (which should be blocked by the extension)
+    // The Enter handler should return true (blocking default behavior)
+    const enterHandled = editor.commands.enter();
+    
+    // The command may succeed, but line count should still be 6 or less due to safety checks
     const { doc: finalDoc } = editor.state;
     expect(finalDoc.content.childCount).toBeLessThanOrEqual(6);
   });
@@ -183,16 +195,18 @@ describe('TemplateParagraph Enter Key Behavior', () => {
     // Ensure we have 5 lines (parseTemplate pads to 6, so we need to remove one)
     const { state: initialState } = editor;
     if (initialState.doc.content.childCount === 6) {
-      const tr = initialState.tr;
-      // Calculate position of last paragraph (start at 1 for doc opening tag)
+      // Calculate the position range of the last paragraph
       const lastIndex = initialState.doc.childCount - 1;
-      let lastPos = 1;
+      let posBeforeLast = 0;
       for (let i = 0; i < lastIndex; i++) {
-        lastPos += initialState.doc.child(i).nodeSize;
+        posBeforeLast += initialState.doc.child(i).nodeSize;
       }
-      // Delete the last paragraph
-      const lastParagraphSize = initialState.doc.child(lastIndex).nodeSize;
-      tr.delete(lastPos, lastPos + lastParagraphSize);
+      // The position after all previous nodes is where the last node starts
+      const from = posBeforeLast;
+      const to = from + initialState.doc.child(lastIndex).nodeSize;
+      
+      const tr = initialState.tr;
+      tr.delete(from, to);
       editor.view.dispatch(tr);
     }
     
