@@ -58,6 +58,36 @@ describe('Template Serialization', () => {
       expect(line[2].text).toBe('Right');
     });
 
+    it('parses fill_space_repeat with dash', () => {
+      const template = 'Header{{fill_space_repeat:-}}';
+      const doc = parseTemplate(template);
+      
+      const line = doc.content![0].content!;
+      expect(line[0].text).toBe('Header');
+      expect(line[1].type).toBe('fillSpace');
+      expect(line[1].attrs?.repeatChar).toBe('-');
+    });
+
+    it('parses fill_space_repeat with dot', () => {
+      const template = 'A{{fill_space_repeat:.}}B';
+      const doc = parseTemplate(template);
+      
+      const line = doc.content![0].content!;
+      expect(line[0].text).toBe('A');
+      expect(line[1].type).toBe('fillSpace');
+      expect(line[1].attrs?.repeatChar).toBe('.');
+      expect(line[2].text).toBe('B');
+    });
+
+    it('parses fill_space_repeat with multi-char', () => {
+      const template = '{{fill_space_repeat:=-}}';
+      const doc = parseTemplate(template);
+      
+      const line = doc.content![0].content!;
+      expect(line[0].type).toBe('fillSpace');
+      expect(line[0].attrs?.repeatChar).toBe('=-');
+    });
+
     it('parses symbols', () => {
       const template = '{sun} Sunny {rain} Rainy';
       const doc = parseTemplate(template);
@@ -78,6 +108,40 @@ describe('Template Serialization', () => {
       
       expect(doc.content![0].attrs?.alignment).toBe('center');
       expect(doc.content![0].content![0].text).toBe('Centered Text');
+    });
+
+    it('parses wrap directive', () => {
+      const template = '{wrap}Wrapped Text';
+      const doc = parseTemplate(template);
+      
+      expect(doc.content![0].attrs?.wrapEnabled).toBe(true);
+      expect(doc.content![0].content![0].text).toBe('Wrapped Text');
+    });
+
+    it('parses wrap with alignment', () => {
+      const template = '{wrap}{center}Centered Wrapped';
+      const doc = parseTemplate(template);
+      
+      expect(doc.content![0].attrs?.wrapEnabled).toBe(true);
+      expect(doc.content![0].attrs?.alignment).toBe('center');
+      expect(doc.content![0].content![0].text).toBe('Centered Wrapped');
+    });
+
+    it('parses blank line with wrap', () => {
+      const template = '{wrap}';
+      const doc = parseTemplate(template);
+      
+      expect(doc.content![0].attrs?.wrapEnabled).toBe(true);
+      expect(doc.content![0].content).toEqual([]);
+    });
+
+    it('parses blank line with wrap and alignment', () => {
+      const template = '{wrap}{center}';
+      const doc = parseTemplate(template);
+      
+      expect(doc.content![0].attrs?.wrapEnabled).toBe(true);
+      expect(doc.content![0].attrs?.alignment).toBe('center');
+      expect(doc.content![0].content).toEqual([]);
     });
 
     it('pads to 6 lines', () => {
@@ -135,6 +199,27 @@ describe('Template Serialization', () => {
       expect(serialized.split('\n')[0]).toBe('A{{fill_space}}B');
     });
 
+    it('serializes fill_space_repeat with dash', () => {
+      const doc = parseTemplate('Header{{fill_space_repeat:-}}');
+      const serialized = serializeTemplate(doc);
+      
+      expect(serialized.split('\n')[0]).toBe('Header{{fill_space_repeat:-}}');
+    });
+
+    it('serializes fill_space_repeat with dot', () => {
+      const doc = parseTemplate('A{{fill_space_repeat:.}}B');
+      const serialized = serializeTemplate(doc);
+      
+      expect(serialized.split('\n')[0]).toBe('A{{fill_space_repeat:.}}B');
+    });
+
+    it('serializes fill_space_repeat with multi-char', () => {
+      const doc = parseTemplate('{{fill_space_repeat:=-}}');
+      const serialized = serializeTemplate(doc);
+      
+      expect(serialized.split('\n')[0]).toBe('{{fill_space_repeat:=-}}');
+    });
+
     it('serializes symbols', () => {
       const doc = parseTemplate('{sun} {rain}');
       const serialized = serializeTemplate(doc);
@@ -147,6 +232,41 @@ describe('Template Serialization', () => {
       const serialized = serializeTemplate(doc);
       
       expect(serialized.split('\n')[0]).toBe('{center}Centered');
+    });
+
+    it('serializes wrap directive', () => {
+      const doc = parseTemplate('{wrap}Wrapped Text');
+      const serialized = serializeTemplate(doc);
+      
+      expect(serialized.split('\n')[0]).toBe('{wrap}Wrapped Text');
+    });
+
+    it('serializes wrap with alignment', () => {
+      const doc = parseTemplate('{wrap}{center}Centered Wrapped');
+      const serialized = serializeTemplate(doc);
+      
+      expect(serialized.split('\n')[0]).toBe('{wrap}{center}Centered Wrapped');
+    });
+
+    it('serializes blank line with wrap', () => {
+      const doc = parseTemplate('{wrap}');
+      const serialized = serializeTemplate(doc);
+      
+      expect(serialized.split('\n')[0]).toBe('{wrap}');
+    });
+
+    it('serializes blank line with wrap and alignment', () => {
+      const doc = parseTemplate('{wrap}{center}');
+      const serialized = serializeTemplate(doc);
+      
+      expect(serialized.split('\n')[0]).toBe('{wrap}{center}');
+    });
+
+    it('serializes blank line with wrap and right alignment', () => {
+      const doc = parseTemplate('{wrap}{right}');
+      const serialized = serializeTemplate(doc);
+      
+      expect(serialized.split('\n')[0]).toBe('{wrap}{right}');
     });
 
     it('always produces 6 lines', () => {
@@ -172,6 +292,62 @@ describe('Template Serialization', () => {
 
     it('maintains complex template', () => {
       const original = '{{red}} {{weather.temp|pad:3}}F\n{sun} {rain}\nLeft{{fill_space}}Right\n{center}Centered\n\n';
+      const doc = parseTemplate(original);
+      const serialized = serializeTemplate(doc);
+      
+      expect(serialized).toBe(original);
+    });
+
+    it('maintains fill_space_repeat', () => {
+      const original = 'Header{{fill_space_repeat:-}}\n{{fill_space_repeat:.}}\nA{{fill_space}}B\n\n\n';
+      const doc = parseTemplate(original);
+      const serialized = serializeTemplate(doc);
+      
+      expect(serialized).toBe(original);
+    });
+
+    it('maintains blank line with wrap', () => {
+      const original = 'Line 1\n{wrap}\nLine 3\n\n\n';
+      const doc = parseTemplate(original);
+      const serialized = serializeTemplate(doc);
+      
+      expect(serialized).toBe(original);
+    });
+
+    it('maintains blank line with wrap between content lines', () => {
+      const original = 'First Line\n{wrap}\nThird Line\n\n\n';
+      const doc = parseTemplate(original);
+      const serialized = serializeTemplate(doc);
+      
+      expect(serialized).toBe(original);
+    });
+
+    it('maintains blank line with wrap and alignment', () => {
+      const original = 'Line 1\n{wrap}{center}\nLine 3\n\n\n';
+      const doc = parseTemplate(original);
+      const serialized = serializeTemplate(doc);
+      
+      expect(serialized).toBe(original);
+    });
+
+    it('maintains multiple blank lines with wrap', () => {
+      const original = 'Line 1\n{wrap}\n{wrap}\nLine 4\n\n';
+      const doc = parseTemplate(original);
+      const serialized = serializeTemplate(doc);
+      
+      expect(serialized).toBe(original);
+    });
+
+    it('maintains wrap on content line', () => {
+      const original = '{wrap}Wrapped Content\nRegular Line\n\n\n\n';
+      const doc = parseTemplate(original);
+      const serialized = serializeTemplate(doc);
+      
+      expect(serialized).toBe(original);
+    });
+
+    it('maintains complex template with wrap on blank lines', () => {
+      const original = '{{red}} Alert\n{wrap}\n{center}Centered\n{wrap}{right}\n\n';
       const doc = parseTemplate(original);
       const serialized = serializeTemplate(doc);
       

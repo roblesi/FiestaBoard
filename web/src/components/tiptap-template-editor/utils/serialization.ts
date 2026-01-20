@@ -4,7 +4,7 @@
  */
 
 import { JSONContent } from '@tiptap/react';
-import { BOARD_COLORS, SYMBOL_CHARS, FILL_SPACE_VAR } from './constants';
+import { BOARD_COLORS, SYMBOL_CHARS, FILL_SPACE_VAR, FILL_SPACE_REPEAT_VAR } from './constants';
 
 /**
  * Parse a template string into TipTap JSON document
@@ -94,19 +94,14 @@ function extractAlignment(line: string): { alignment: string; wrapEnabled: boole
  * Apply alignment and wrap prefixes to content
  */
 function applyAlignment(alignment: string, wrapEnabled: boolean, content: string): string {
-  // Don't add prefix to empty lines
-  if (!content) {
-    return '';
-  }
-  
   const prefixes: string[] = [];
   
-  // Add wrap prefix first
+  // Add wrap prefix first (preserve even for empty lines)
   if (wrapEnabled) {
     prefixes.push('{wrap}');
   }
   
-  // Add alignment prefix
+  // Add alignment prefix (only for non-left alignment)
   switch (alignment) {
     case 'center':
       prefixes.push('{center}');
@@ -115,6 +110,12 @@ function applyAlignment(alignment: string, wrapEnabled: boolean, content: string
       prefixes.push('{right}');
       break;
     // left is default, no prefix needed
+  }
+  
+  // If no prefixes and no content, return empty string
+  // Otherwise return prefixes + content (even if content is empty)
+  if (prefixes.length === 0 && !content) {
+    return '';
   }
   
   return prefixes.join('') + content;
@@ -152,6 +153,23 @@ export function parseLineContent(text: string): JSONContent[] {
           type: 'fillSpace',
           attrs: {
             id: Math.random().toString(36).substr(2, 9),
+          },
+        });
+      }
+      // Check if it's fill_space_repeat with optional character
+      else if (content.toLowerCase().startsWith(FILL_SPACE_REPEAT_VAR)) {
+        let repeatChar = ' '; // default
+        if (content.includes(':')) {
+          const parts = content.split(':');
+          if (parts.length > 1 && parts[1]) {
+            repeatChar = parts[1];
+          }
+        }
+        nodes.push({
+          type: 'fillSpace',
+          attrs: {
+            id: Math.random().toString(36).substr(2, 9),
+            repeatChar,
           },
         });
       }
@@ -262,6 +280,10 @@ function serializeLineContent(nodes: JSONContent[]): string {
         return `{{${node.attrs?.color || 'red'}}}`;
       
       case 'fillSpace':
+        // Check if it has repeatChar attribute (fill_space_repeat)
+        if (node.attrs?.repeatChar) {
+          return `{{${FILL_SPACE_REPEAT_VAR}:${node.attrs.repeatChar}}}`;
+        }
         return `{{${FILL_SPACE_VAR}}}`;
       
       case 'symbol':

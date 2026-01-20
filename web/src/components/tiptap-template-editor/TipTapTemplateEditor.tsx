@@ -188,16 +188,11 @@ export function TipTapTemplateEditor({
       const tr = editor.state.tr;
       let modified = false;
       
+      // Iterate through paragraphs in document order
+      let paragraphIndex = 0;
       doc.descendants((node, pos) => {
         if (node.type.name === 'templateParagraph') {
-          // Get paragraph index by counting previous paragraphs
-          let paragraphIndex = 0;
-          doc.nodesBetween(0, pos, (n) => {
-            if (n.type.name === 'templateParagraph') {
-              paragraphIndex++;
-            }
-          });
-          
+          // Use the current paragraph index (0-based)
           if (paragraphIndex < BOARD_LINES) {
             const currentAlignment = node.attrs.alignment || 'left';
             const newAlignment = lineAlignments[paragraphIndex] || 'left';
@@ -210,6 +205,7 @@ export function TipTapTemplateEditor({
               modified = true;
             }
           }
+          paragraphIndex++;
         }
       });
       
@@ -228,17 +224,11 @@ export function TipTapTemplateEditor({
     const tr = state.tr;
     let modified = false;
     
+    // Iterate through paragraphs in document order
+    let paragraphIndex = 0;
     doc.descendants((node, pos) => {
       if (node.type.name === 'templateParagraph') {
-        // Count which paragraph this is
-        let paragraphIndex = 0;
-        state.doc.nodesBetween(0, pos, (n) => {
-          if (n.type.name === 'templateParagraph') {
-            paragraphIndex++;
-          }
-        });
-        paragraphIndex--; // Adjust for current paragraph
-        
+        // Use the current paragraph index (0-based)
         if (paragraphIndex >= 0 && paragraphIndex < BOARD_LINES) {
           const expectedWrap = lineWrapEnabled[paragraphIndex] || false;
           const currentWrap = node.attrs.wrapEnabled || false;
@@ -251,6 +241,7 @@ export function TipTapTemplateEditor({
             modified = true;
           }
         }
+        paragraphIndex++;
       }
     });
     
@@ -412,15 +403,50 @@ export function TipTapTemplateEditor({
         <div className={cn(
           "border bg-background relative",
           showToolbar ? "rounded-b-md border-t-0" : "rounded-md"
-        )} style={{ padding: '0.5rem', paddingLeft: '4rem', overflow: 'visible' }}>
+        )} style={{ 
+          padding: '0.5rem', 
+          paddingLeft: '2.5rem', 
+          overflow: 'hidden',
+          minHeight: `${BOARD_LINES * 1.5 + 1}rem`, // 6 lines * 1.5rem + 1rem padding
+          height: `${BOARD_LINES * 1.5 + 1}rem`, // Fixed height to match exactly 6 lines
+        }}>
+            {/* Line numbers - rendered as absolute positioned elements, aligned with editor lines */}
+            <div 
+              className="absolute left-0 pointer-events-none z-20"
+              style={{
+                top: '0.5rem',
+                width: '2rem',
+                display: 'flex',
+                flexDirection: 'column',
+                height: `${BOARD_LINES * 1.5}rem`, // Exactly match 6 lines height
+              }}
+            >
+              {Array.from({ length: BOARD_LINES }).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-end text-xs text-muted-foreground font-semibold"
+                  style={{ 
+                    height: '1.5rem',
+                    lineHeight: '1.5rem',
+                    margin: 0,
+                    padding: 0,
+                    paddingRight: '0.5rem',
+                    marginRight: '0.25rem',
+                  }}
+                >
+                  {i + 1}
+                </div>
+              ))}
+            </div>
+            
             {/* Grid overlay - 22 columns × 6 rows matching board display */}
             <div 
               className="absolute pointer-events-none z-0"
               style={{
                 top: '0.5rem',
-                left: '2.5rem',
+                left: '0.5rem',
                 right: '0.5rem',
-                bottom: '0.5rem',
+                height: `${BOARD_LINES * 1.5}rem`, // Match exactly 6 lines height
                 backgroundImage: `
                   repeating-linear-gradient(
                     to right,
@@ -441,7 +467,7 @@ export function TipTapTemplateEditor({
                 `,
               }}
             />
-          <div className="relative z-10">
+          <div className="relative z-10" style={{ height: `${BOARD_LINES * 1.5}rem` }}>
             <EditorContent editor={editor} />
           </div>
         </div>
@@ -502,6 +528,12 @@ export function TipTapTemplateEditor({
 
       {/* Placeholder styling */}
       <style jsx global>{`
+        /* Ensure ProseMirror container has no spacing that affects line alignment */
+        .ProseMirror {
+          margin: 0;
+          padding: 0;
+        }
+        
         .ProseMirror[data-placeholder]:empty::before {
           content: attr(data-placeholder);
           color: hsl(var(--muted-foreground));
@@ -515,6 +547,7 @@ export function TipTapTemplateEditor({
         }
 
         /* Ensure each paragraph is treated as a line with FIXED height */
+        .ProseMirror > div[data-node-view-wrapper],
         .ProseMirror > p {
           display: flex;
           flex-wrap: nowrap;
@@ -535,110 +568,20 @@ export function TipTapTemplateEditor({
           letter-spacing: 0;
           position: relative;
           overflow: visible;
-          counter-increment: line-number;
         }
         
-        /* Add line numbers using CSS counter - must always show */
-        .ProseMirror > p::before {
-          content: counter(line-number) !important;
-          position: absolute;
-          left: -2.5rem;
-          width: 2rem;
-          text-align: right;
-          font-size: 0.75rem;
-          color: hsl(var(--muted-foreground));
-          line-height: 1.5rem;
-          height: 1.5rem;
-          display: flex;
-          align-items: center;
-          justify-content: flex-end;
-          pointer-events: none;
-          padding-right: 0.5rem; /* Space between line number and content */
-          z-index: 1;
-        }
-        
-        /* Add alignment and wrap indicators next to line number */
-        .ProseMirror > p::after {
-          content: '';
-          position: absolute;
-          left: -1.25rem;
-          top: 50%;
-          transform: translateY(-50%);
-          width: 0.75rem;
-          height: 0.75rem;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          pointer-events: none;
-          font-size: 0.7rem;
-          font-weight: 700;
-          color: hsl(var(--primary));
-          opacity: 0.8;
-          transition: opacity 0.2s;
-          font-family: 'Courier New', 'Courier', monospace;
-        }
-        
-        .ProseMirror > p[data-alignment="left"]::after {
-          content: 'L';
-        }
-        
-        .ProseMirror > p[data-alignment="center"]::after {
-          content: 'C';
-        }
-        
-        .ProseMirror > p[data-alignment="right"]::after {
-          content: 'R';
-        }
-        
-        /* Wrap indicator - show W badge when wrap is enabled */
-        .ProseMirror > p[data-wrap-enabled="true"]::after {
-          content: 'W';
-          color: hsl(var(--primary));
-          opacity: 0.9;
-        }
-        
-        /* When both alignment and wrap, show both (W takes priority, alignment shown via text-align) */
-        .ProseMirror > p[data-wrap-enabled="true"][data-alignment="left"]::after,
-        .ProseMirror > p[data-wrap-enabled="true"][data-alignment="center"]::after,
-        .ProseMirror > p[data-wrap-enabled="true"][data-alignment="right"]::after {
-          content: 'W';
-        }
-        
-        .ProseMirror > p:hover::after {
-          opacity: 1;
-        }
-        
-        /* Initialize counter */
-        .ProseMirror {
-          counter-reset: line-number;
+        /* Ensure no gaps between lines */
+        .ProseMirror > div[data-node-view-wrapper] + div[data-node-view-wrapper],
+        .ProseMirror > p + p {
+          margin-top: 0;
         }
         
         /* Ensure empty paragraphs are visible and maintain height */
+        .ProseMirror > div[data-node-view-wrapper]:empty,
         .ProseMirror > p:empty {
           min-height: 1.5rem !important;
           height: 1.5rem !important;
           position: relative;
-        }
-        
-        /* Show a visible cursor placeholder on empty lines when editor is focused */
-        /* Use a separate element for cursor to avoid conflicting with line numbers */
-        .ProseMirror-focused > p:empty,
-        .ProseMirror:focus-within > p:empty {
-          position: relative;
-        }
-        
-        .ProseMirror-focused > p:empty::after,
-        .ProseMirror:focus-within > p:empty::after {
-          content: '';
-          position: absolute;
-          left: 6px;
-          top: 0;
-          width: 2px;
-          height: 1.4rem;
-          background-color: hsl(var(--primary));
-          animation: blink 1s step-end infinite;
-          pointer-events: none;
-          z-index: 0;
         }
         
         /* Make it a block cursor on the currently selected empty line */
