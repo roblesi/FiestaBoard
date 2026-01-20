@@ -1,19 +1,18 @@
 /**
  * Template Editor Toolbar - Toolbar for TipTap template editor
- * Provides quick access to variables, colors, formatting, filters, and alignment
+ * Provides quick access to variables, colors, formatting, and alignment
  */
 "use client";
 
 import { Editor } from '@tiptap/react';
 import { useQuery } from '@tanstack/react-query';
-import { AlignLeft, AlignCenter, AlignRight, Code2, Palette, Type, Filter, WrapText } from 'lucide-react';
+import { AlignLeft, AlignCenter, AlignRight, Code2, Palette, Type, WrapText } from 'lucide-react';
 import { api } from '@/lib/api';
 import { insertTemplateContent } from '../utils/insertion';
 import { ToolbarDropdown } from './ToolbarDropdown';
 import { VariablePickerContent } from './VariablePickerContent';
 import { ColorPickerContent } from './ColorPickerContent';
 import { FormattingPickerContent } from './FormattingPickerContent';
-import { FilterPickerContent } from './FilterPickerContent';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { LineAlignment } from '../extensions/template-paragraph';
@@ -52,94 +51,10 @@ export function TemplateEditorToolbar({
     }
   };
 
-  const handleWrapClick = () => {
-    if (!editor) return;
-
-    const { state } = editor;
-    const { selection } = state;
-    const { $from } = selection;
-
-    // Check if selection is inside or on a variable node
-    let variableNode = null;
-    let variablePos = null;
-
-    // Walk up the node tree to find if we're inside a variable node
-    let depth = $from.depth;
-    while (depth > 0) {
-      const node = $from.node(depth);
-      if (node.type.name === 'variable') {
-        variableNode = node;
-        variablePos = $from.before(depth);
-        break;
-      }
-      depth--;
-    }
-
-    // Also check if selection spans a variable node
-    if (!variableNode) {
-      state.doc.nodesBetween(selection.from, selection.to, (node, pos) => {
-        if (node.type.name === 'variable') {
-          variableNode = node;
-          variablePos = pos;
-          return false; // Stop searching
-        }
-      });
-    }
-
-    if (variableNode && variablePos !== null) {
-      // Apply wrap filter to the selected variable
-      const currentFilters = variableNode.attrs.filters || [];
-      const filterExists = currentFilters.some((f: { name: string }) => f.name === 'wrap');
-      
-      if (!filterExists) {
-        const updatedFilters = [...currentFilters, { name: 'wrap' }];
-        const tr = state.tr;
-        tr.setNodeMarkup(variablePos, undefined, {
-          ...variableNode.attrs,
-          filters: updatedFilters,
-        });
-        editor.view.dispatch(tr);
-        editor.chain().focus().run();
-      }
-    } else if (selection.from !== selection.to) {
-      // For wrap filter, if text is selected, wrap it in a wrappedText node
-      const selectedText = state.doc.textBetween(selection.from, selection.to);
-      
-      if (selectedText.trim().length > 0) {
-        // Check if selection is already inside a wrappedText node
-        let isInWrappedText = false;
-        depth = $from.depth;
-        while (depth > 0) {
-          const node = $from.node(depth);
-          if (node.type.name === 'wrappedText') {
-            isInWrappedText = true;
-            break;
-          }
-          depth--;
-        }
-        
-        if (!isInWrappedText) {
-          // Replace selection with wrappedText node
-          editor.chain()
-            .focus()
-            .deleteSelection()
-            .insertContent({
-              type: 'wrappedText',
-              attrs: {
-                text: selectedText,
-              },
-            })
-            .run();
-        }
-      }
-    }
-  };
-
   // Check if variables are available
   const hasVariables = templateVars?.variables && Object.keys(templateVars.variables).length > 0;
   const hasColors = templateVars?.colors && Object.keys(templateVars.colors).length > 0;
   const hasFormatting = templateVars?.formatting && Object.keys(templateVars.formatting).length > 0;
-  const hasFilters = templateVars?.filters && templateVars.filters.length > 0;
 
   return (
     <TooltipProvider>
@@ -222,25 +137,6 @@ export function TemplateEditorToolbar({
           </ToolbarDropdown>
         )}
 
-        {/* Filters Dropdown */}
-        {hasFilters && (
-          <ToolbarDropdown
-            label="Filters"
-            icon={<Filter className="w-4 h-4" />}
-          >
-            {(close) => (
-              <FilterPickerContent
-                filters={templateVars.filters}
-                editor={editor}
-                onInsert={(filter) => {
-                  handleInsert(filter);
-                  close();
-                }}
-              />
-            )}
-          </ToolbarDropdown>
-        )}
-
         {/* Wrap Toggle Button */}
         <Tooltip>
           <TooltipTrigger asChild>
@@ -264,7 +160,7 @@ export function TemplateEditorToolbar({
         </Tooltip>
 
         {/* Divider */}
-        {(hasVariables || hasColors || hasFormatting || hasFilters) && (
+        {(hasVariables || hasColors || hasFormatting) && (
           <div className="h-6 w-px bg-border mx-1" />
         )}
 
