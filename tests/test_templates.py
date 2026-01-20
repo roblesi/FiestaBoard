@@ -248,32 +248,37 @@ class TestAlignment:
     
     def test_extract_alignment_left_implicit(self, engine):
         """Test left alignment is default."""
-        alignment, content = engine._extract_alignment("Hello World")
+        alignment, wrap_enabled, content = engine._extract_alignment("Hello World")
         assert alignment == "left"
+        assert wrap_enabled is False
         assert content == "Hello World"
     
     def test_extract_alignment_left_explicit(self, engine):
         """Test explicit {left} prefix."""
-        alignment, content = engine._extract_alignment("{left}Hello World")
+        alignment, wrap_enabled, content = engine._extract_alignment("{left}Hello World")
         assert alignment == "left"
+        assert wrap_enabled is False
         assert content == "Hello World"
     
     def test_extract_alignment_center(self, engine):
         """Test {center} prefix."""
-        alignment, content = engine._extract_alignment("{center}Hello World")
+        alignment, wrap_enabled, content = engine._extract_alignment("{center}Hello World")
         assert alignment == "center"
+        assert wrap_enabled is False
         assert content == "Hello World"
     
     def test_extract_alignment_right(self, engine):
         """Test {right} prefix."""
-        alignment, content = engine._extract_alignment("{right}Hello World")
+        alignment, wrap_enabled, content = engine._extract_alignment("{right}Hello World")
         assert alignment == "right"
+        assert wrap_enabled is False
         assert content == "Hello World"
     
     def test_extract_alignment_case_insensitive(self, engine):
         """Test alignment prefix is case insensitive."""
-        alignment, content = engine._extract_alignment("{CENTER}Hello")
+        alignment, wrap_enabled, content = engine._extract_alignment("{CENTER}Hello")
         assert alignment == "center"
+        assert wrap_enabled is False
         assert content == "Hello"
     
     def test_apply_alignment_left(self, engine):

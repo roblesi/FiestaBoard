@@ -77,10 +77,16 @@ describe('TemplateParagraph Enter Key Behavior', () => {
     const lastLineIsEmpty = lastParagraphBefore && lastParagraphBefore.content.size === 0;
     expect(lastLineIsEmpty).toBe(true);
     
-    // Manually trigger the Enter behavior
+    // Manually trigger the Enter behavior - delete last paragraph
     const tr = state.tr;
-    const lastPos = state.doc.content.size - 1;
-    tr.delete(lastPos, lastPos + 1);
+    // Calculate position of last paragraph
+    const lastIndex = state.doc.childCount - 1;
+    let lastPos = 0;
+    for (let i = 0; i < lastIndex; i++) {
+      lastPos += state.doc.child(i).nodeSize;
+    }
+    // Delete from start of last paragraph to end of document
+    tr.delete(lastPos, state.doc.content.size);
     editor.view.dispatch(tr);
     
     // Now should have 5 lines
@@ -124,8 +130,14 @@ describe('TemplateParagraph Enter Key Behavior', () => {
     
     // Delete last line
     const tr = state.tr;
-    const lastPos = state.doc.content.size - 1;
-    tr.delete(lastPos, lastPos + 1);
+    // Calculate position of last paragraph
+    const lastIndex = state.doc.childCount - 1;
+    let lastPos = 0;
+    for (let i = 0; i < lastIndex; i++) {
+      lastPos += state.doc.child(i).nodeSize;
+    }
+    // Delete from start of last paragraph to end of document
+    tr.delete(lastPos, state.doc.content.size);
     editor.view.dispatch(tr);
     
     // Should now have 5 lines
@@ -170,7 +182,14 @@ describe('TemplateParagraph Enter Key Behavior', () => {
     const { state: initialState } = editor;
     if (initialState.doc.content.childCount === 6) {
       const tr = initialState.tr;
-      tr.delete(initialState.doc.content.size - 1, initialState.doc.content.size);
+      // Calculate position of last paragraph
+      const lastIndex = initialState.doc.childCount - 1;
+      let lastPos = 0;
+      for (let i = 0; i < lastIndex; i++) {
+        lastPos += initialState.doc.child(i).nodeSize;
+      }
+      // Delete from start of last paragraph to end of document
+      tr.delete(lastPos, initialState.doc.content.size);
       editor.view.dispatch(tr);
     }
     
