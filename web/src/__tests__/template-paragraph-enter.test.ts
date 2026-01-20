@@ -79,14 +79,15 @@ describe('TemplateParagraph Enter Key Behavior', () => {
     
     // Manually trigger the Enter behavior - delete last paragraph
     const tr = state.tr;
-    // Calculate position of last paragraph
+    // Calculate position of last paragraph (start at 1 for doc opening tag)
     const lastIndex = state.doc.childCount - 1;
-    let lastPos = 0;
+    let lastPos = 1;
     for (let i = 0; i < lastIndex; i++) {
       lastPos += state.doc.child(i).nodeSize;
     }
-    // Delete from start of last paragraph to end of document
-    tr.delete(lastPos, state.doc.content.size);
+    // Delete the last paragraph
+    const lastParagraphSize = state.doc.child(lastIndex).nodeSize;
+    tr.delete(lastPos, lastPos + lastParagraphSize);
     editor.view.dispatch(tr);
     
     // Now should have 5 lines
@@ -130,14 +131,15 @@ describe('TemplateParagraph Enter Key Behavior', () => {
     
     // Delete last line
     const tr = state.tr;
-    // Calculate position of last paragraph
+    // Calculate position of last paragraph (start at 1 for doc opening tag)
     const lastIndex = state.doc.childCount - 1;
-    let lastPos = 0;
+    let lastPos = 1;
     for (let i = 0; i < lastIndex; i++) {
       lastPos += state.doc.child(i).nodeSize;
     }
-    // Delete from start of last paragraph to end of document
-    tr.delete(lastPos, state.doc.content.size);
+    // Delete the last paragraph
+    const lastParagraphSize = state.doc.child(lastIndex).nodeSize;
+    tr.delete(lastPos, lastPos + lastParagraphSize);
     editor.view.dispatch(tr);
     
     // Should now have 5 lines
@@ -182,14 +184,15 @@ describe('TemplateParagraph Enter Key Behavior', () => {
     const { state: initialState } = editor;
     if (initialState.doc.content.childCount === 6) {
       const tr = initialState.tr;
-      // Calculate position of last paragraph
+      // Calculate position of last paragraph (start at 1 for doc opening tag)
       const lastIndex = initialState.doc.childCount - 1;
-      let lastPos = 0;
+      let lastPos = 1;
       for (let i = 0; i < lastIndex; i++) {
         lastPos += initialState.doc.child(i).nodeSize;
       }
-      // Delete from start of last paragraph to end of document
-      tr.delete(lastPos, initialState.doc.content.size);
+      // Delete the last paragraph
+      const lastParagraphSize = initialState.doc.child(lastIndex).nodeSize;
+      tr.delete(lastPos, lastPos + lastParagraphSize);
       editor.view.dispatch(tr);
     }
     
