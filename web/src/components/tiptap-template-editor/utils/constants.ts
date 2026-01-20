@@ -40,5 +40,6 @@ export type SymbolName = keyof typeof SYMBOL_CHARS;
 export const BOARD_WIDTH = 22; // characters per line
 export const BOARD_LINES = 6; // total lines
 
-// Special variable name
+// Special variable names
 export const FILL_SPACE_VAR = "fill_space";
+export const FILL_SPACE_REPEAT_VAR = "fill_space_repeat";
