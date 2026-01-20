@@ -3350,9 +3350,12 @@ async def render_template(request: dict):
     template_engine = get_template_engine()
     
     try:
+        # Debug logging to see what template is being received
         if isinstance(template, list):
+            logger.info(f"Rendering template lines: {template}")
             rendered = template_engine.render_lines(template)
         else:
+            logger.info(f"Rendering template string: {template}")
             rendered = template_engine.render(template)
         
         return {

@@ -1,0 +1,787 @@
+/**
+ * Single 6-line TipTap Template Editor
+ * Replaces 6 separate line editors with one unified editor
+ * - 6 lines, 22 characters wide each
+ * - Per-line alignment support
+ * - Visual rendering of custom nodes (variables, colors, symbols, fill_space)
+ */
+"use client";
+
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import { useEffect, useCallback, useRef } from 'react';
+import { cn } from '@/lib/utils';
+import { TemplateParagraph } from './extensions/template-paragraph';
+import { VariableNode } from './extensions/variable-node';
+import { ColorTileNode } from './extensions/color-tile-node';
+import { FillSpaceNode } from './extensions/fill-space-node';
+import { SymbolNode } from './extensions/symbol-node';
+import { WrappedTextNode } from './extensions/wrapped-text-node';
+import { parseTemplate, serializeTemplate } from './utils/serialization';
+import { BOARD_LINES, BOARD_WIDTH } from './utils/constants';
+import { AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
+import type { LineAlignment } from './extensions/template-paragraph';
+import { TemplateEditorToolbar } from './components/TemplateEditorToolbar';
+
+interface TipTapTemplateEditorProps {
+  value: string; // Template string with 6 lines separated by \n
+  onChange: (value: string) => void;
+  onFocus?: () => void;
+  placeholder?: string;
+  className?: string;
+  showAlignmentControls?: boolean;
+  onLineAlignmentChange?: (lineIndex: number, alignment: LineAlignment) => void;
+  lineAlignments?: LineAlignment[]; // Array of 6 alignments
+  onLineWrapChange?: (lineIndex: number, wrapEnabled: boolean) => void;
+  lineWrapEnabled?: boolean[]; // Array of 6 wrap states
+  showToolbar?: boolean; // Show toolbar at top (default: true)
+}
+
+/**
+ * Single TipTap editor for all 6 template lines
+ */
+export function TipTapTemplateEditor({
+  value,
+  onChange,
+  onFocus,
+  placeholder = "Type text or insert variables...",
+  className,
+  showAlignmentControls = true,
+  onLineAlignmentChange,
+  lineAlignments = ['left', 'left', 'left', 'left', 'left', 'left'],
+  onLineWrapChange,
+  lineWrapEnabled = [false, false, false, false, false, false],
+  showToolbar = true,
+}: TipTapTemplateEditorProps) {
+  // Track if we're manually updating wrap to prevent onChange from overwriting state
+  const isUpdatingWrap = useRef(false);
+  
+  const editor = useEditor({
+    immediatelyRender: false,
+    extensions: [
+      StarterKit.configure({
+        heading: false,
+        blockquote: false,
+        codeBlock: false,
+        horizontalRule: false,
+        bulletList: false,
+        orderedList: false,
+        listItem: false,
+        code: false,
+        bold: false,
+        italic: false,
+        strike: false,
+        history: true,
+        document: true,
+        text: true,
+        hardBreak: false,
+        paragraph: false, // We use TemplateParagraph instead
+      }),
+      TemplateParagraph,
+      VariableNode,
+      ColorTileNode,
+      FillSpaceNode,
+      SymbolNode,
+      WrappedTextNode,
+    ],
+    content: parseTemplate(value || ''),
+    editorProps: {
+      attributes: {
+        class: cn(
+          'w-full font-mono text-sm',
+          'prose prose-sm max-w-none',
+          '[&_.ProseMirror]:outline-none',
+          '[&_.ProseMirror]:font-mono',
+          '[&_.ProseMirror]:text-sm',
+          '[&_.ProseMirror_p]:my-0 [&_.ProseMirror_p]:leading-tight',
+          '[&_.ProseMirror_p]:min-h-[1.5rem]',
+          // Constrain each paragraph to 22 characters visually
+          '[&_.ProseMirror_p]:max-w-[22ch]',
+          '[&_.ProseMirror_p]:overflow-hidden',
+          className
+        ),
+        'data-placeholder': placeholder,
+        'role': 'textbox',
+        'aria-label': 'Template editor',
+        'aria-multiline': 'true',
+      },
+      handleKeyDown: (view, event) => {
+        // Let the extension handle Enter key logic
+        // The extension's addKeyboardShortcuts will handle all Enter behavior
+        if (event.key === 'Enter') {
+          return false; // Let it propagate to extension
+        }
+        
+        // Convert lowercase letters to uppercase
+        if (event.key.length === 1 && /[a-z]/.test(event.key) && !event.ctrlKey && !event.metaKey) {
+          event.preventDefault();
+          const { state, dispatch } = view;
+          const { selection } = state;
+          const uppercaseChar = event.key.toUpperCase();
+          
+          // Insert uppercase character
+          const tr = state.tr.insertText(uppercaseChar, selection.from, selection.to);
+          dispatch(tr);
+          return true;
+        }
+        
+        return false;
+      },
+      transformPastedText: (text) => {
+        // Convert pasted text to uppercase
+        return text.toUpperCase();
+      },
+      handleDrop: (view, event, slice, moved) => {
+        // Enable drag and drop for nodes with data-drag-handle
+        if (moved) {
+          return false; // Let TipTap handle moved nodes
+        }
+        return false; // Let TipTap handle regular drops
+      },
+    },
+    onUpdate: ({ editor }) => {
+      // Skip onChange if we're manually updating wrap (to prevent state overwrite)
+      if (isUpdatingWrap.current) {
+        return;
+      }
+      const doc = editor.getJSON();
+      const templateString = serializeTemplate(doc);
+      onChange(templateString);
+    },
+    onFocus: () => {
+      onFocus?.();
+    },
+  });
+
+  // Update editor content when value changes externally
+  useEffect(() => {
+    if (editor) {
+      const currentSerialized = serializeTemplate(editor.getJSON());
+      if (value !== currentSerialized) {
+        editor.commands.setContent(parseTemplate(value || ''));
+      }
+    }
+  }, [value, editor]);
+
+  // Ensure editor always has exactly 6 paragraphs
+  useEffect(() => {
+    if (editor) {
+      const { doc } = editor.state;
+      const paragraphCount = doc.content.childCount;
+      
+      if (paragraphCount < BOARD_LINES) {
+        // Add missing paragraphs
+        const tr = editor.state.tr;
+        for (let i = paragraphCount; i < BOARD_LINES; i++) {
+          tr.insert(tr.doc.content.size, editor.schema.nodes.templateParagraph.create({ alignment: 'left' }));
+        }
+        editor.view.dispatch(tr);
+      } else if (paragraphCount > BOARD_LINES) {
+        // Remove extra paragraphs (shouldn't happen, but handle it)
+        const currentValue = serializeTemplate(editor.getJSON());
+        editor.commands.setContent(parseTemplate(currentValue));
+      }
+    }
+  }, [editor]);
+
+  // Update alignments when they change externally
+  useEffect(() => {
+    if (editor && lineAlignments) {
+      const { doc } = editor.state;
+      const tr = editor.state.tr;
+      let modified = false;
+      
+      // Iterate through paragraphs in document order
+      let paragraphIndex = 0;
+      doc.descendants((node, pos) => {
+        if (node.type.name === 'templateParagraph') {
+          // Use the current paragraph index (0-based)
+          if (paragraphIndex < BOARD_LINES) {
+            const currentAlignment = node.attrs.alignment || 'left';
+            const newAlignment = lineAlignments[paragraphIndex] || 'left';
+            
+            if (currentAlignment !== newAlignment) {
+              tr.setNodeMarkup(pos, undefined, {
+                ...node.attrs,
+                alignment: newAlignment,
+              });
+              modified = true;
+            }
+          }
+          paragraphIndex++;
+        }
+      });
+      
+      if (modified) {
+        editor.view.dispatch(tr);
+      }
+    }
+  }, [editor, lineAlignments]);
+
+  // Sync wrapEnabled state from props
+  useEffect(() => {
+    if (!editor) return;
+    
+    const { state } = editor;
+    const { doc } = state;
+    const tr = state.tr;
+    let modified = false;
+    
+    // Iterate through paragraphs in document order
+    let paragraphIndex = 0;
+    doc.descendants((node, pos) => {
+      if (node.type.name === 'templateParagraph') {
+        // Use the current paragraph index (0-based)
+        if (paragraphIndex >= 0 && paragraphIndex < BOARD_LINES) {
+          const expectedWrap = lineWrapEnabled[paragraphIndex] || false;
+          const currentWrap = node.attrs.wrapEnabled || false;
+          
+          if (currentWrap !== expectedWrap) {
+            tr.setNodeMarkup(pos, undefined, {
+              ...node.attrs,
+              wrapEnabled: expectedWrap,
+            });
+            modified = true;
+          }
+        }
+        paragraphIndex++;
+      }
+    });
+    
+    if (modified) {
+      editor.view.dispatch(tr);
+    }
+  }, [editor, lineWrapEnabled]);
+
+  // Get current line index from cursor position
+  const getCurrentLineIndex = useCallback((): number | null => {
+    if (!editor) return null;
+    const { state } = editor;
+    const { selection } = state;
+    const { $from } = selection;
+    
+    // Count paragraphs before the current position
+    let paragraphIndex = 0;
+    state.doc.nodesBetween(0, $from.pos, (node) => {
+      if (node.type.name === 'templateParagraph') {
+        paragraphIndex++;
+      }
+    });
+    
+    // If we're inside a paragraph, return its index (0-based)
+    // Otherwise return null
+    const currentParagraph = $from.node($from.depth);
+    if (currentParagraph.type.name === 'templateParagraph') {
+      return paragraphIndex - 1; // -1 because we counted the current paragraph
+    }
+    
+    return null;
+  }, [editor]);
+
+  // Handle alignment button clicks
+  const handleAlignmentClick = useCallback((alignment: LineAlignment) => {
+    if (!editor) return;
+    
+    const lineIndex = getCurrentLineIndex();
+    if (lineIndex === null || lineIndex < 0 || lineIndex >= BOARD_LINES) {
+      return; // Can't apply alignment if no line is selected
+    }
+
+    // Apply to specific line
+    const { state } = editor;
+    const { doc } = state;
+    let paragraphCount = 0;
+    
+    doc.descendants((node, pos) => {
+      if (node.type.name === 'templateParagraph') {
+        if (paragraphCount === lineIndex) {
+          const tr = state.tr;
+          tr.setNodeMarkup(pos, undefined, {
+            ...node.attrs,
+            alignment,
+          });
+          editor.view.dispatch(tr);
+          
+          // Notify parent of alignment change
+          if (onLineAlignmentChange) {
+            onLineAlignmentChange(lineIndex, alignment);
+          }
+        }
+        paragraphCount++;
+      }
+    });
+  }, [editor, getCurrentLineIndex, onLineAlignmentChange]);
+
+  // Handle wrap toggle
+  const handleWrapClick = useCallback(() => {
+    if (!editor) return;
+    
+    const lineIndex = getCurrentLineIndex();
+    if (lineIndex === null || lineIndex < 0 || lineIndex >= BOARD_LINES) {
+      return; // Can't apply wrap if no line is selected
+    }
+
+    // Toggle wrap for specific line
+    const { state } = editor;
+    const { doc } = state;
+    let paragraphCount = 0;
+    
+    doc.descendants((node, pos) => {
+      if (node.type.name === 'templateParagraph') {
+        if (paragraphCount === lineIndex) {
+          const currentWrap = node.attrs.wrapEnabled || false;
+          const newWrap = !currentWrap;
+          
+          const tr = state.tr;
+          tr.setNodeMarkup(pos, undefined, {
+            ...node.attrs,
+            wrapEnabled: newWrap,
+          });
+          editor.view.dispatch(tr);
+          
+          // Set flag to prevent onUpdate from overwriting state
+          isUpdatingWrap.current = true;
+          
+          // Notify parent of wrap change (updates state immediately)
+          if (onLineWrapChange) {
+            onLineWrapChange(lineIndex, newWrap);
+          }
+          
+          // Manually trigger onChange to ensure wrap state is included in serialization
+          // Use requestAnimationFrame to ensure transaction is fully applied and DOM is updated
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              const doc = editor.getJSON();
+              const templateString = serializeTemplate(doc);
+              onChange(templateString);
+              // Clear flag after onChange is called
+              isUpdatingWrap.current = false;
+            });
+          });
+        }
+        paragraphCount++;
+      }
+    });
+  }, [editor, getCurrentLineIndex, onLineWrapChange]);
+
+  if (!editor) {
+    return (
+      <div className={cn('min-h-[9rem] border rounded-md p-2 bg-muted/30', className)}>
+        <div className="space-y-1">
+          {Array.from({ length: BOARD_LINES }).map((_, i) => (
+            <div key={i} className="h-6 bg-background/50 rounded" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const currentLineIndex = getCurrentLineIndex();
+  const currentAlignment = currentLineIndex !== null && currentLineIndex >= 0 && currentLineIndex < BOARD_LINES
+    ? lineAlignments[currentLineIndex] || 'left'
+    : 'left';
+  const currentWrapEnabled = currentLineIndex !== null && currentLineIndex >= 0 && currentLineIndex < BOARD_LINES
+    ? lineWrapEnabled[currentLineIndex] || false
+    : false;
+
+  return (
+    <div className={cn('relative', className)}>
+      {/* Toolbar */}
+      {showToolbar && (
+        <TemplateEditorToolbar
+          editor={editor}
+          currentAlignment={currentAlignment}
+          currentWrapEnabled={currentWrapEnabled}
+          onAlignmentChange={(alignment) => {
+            handleAlignmentClick(alignment);
+          }}
+          onWrapToggle={() => {
+            handleWrapClick();
+          }}
+        />
+      )}
+      
+      {/* Editor container */}
+      <div className="flex-1">
+        <div className={cn(
+          "border bg-background relative",
+          showToolbar ? "rounded-b-md border-t-0" : "rounded-md"
+        )} style={{ 
+          padding: '0.5rem', 
+          paddingLeft: '2.5rem', 
+          overflow: 'hidden',
+          minHeight: `${BOARD_LINES * 1.5 + 1}rem`, // 6 lines * 1.5rem + 1rem padding
+          height: `${BOARD_LINES * 1.5 + 1}rem`, // Fixed height to match exactly 6 lines
+        }}>
+            {/* Line numbers - rendered as absolute positioned elements, aligned with editor lines */}
+            <div 
+              className="absolute left-0 pointer-events-none z-20"
+              style={{
+                top: '0.5rem',
+                width: '2rem',
+                display: 'flex',
+                flexDirection: 'column',
+                height: `${BOARD_LINES * 1.5}rem`, // Exactly match 6 lines height
+              }}
+            >
+              {Array.from({ length: BOARD_LINES }).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-end text-xs text-muted-foreground font-semibold"
+                  style={{ 
+                    height: '1.5rem',
+                    lineHeight: '1.5rem',
+                    margin: 0,
+                    padding: 0,
+                    paddingRight: '0.5rem',
+                    marginRight: '0.25rem',
+                  }}
+                >
+                  {i + 1}
+                </div>
+              ))}
+            </div>
+            
+            {/* Grid overlay - 22 columns × 6 rows matching board display */}
+            <div 
+              className="absolute pointer-events-none z-0"
+              style={{
+                top: '0.5rem',
+                left: '0.5rem',
+                right: '0.5rem',
+                height: `${BOARD_LINES * 1.5}rem`, // Match exactly 6 lines height
+                backgroundImage: `
+                  repeating-linear-gradient(
+                    to right,
+                    transparent 0,
+                    transparent calc(1ch - 0.5px),
+                    hsl(var(--border) / 0.2) calc(1ch - 0.5px),
+                    hsl(var(--border) / 0.2) calc(1ch + 0.5px),
+                    transparent calc(1ch + 0.5px)
+                  ),
+                  repeating-linear-gradient(
+                    to bottom,
+                    transparent 0,
+                    transparent calc(1.5rem - 0.5px),
+                    hsl(var(--border) / 0.2) calc(1.5rem - 0.5px),
+                    hsl(var(--border) / 0.2) calc(1.5rem + 0.5px),
+                    transparent calc(1.5rem + 0.5px)
+                  )
+                `,
+              }}
+            />
+          <div className="relative z-10" style={{ height: `${BOARD_LINES * 1.5}rem` }}>
+            <EditorContent editor={editor} />
+          </div>
+        </div>
+
+        {/* Alignment controls - only show if toolbar is hidden */}
+        {!showToolbar && showAlignmentControls && (
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-xs text-muted-foreground">Alignment:</span>
+              <div className="flex rounded-md border overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => handleAlignmentClick('left')}
+                  className={cn(
+                    'px-3 py-1.5 text-xs transition-colors',
+                    currentAlignment === 'left'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'hover:bg-muted text-muted-foreground'
+                  )}
+                  title="Align left"
+                >
+                  <AlignLeft className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAlignmentClick('center')}
+                  className={cn(
+                    'px-3 py-1.5 text-xs border-x transition-colors',
+                    currentAlignment === 'center'
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'hover:bg-muted text-muted-foreground'
+                  )}
+                  title="Align center"
+                >
+                  <AlignCenter className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAlignmentClick('right')}
+                  className={cn(
+                    'px-3 py-1.5 text-xs transition-colors',
+                    currentAlignment === 'right'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'hover:bg-muted text-muted-foreground'
+                  )}
+                  title="Align right"
+                >
+                  <AlignRight className="w-4 h-4" />
+                </button>
+              </div>
+              {currentLineIndex !== null && (
+                <span className="text-xs text-muted-foreground">
+                  (Line {currentLineIndex + 1})
+                </span>
+              )}
+            </div>
+          )}
+      </div>
+
+      {/* Placeholder styling */}
+      <style jsx global>{`
+        /* Ensure ProseMirror container has no spacing that affects line alignment */
+        .ProseMirror {
+          margin: 0;
+          padding: 0;
+        }
+        
+        .ProseMirror[data-placeholder]:empty::before {
+          content: attr(data-placeholder);
+          color: hsl(var(--muted-foreground));
+          float: left;
+          height: 0;
+          pointer-events: none;
+        }
+        
+        .ProseMirror:focus[data-placeholder]:empty::before {
+          opacity: 0.5;
+        }
+
+        /* Ensure each paragraph is treated as a line with FIXED height */
+        .ProseMirror > div[data-node-view-wrapper],
+        .ProseMirror > p {
+          display: flex;
+          flex-wrap: nowrap;
+          align-items: center;
+          width: 100%;
+          max-width: ${BOARD_WIDTH}ch;
+          min-height: 1.5rem;
+          max-height: 1.5rem;
+          height: 1.5rem;
+          line-height: 1.5rem;
+          margin: 0;
+          padding: 0;
+          padding-left: 6px; /* Space for cursor at position 0 */
+          text-transform: uppercase;
+          gap: 0;
+          font-family: 'Courier New', 'Courier', monospace;
+          font-size: 0.875rem;
+          letter-spacing: 0;
+          position: relative;
+          overflow: visible;
+        }
+        
+        /* Ensure no gaps between lines */
+        .ProseMirror > div[data-node-view-wrapper] + div[data-node-view-wrapper],
+        .ProseMirror > p + p {
+          margin-top: 0;
+        }
+        
+        /* Ensure empty paragraphs are visible and maintain height */
+        .ProseMirror > div[data-node-view-wrapper]:empty,
+        .ProseMirror > p:empty {
+          min-height: 1.5rem !important;
+          height: 1.5rem !important;
+          position: relative;
+        }
+        
+        /* Make it a block cursor on the currently selected empty line */
+        .ProseMirror-focused > p:empty:has(+ *):first-of-type::after,
+        .ProseMirror > p:empty:focus-within::after {
+          width: 1ch;
+          background-color: hsl(var(--primary) / 0.3);
+          border: 2px solid hsl(var(--primary));
+        }
+        
+        /* Block-style blinking cursor (dogbone) */
+        .ProseMirror-focused .ProseMirror-gapcursor {
+          display: block !important;
+        }
+        
+        .ProseMirror .ProseMirror-cursor {
+          position: relative;
+          display: inline-block;
+          width: 1ch;
+          height: 1.4rem;
+          background-color: hsl(var(--primary) / 0.5);
+          border: 2px solid hsl(var(--primary));
+          animation: blink 1s step-end infinite;
+          pointer-events: none;
+        }
+        
+        @keyframes blink {
+          0%, 50% {
+            opacity: 1;
+          }
+          50.1%, 100% {
+            opacity: 0;
+          }
+        }
+        
+        /* Force caret to always be visible */
+        .ProseMirror {
+          caret-shape: block;
+        }
+        
+        /* Ensure paragraphs can receive cursor even when empty */
+        .ProseMirror > p {
+          min-width: 1ch;
+        }
+        
+        .ProseMirror > p br {
+          display: none;
+        }
+        
+        /* Make caret a visible block */
+        .ProseMirror {
+          caret-color: hsl(var(--primary));
+        }
+        
+        .ProseMirror:focus {
+          caret-color: hsl(var(--primary));
+        }
+        
+        /* Override default caret with a block style using a pseudo-element trick */
+        @supports (caret-shape: block) {
+          .ProseMirror {
+            caret-shape: block;
+          }
+        }
+        
+        /* Reduce or remove focus ring on the container */
+        .ProseMirror:focus-visible {
+          outline: none;
+        }
+        
+        /* Ensure text nodes have proper spacing */
+        .ProseMirror > p > .text {
+          padding-left: 0;
+        }
+        
+        /* Make each character/node appear in a grid cell with FIXED height */
+        .ProseMirror > p > * {
+          display: inline-flex;
+          align-items: center;
+          vertical-align: middle;
+          max-height: 1.4rem;
+          height: auto;
+        }
+        
+        /* All inline nodes must not exceed line height */
+        .ProseMirror [data-type="variable"],
+        .ProseMirror [data-type="color-tile"],
+        .ProseMirror [data-type="symbol"],
+        .ProseMirror [data-type="fill-space"],
+        .ProseMirror [data-type="wrapped-text"] {
+          max-height: 1.4rem !important;
+          height: auto !important;
+          line-height: 1.4rem;
+          vertical-align: middle;
+        }
+        
+        /* Text should be monospace and equal width - each character is exactly 1ch */
+        .ProseMirror {
+          font-family: 'Courier New', 'Courier', monospace;
+          font-variant-numeric: tabular-nums;
+        }
+        
+        /* Subtle cell background for each character position */
+        .ProseMirror > p {
+          background-image: repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent calc(1ch - 0.5px),
+            hsl(var(--muted) / 0.05) calc(1ch - 0.5px),
+            hsl(var(--muted) / 0.05) calc(1ch + 0.5px),
+            transparent calc(1ch + 0.5px)
+          );
+        }
+        
+        /* Make fill-space nodes expand to fill available space */
+        .ProseMirror > p [data-type="fill-space"] {
+          flex: 1 1 auto;
+          min-width: 3rem;
+        }
+        
+        /* Don't transform node views (they handle their own display) */
+        .ProseMirror [data-type="variable"],
+        .ProseMirror [data-type="color-tile"],
+        .ProseMirror [data-type="symbol"],
+        .ProseMirror [data-type="fill-space"],
+        .ProseMirror [data-type="wrapped-text"] {
+          text-transform: none;
+        }
+        
+        /* Enable dragging for nodes with data-drag-handle */
+        .ProseMirror [data-drag-handle] {
+          cursor: grab;
+        }
+        
+        .ProseMirror [data-drag-handle]:active {
+          cursor: grabbing;
+        }
+
+        /* Apply text alignment based on data-alignment attribute */
+        .ProseMirror p[data-alignment="center"] {
+          text-align: center;
+        }
+        .ProseMirror p[data-alignment="right"] {
+          text-align: right;
+        }
+        .ProseMirror p[data-alignment="left"] {
+          text-align: left;
+        }
+        
+        /* Visual alignment guides - show where text aligns */
+        .ProseMirror > p[data-alignment="center"] {
+          position: relative;
+        }
+        
+        /* Visual alignment guides - use a wrapper div approach via CSS */
+        .ProseMirror > p[data-alignment="center"] {
+          position: relative;
+          background-image: 
+            linear-gradient(to bottom,
+              transparent 0%,
+              hsl(var(--primary) / 0.15) calc(50% - 0.5px),
+              hsl(var(--primary) / 0.15) calc(50% + 0.5px),
+              transparent 100%),
+            repeating-linear-gradient(
+              to right,
+              transparent 0,
+              transparent calc(1ch - 0.5px),
+              hsl(var(--muted) / 0.05) calc(1ch - 0.5px),
+              hsl(var(--muted) / 0.05) calc(1ch + 0.5px),
+              transparent calc(1ch + 0.5px)
+            );
+          background-size: 1px 100%, auto;
+          background-position: center, 0 0;
+          background-repeat: no-repeat, repeat;
+        }
+        
+        .ProseMirror > p[data-alignment="right"] {
+          position: relative;
+          background-image: 
+            linear-gradient(to bottom,
+              transparent 0%,
+              hsl(var(--primary) / 0.15) calc(50% - 0.5px),
+              hsl(var(--primary) / 0.15) calc(50% + 0.5px),
+              transparent 100%),
+            repeating-linear-gradient(
+              to right,
+              transparent 0,
+              transparent calc(1ch - 0.5px),
+              hsl(var(--muted) / 0.05) calc(1ch - 0.5px),
+              hsl(var(--muted) / 0.05) calc(1ch + 0.5px),
+              transparent calc(1ch + 0.5px)
+            );
+          background-size: 1px 100%, auto;
+          background-position: right, 0 0;
+          background-repeat: no-repeat, repeat;
+        }
+      `}</style>
+    </div>
+  );
+}
