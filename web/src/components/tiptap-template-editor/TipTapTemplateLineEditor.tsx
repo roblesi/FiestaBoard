@@ -1,6 +1,6 @@
 /**
  * TipTap Template Line Editor - Complete wrapper with toolbar and metrics
- * Drop-in replacement for template-line-editor.tsx
+ * Includes toolbar above editor and metrics (length/overflow) below
  */
 "use client";
 
@@ -33,7 +33,6 @@ interface TipTapTemplateLineEditorProps {
 
 /**
  * Complete TipTap template line editor with toolbar and metrics
- * Compatible with existing template-line-editor interface
  */
 export function TipTapTemplateLineEditor({
   value,
