@@ -1105,14 +1105,13 @@ class TemplateEngine:
         Returns:
             Text with fill_space markers replaced by appropriate padding
         """
-        from src.board_chars import BoardChars
+        from ..board_chars import BoardChars
         
         # The fill_space marker patterns
         FILL_MARKER = '\x00FILL_SPACE\x00'
         FILL_REPEAT_PREFIX = '\x00FILL_SPACE_REPEAT:'
         
         # Find all fill markers (both regular and repeat)
-        import re
         fill_pattern = re.compile(r'\x00FILL_SPACE(?:_REPEAT:(.+?))?\x00')
         fill_matches = list(fill_pattern.finditer(text))
         fill_count = len(fill_matches)

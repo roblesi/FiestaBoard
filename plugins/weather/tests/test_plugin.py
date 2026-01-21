@@ -360,6 +360,20 @@ class TestWeatherPlugin:
 class TestWeatherForecastData:
     """Tests for forecast data fetching."""
     
+    @pytest.fixture
+    def weather_manifest(self):
+        """Create a test manifest for the weather plugin."""
+        return {
+            "id": "weather",
+            "name": "Weather",
+            "version": "1.0.0",
+            "description": "Weather plugin",
+            "author": "Test",
+            "settings_schema": {},
+            "variables": {"simple": ["temperature", "condition"]},
+            "max_lengths": {}
+        }
+    
     @patch('requests.get')
     def test_weatherapi_forecast_data(self, mock_get):
         """Test fetching forecast data from WeatherAPI."""
@@ -498,7 +512,7 @@ class TestWeatherForecastData:
         forecast_response.json.return_value = {
             "list": [
                 {"main": {"temp": 65, "temp_max": 65, "temp_min": 52}, "pop": 0.0},
-                {"main": {"temp": 60, "temp_max": 65, "temp_min": 52}, "pop": 0.1},
+                {"main": {"temp": 52, "temp_max": 65, "temp_min": 50}, "pop": 0.1},
             ]
         }
         forecast_response.raise_for_status = Mock()
@@ -703,8 +717,8 @@ class TestWeatherForecastData:
         assert result["feels_like_c"] == 19  # (66 - 32) * 5/9 ≈ 19
         assert result["high_temp_c"] == 25  # (77 - 32) * 5/9 = 25
         assert result["low_temp_c"] == 15  # (59 - 32) * 5/9 = 15
-        # Check Celsius variables are included
-        assert "temperature_c" in result.data
-        assert "feels_like_c" in result.data
-        assert "high_temp_c" in result.data
-        assert "low_temp_c" in result.data
+        # Check Celsius variables are included (result is a dict, not PluginResult)
+        assert "temperature_c" in result
+        assert "feels_like_c" in result
+        assert "high_temp_c" in result
+        assert "low_temp_c" in result
