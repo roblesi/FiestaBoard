@@ -466,8 +466,8 @@ export function TipTapTemplateEditor({
           letter-spacing: 0;
           line-height: 1.5rem;
           white-space: nowrap;
-          overflow: hidden;
-          max-width: ${BOARD_WIDTH}ch;
+          overflow: visible; /* Let content flow naturally, limit via input handling */
+          display: block;
         }
         
         /* Hard breaks create line breaks naturally */
@@ -499,19 +499,27 @@ export function TipTapTemplateEditor({
           outline: none;
         }
         
-        /* Inline nodes - keep them truly inline */
+        /* Inline nodes - keep them truly inline, no wrapping */
         .ProseMirror [data-type="variable"],
         .ProseMirror [data-type="color-tile"],
         .ProseMirror [data-type="symbol"],
         .ProseMirror [data-type="fill-space"],
         .ProseMirror [data-type="wrapped-text"] {
-          display: inline;
-          vertical-align: baseline;
+          display: inline-block !important;
+          vertical-align: middle;
+          white-space: nowrap;
         }
         
-        /* Node view wrappers */
+        /* Node view wrappers - prevent wrapping */
         .ProseMirror [data-node-view-wrapper] {
-          display: inline;
+          display: inline-block !important;
+          vertical-align: middle;
+          white-space: nowrap;
+        }
+        
+        /* Ensure text nodes also don't wrap */
+        .ProseMirror p > span {
+          white-space: nowrap;
         }
         
         /* All inline nodes must not exceed line height */

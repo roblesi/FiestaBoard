@@ -27,6 +27,21 @@ export function insertTemplateContent(
     return;
   }
 
+  // Get current cursor position before insertion
+  const { from } = editor.state.selection;
+  
   // Insert at current cursor position
   editor.chain().focus().insertContent(nodes).run();
+  
+  // Calculate the size of inserted content to position cursor correctly
+  // For atomic nodes, we need to move cursor past the node
+  let insertedSize = 0;
+  nodes.forEach((node: any) => {
+    // Atomic nodes (color tiles, variables, symbols, etc.) take 1 position
+    insertedSize += 1;
+  });
+  
+  // Set cursor position after the inserted content
+  const newPosition = from + insertedSize;
+  editor.commands.setTextSelection(newPosition);
 }

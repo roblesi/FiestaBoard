@@ -40,6 +40,7 @@ export function SymbolNodeView({ node, deleteNode, selected }: SymbolNodeViewPro
       style={{
         display: 'inline-block',
         verticalAlign: 'middle',
+        whiteSpace: 'nowrap',
       }}
     >
       <span className="font-mono text-[11px]">

@@ -42,6 +42,7 @@ export function VariableNodeView({ node, deleteNode, selected }: VariableNodeVie
       style={{
         display: 'inline-block',
         verticalAlign: 'middle',
+        whiteSpace: 'nowrap',
       }}
     >
       {/* Variable display */}

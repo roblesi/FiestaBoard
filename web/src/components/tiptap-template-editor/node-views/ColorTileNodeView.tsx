@@ -56,6 +56,7 @@ export function ColorTileNodeView({ node, deleteNode, selected }: ColorTileNodeV
         display: 'inline-block',
         verticalAlign: 'middle',
         marginRight: '1px',
+        whiteSpace: 'nowrap',
       }}
       title={`${color} tile (code ${code})`}
     >

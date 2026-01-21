@@ -39,6 +39,7 @@ export function WrappedTextView({ node, deleteNode, selected }: WrappedTextViewP
       style={{
         display: 'inline-block',
         verticalAlign: 'middle',
+        whiteSpace: 'nowrap',
       }}
     >
       {/* Wrap icon */}
