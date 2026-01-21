@@ -19,6 +19,7 @@ import { SymbolNode } from './extensions/symbol-node';
 import { WrappedTextNode } from './extensions/wrapped-text-node';
 import { parseTemplateSimple, serializeTemplateSimple } from './utils/serialization';
 import { BOARD_LINES, BOARD_WIDTH } from './utils/constants';
+import { calculateLineLength } from './utils/length-calculator';
 import { AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
 export type LineAlignment = 'left' | 'center' | 'right';
 import { TemplateEditorToolbar } from './components/TemplateEditorToolbar';
@@ -104,9 +105,13 @@ export function TipTapTemplateEditor({
       },
       handleKeyDown: (view, event) => {
         const { state } = view;
+        const { selection } = state;
+        const { $from } = selection;
         
-        // Handle Enter key - limit to 6 lines (5 hard breaks)
-        if (event.key === 'Enter') {
+        // Handle Enter key - insert hardBreak instead of new paragraph, limit to 6 lines
+        if (event.key === 'Enter' && !event.shiftKey) {
+          event.preventDefault();
+          
           // Count existing hard breaks
           let hardBreakCount = 0;
           state.doc.descendants((node) => {
@@ -117,22 +122,73 @@ export function TipTapTemplateEditor({
           
           // If we already have 5 or more hard breaks (6+ lines), prevent adding more
           if (hardBreakCount >= 5) {
+            return true; // Block
+          }
+          
+          // Insert a hardBreak instead of creating a new paragraph
+          const tr = state.tr.replaceSelectionWith(state.schema.nodes.hardBreak.create());
+          view.dispatch(tr);
+          return true;
+        }
+        
+        // Handle regular character input
+        if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+          // Find current line boundaries (between hardBreaks)
+          const paragraph = $from.node($from.depth);
+          if (paragraph.type.name !== 'paragraph') {
+            return false;
+          }
+          
+          // Find current line by collecting nodes between hardBreaks
+          const lineNodes: any[] = [];
+          let foundStart = false;
+          
+          // Traverse paragraph content to find current line
+          paragraph.content.forEach((node, offset) => {
+            const nodePos = $from.start() + offset;
+            
+            // If this is a hardBreak after cursor, we're done with this line
+            if (node.type.name === 'hardBreak' && nodePos >= $from.pos && foundStart) {
+              return false; // Stop iteration
+            }
+            
+            // If we've passed a hardBreak before cursor, start collecting
+            if (node.type.name === 'hardBreak' && nodePos < $from.pos) {
+              lineNodes.length = 0; // Reset - new line starts after this break
+              foundStart = true;
+              return;
+            }
+            
+            // If this is a hardBreak after cursor position, we're done
+            if (node.type.name === 'hardBreak' && nodePos >= $from.pos) {
+              return false;
+            }
+            
+            // Collect non-hardBreak nodes for current line
+            if (node.type.name !== 'hardBreak') {
+              lineNodes.push(node.toJSON());
+              foundStart = true;
+            }
+          });
+          
+          // Calculate current line length using proper calculator
+          const currentLineLength = calculateLineLength(lineNodes);
+          
+          // If typing would exceed 22 characters and we're not replacing a selection, block it
+          const isReplacing = !selection.empty;
+          if (!isReplacing && currentLineLength >= BOARD_WIDTH) {
             event.preventDefault();
             return true; // Block
           }
           
-          // Otherwise allow default hard break behavior
-          return false;
-        }
-        
-        // Handle text input - convert lowercase to uppercase
-        if (event.key.length === 1 && /[a-z]/.test(event.key) && !event.ctrlKey && !event.metaKey && !event.altKey) {
-          event.preventDefault();
-          const { selection } = state;
-          const uppercaseChar = event.key.toUpperCase();
-          const tr = state.tr.insertText(uppercaseChar, selection.from, selection.to);
-          view.dispatch(tr);
-          return true;
+          // Convert lowercase to uppercase
+          if (/[a-z]/.test(event.key)) {
+            event.preventDefault();
+            const uppercaseChar = event.key.toUpperCase();
+            const tr = state.tr.insertText(uppercaseChar, selection.from, selection.to);
+            view.dispatch(tr);
+            return true;
+          }
         }
         
         return false;
@@ -400,7 +456,7 @@ export function TipTapTemplateEditor({
           opacity: 0.5;
         }
 
-        /* Standard paragraph - natural text flow */
+        /* Standard paragraph - no wrapping, fixed line height */
         .ProseMirror > p {
           margin: 0;
           padding: 0;
@@ -409,9 +465,9 @@ export function TipTapTemplateEditor({
           font-size: 0.875rem;
           letter-spacing: 0;
           line-height: 1.5rem;
-          white-space: pre-wrap;
-          word-break: break-all;
-          max-width: ${BOARD_WIDTH}ch;
+          white-space: nowrap;
+          overflow: visible; /* Let content flow naturally, limit via input handling */
+          display: block;
         }
         
         /* Hard breaks create line breaks naturally */
@@ -443,19 +499,27 @@ export function TipTapTemplateEditor({
           outline: none;
         }
         
-        /* Inline nodes - keep them truly inline */
+        /* Inline nodes - keep them truly inline, no wrapping */
         .ProseMirror [data-type="variable"],
         .ProseMirror [data-type="color-tile"],
         .ProseMirror [data-type="symbol"],
         .ProseMirror [data-type="fill-space"],
         .ProseMirror [data-type="wrapped-text"] {
-          display: inline;
-          vertical-align: baseline;
+          display: inline-block !important;
+          vertical-align: middle;
+          white-space: nowrap;
         }
         
-        /* Node view wrappers */
+        /* Node view wrappers - prevent wrapping */
         .ProseMirror [data-node-view-wrapper] {
-          display: inline;
+          display: inline-block !important;
+          vertical-align: middle;
+          white-space: nowrap;
+        }
+        
+        /* Ensure text nodes also don't wrap */
+        .ProseMirror p > span {
+          white-space: nowrap;
         }
         
         /* All inline nodes must not exceed line height */
