@@ -138,8 +138,17 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    /* Reserve space for scrollbar to prevent layout shift */
+    scrollbar-gutter: stable;
+  }
   body {
     @apply bg-background text-foreground;
+  }
+  /* Prevent Radix UI Select from removing scrollbar when opened */
+  body[data-scroll-locked] {
+    overflow-y: scroll !important;
+    margin-right: 0 !important;
   }
 }
 

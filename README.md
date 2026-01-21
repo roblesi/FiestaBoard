@@ -74,7 +74,7 @@ FiestaBoard uses a **plugin architecture** - each feature is a self-contained pl
 - 📈 **[Stocks](./plugins/stocks/docs/SETUP.md)**: Monitor stock prices with color-coded indicators
 - 🌊 **[Surf Conditions](./plugins/surf/docs/SETUP.md)**: Live surf reports with wave height and quality ratings
 - 🚗 **[Traffic](./plugins/traffic/docs/SETUP.md)**: Travel time to destinations with live traffic
-- 🌤️ **[Weather](./plugins/weather/docs/SETUP.md)**: Current weather conditions with text-based icons
+- 🌤️ **[Weather](./plugins/weather/docs/SETUP.md)**: Current conditions with temperature (F/C), UV index, precipitation chance, daily high/low, and sunset time
 
 **→ [Plugin Development Guide](./docs/development/PLUGIN_DEVELOPMENT.md)** - Create your own plugins!
 
@@ -373,11 +373,15 @@ MIT License - see [LICENSE](./LICENSE) file for details.
 
 ![Sports Scores Display](./plugins/sports_scores/docs/sports-scores-display.png)
 
+**Weather**: Current conditions with temperature, UV index, precipitation chance, and daily high/low temperatures
+
+![Weather Display](./plugins/weather/docs/weather-display.png)
+
 ### Other Available Features
 
 The board can display various screens:
 
-- **Weather + DateTime**: Current conditions with temperature and text-based weather icons
+- **Weather + DateTime**: Current conditions with temperature (Fahrenheit/Celsius), UV index with color coding, precipitation chance, daily high/low temperatures, and sunset time
 - **Home Assistant**: House status with green ([G]) and red ([R]) indicators
 - **Star Trek Quotes**: Inspiring quotes from TNG, Voyager, and DS9
 - **Guest WiFi**: SSID and password for guests

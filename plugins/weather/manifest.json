@@ -34,6 +34,7 @@
         "type": "array",
         "title": "Locations",
         "description": "Weather locations to monitor (max 4)",
+        "minItems": 1,
         "maxItems": 4,
         "items": {
           "type": "object",
@@ -93,26 +94,45 @@
   "variables": {
     "simple": [
       "temperature",
+      "temperature_c",
       "feels_like",
+      "feels_like_c",
       "condition",
       "humidity",
       "wind_speed",
       "location",
       "location_name",
       "location_count",
-      "temperature_color"
+      "temperature_color",
+      "uv_index_color",
+      "precipitation_chance",
+      "high_temp",
+      "high_temp_c",
+      "low_temp",
+      "low_temp_c",
+      "uv_index",
+      "sunset"
     ],
     "arrays": {
       "locations": {
         "label_field": "location_name",
         "item_fields": [
           "temperature",
+          "temperature_c",
           "feels_like",
+          "feels_like_c",
           "condition",
           "humidity",
           "wind_speed",
           "location",
-          "location_name"
+          "location_name",
+          "precipitation_chance",
+          "high_temp",
+          "high_temp_c",
+          "low_temp",
+          "low_temp_c",
+          "uv_index",
+          "sunset"
         ]
       }
     }
@@ -120,7 +140,9 @@
 
   "max_lengths": {
     "temperature": 3,
+    "temperature_c": 3,
     "feels_like": 3,
+    "feels_like_c": 3,
     "condition": 12,
     "humidity": 3,
     "wind_speed": 3,
@@ -128,13 +150,30 @@
     "location_name": 10,
     "location_count": 1,
     "temperature_color": 4,
+    "uv_index_color": 4,
+    "precipitation_chance": 3,
+    "high_temp": 3,
+    "high_temp_c": 3,
+    "low_temp": 3,
+    "low_temp_c": 3,
+    "uv_index": 2,
+    "sunset": 8,
     "locations.*.temperature": 3,
+    "locations.*.temperature_c": 3,
     "locations.*.feels_like": 3,
+    "locations.*.feels_like_c": 3,
     "locations.*.condition": 12,
     "locations.*.humidity": 3,
     "locations.*.wind_speed": 3,
     "locations.*.location": 15,
-    "locations.*.location_name": 10
+    "locations.*.location_name": 10,
+    "locations.*.precipitation_chance": 3,
+    "locations.*.high_temp": 3,
+    "locations.*.high_temp_c": 3,
+    "locations.*.low_temp": 3,
+    "locations.*.low_temp_c": 3,
+    "locations.*.uv_index": 2,
+    "locations.*.sunset": 8
   },
 
   "color_rules_schema": {
@@ -147,6 +186,17 @@
         {"condition": ">=", "value": 60, "color": "green"},
         {"condition": ">=", "value": 45, "color": "blue"},
         {"condition": "<", "value": 45, "color": "violet"}
+      ]
+    },
+    "uv_index": {
+      "type": "threshold",
+      "description": "Color based on UV index value (standard UV index color scheme)",
+      "default_rules": [
+        {"condition": ">=", "value": 11, "color": "violet"},
+        {"condition": ">=", "value": 8, "color": "red"},
+        {"condition": ">=", "value": 6, "color": "orange"},
+        {"condition": ">=", "value": 3, "color": "yellow"},
+        {"condition": "<", "value": 3, "color": "green"}
       ]
     }
   }

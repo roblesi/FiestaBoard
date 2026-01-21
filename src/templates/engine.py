@@ -653,8 +653,22 @@ class TemplateEngine:
         plugin_id = parts[0].lower()
         field = parts[1].lower()
         
-        # Get color rules for this field from plugin config
+        # Skip automatic coloring for fields that have separate _color variables
+        # These fields should only be colored via their explicit _color variable
+        if field in ("uv_index", "temperature"):
+            return ""
+        
+        # Try to get color rules from config manager first (for legacy features)
         rules = self.config_manager.get_color_rules(plugin_id, field)
+        
+        # If not found, try to get from plugin manifest
+        if not rules and self._plugin_registry:
+            manifest = self._plugin_registry.get_manifest(plugin_id)
+            if manifest and manifest.color_rules_schema:
+                field_schema = manifest.color_rules_schema.get(field)
+                if field_schema and isinstance(field_schema, dict):
+                    rules = field_schema.get("default_rules", [])
+        
         if not rules:
             return ""
         
@@ -834,9 +848,10 @@ class TemplateEngine:
         
         field = parts[1]
         
-        # Check if this is a _color request
-        if field.endswith('_color'):
-            base_field = field[:-6]  # Remove '_color' suffix
+        # Check if this is a _color request (case-insensitive)
+        field_lower = field.lower()
+        if field_lower.endswith('_color'):
+            base_field = field_lower[:-6]  # Remove '_color' suffix (already lowercased)
             color_result = self._get_color_only(source, base_field, context)
             # If color lookup fails, return empty string (no color tile)
             return color_result if color_result else ""
@@ -897,8 +912,17 @@ class TemplateEngine:
         Returns:
             Color tile like '{65}' or empty string if no rule matches
         """
-        # Get color rules for this field from plugin config
+        # Try to get color rules from config manager first (for legacy features)
         rules = self.config_manager.get_color_rules(plugin_id, field)
+        
+        # If not found, try to get from plugin manifest
+        if not rules and self._plugin_registry:
+            manifest = self._plugin_registry.get_manifest(plugin_id)
+            if manifest and manifest.color_rules_schema:
+                field_schema = manifest.color_rules_schema.get(field)
+                if field_schema and isinstance(field_schema, dict):
+                    rules = field_schema.get("default_rules", [])
+        
         if not rules:
             return ""
         
@@ -1231,7 +1255,16 @@ class TemplateEngine:
                 field = parts[1]
                 # Check if plugin has color rules for this field
                 try:
+                    # Try to get color rules from config manager first (for legacy features)
                     rules = self.config_manager.get_color_rules(plugin_id, field)
+                    
+                    # If not found, try to get from plugin manifest
+                    if not rules and self._plugin_registry:
+                        manifest = self._plugin_registry.get_manifest(plugin_id)
+                        if manifest and manifest.color_rules_schema:
+                            field_schema = manifest.color_rules_schema.get(field)
+                            if field_schema and isinstance(field_schema, dict):
+                                rules = field_schema.get("default_rules", [])
                     if rules:
                         color_prefix_len = 2  # Color tile + space
                 except Exception:
