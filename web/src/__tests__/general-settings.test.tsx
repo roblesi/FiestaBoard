@@ -53,12 +53,11 @@ describe("GeneralSettings", () => {
   });
 
   it("shows timezone picker", async () => {
-    const { container } = render(<GeneralSettings />, { wrapper: TestWrapper });
+    render(<GeneralSettings />, { wrapper: TestWrapper });
 
     await waitFor(() => {
       expect(screen.getByText("Timezone")).toBeInTheDocument();
-      const select = container.querySelector("select");
-      expect(select).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Search timezone...")).toBeInTheDocument();
     });
   });
 
@@ -108,22 +107,32 @@ describe("GeneralSettings", () => {
 
   it("shows save button when changes are made", async () => {
     const user = userEvent.setup();
-    const { container } = render(<GeneralSettings />, { wrapper: TestWrapper });
+    render(<GeneralSettings />, { wrapper: TestWrapper });
 
     await waitFor(() => {
-      const select = container.querySelector("select");
-      expect(select).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Search timezone...")).toBeInTheDocument();
     });
 
-    // Change timezone
-    const timezoneSelect = container.querySelector("select") as HTMLSelectElement;
-    await user.selectOptions(timezoneSelect, "America/New_York");
+    // Change timezone by typing and selecting
+    const timezoneInput = screen.getByPlaceholderText("Search timezone...");
+    await user.click(timezoneInput);
+    await user.clear(timezoneInput);
+    await user.type(timezoneInput, "New York");
+    
+    // Wait for dropdown and select New York
+    await waitFor(() => {
+      const newYorkOption = screen.queryByText(/America\/New York/i);
+      expect(newYorkOption).toBeInTheDocument();
+    }, { timeout: 3000 });
+    
+    const newYorkOption = screen.getByText(/America\/New York/i);
+    await user.click(newYorkOption);
 
     // Save button should appear
     await waitFor(() => {
       const saveButton = screen.queryByText(/Save Changes/i);
       // Button might appear after state changes
-      expect(saveButton || container.querySelector("select")).toBeInTheDocument();
+      expect(saveButton || screen.getByPlaceholderText("Search timezone...")).toBeInTheDocument();
     });
   });
 
@@ -138,16 +147,26 @@ describe("GeneralSettings", () => {
 
   it("disables controls while saving", async () => {
     const user = userEvent.setup();
-    const { container } = render(<GeneralSettings />, { wrapper: TestWrapper });
+    render(<GeneralSettings />, { wrapper: TestWrapper });
 
     await waitFor(() => {
-      const select = container.querySelector("select");
-      expect(select).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Search timezone...")).toBeInTheDocument();
     });
 
     // Attempt to change settings
-    const timezoneSelect = container.querySelector("select") as HTMLSelectElement;
-    await user.selectOptions(timezoneSelect, "America/New_York");
+    const timezoneInput = screen.getByPlaceholderText("Search timezone...");
+    await user.click(timezoneInput);
+    await user.clear(timezoneInput);
+    await user.type(timezoneInput, "New York");
+    
+    // Wait for dropdown and select New York
+    await waitFor(() => {
+      const newYorkOption = screen.queryByText(/America\/New York/i);
+      expect(newYorkOption).toBeInTheDocument();
+    }, { timeout: 3000 });
+    
+    const newYorkOption = screen.getByText(/America\/New York/i);
+    await user.click(newYorkOption);
 
     // Component should handle saving state
     await waitFor(() => {
