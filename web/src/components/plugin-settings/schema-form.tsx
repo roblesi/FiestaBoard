@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { TimezonePicker } from "@/components/ui/timezone-picker";
 import { cn } from "@/lib/utils";
 import { Plus, Trash2, Eye, EyeOff, MapPin, Loader2 } from "lucide-react";
 
@@ -60,8 +61,10 @@ interface FieldProps {
 
 function StringField({ name, property, value, onChange, required, disabled }: FieldProps) {
   const [showPassword, setShowPassword] = useState(false);
+  const [timezoneValid, setTimezoneValid] = useState(true);
   const isPassword = property["ui:widget"] === "password";
   const isTextarea = property["ui:widget"] === "textarea";
+  const isTimezone = property["ui:widget"] === "timezone";
   
   if (property.enum && property.enum.length > 0) {
     return (
@@ -99,6 +102,17 @@ function StringField({ name, property, value, onChange, required, disabled }: Fi
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
           "disabled:cursor-not-allowed disabled:opacity-50"
         )}
+      />
+    );
+  }
+
+  if (isTimezone) {
+    return (
+      <TimezonePicker
+        value={String(value || "")}
+        onChange={onChange}
+        disabled={disabled}
+        onValidationChange={setTimezoneValid}
       />
     );
   }

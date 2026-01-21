@@ -21,7 +21,8 @@
         "type": "string",
         "title": "Timezone",
         "description": "IANA timezone name (e.g., America/Los_Angeles)",
-        "default": "America/Los_Angeles"
+        "default": "America/Los_Angeles",
+        "ui:widget": "timezone"
       }
     }
   },
@@ -46,7 +47,15 @@
       "year",
       "hour",
       "minute",
-      "timezone_abbr"
+      "timezone_abbr",
+      "time_12h",
+      "time_24h",
+      "date_us",
+      "date_us_short",
+      "month_number",
+      "month_number_padded",
+      "month_abbr",
+      "timezone"
     ]
   },
 
@@ -60,7 +69,15 @@
     "year": 4,
     "hour": 2,
     "minute": 2,
-    "timezone_abbr": 5
+    "timezone_abbr": 5,
+    "time_12h": 8,
+    "time_24h": 5,
+    "date_us": 10,
+    "date_us_short": 8,
+    "month_number": 2,
+    "month_number_padded": 2,
+    "month_abbr": 3,
+    "timezone": 30
   }
 }
 
