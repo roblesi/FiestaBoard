@@ -580,7 +580,15 @@ export interface PluginManifest {
   settings_schema: Record<string, unknown>;
   variables: {
     simple?: string[];
-    arrays?: Record<string, { label_field: string; item_fields: string[] }>;
+    arrays?: Record<string, {
+      label_field: string;
+      item_fields: string[];
+      sub_arrays?: Record<string, {
+        key_type?: "index" | "dynamic";
+        key_field?: string;
+        item_fields: string[];
+      }>;
+    }>;
     nested?: Record<string, unknown>;
     dynamic?: boolean;
   };
