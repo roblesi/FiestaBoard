@@ -8,6 +8,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { BoardDisplay } from "@/components/board-display";
 import { TipTapTemplateEditor } from "@/components/tiptap-template-editor/TipTapTemplateEditor";
+import { PlainTextEditor } from "@/components/plain-text-editor";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { queryKeys } from "@/hooks/use-board";
 import {
@@ -129,6 +131,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
   const [lineWrapEnabled, setLineWrapEnabled] = useState<boolean[]>([false, false, false, false, false, false]);
   const [preview, setPreview] = useState<string | null>(null);
   const [draftRestored, setDraftRestored] = useState(false);
+  const [editorMode, setEditorMode] = useState<"rich" | "plain">("rich");
 
   // Debounced state (for expensive operations)
   const [debouncedTemplateLines, setDebouncedTemplateLines] = useState<string[]>(["", "", "", "", "", ""]);
@@ -562,41 +565,84 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
 
             {/* Template line editors */}
             <div className="space-y-3">
-              {/* Single 6-line template editor */}
-              <TipTapTemplateEditor
-                value={templateLines.join('\n')}
-                onChange={(newValue) => {
-                  // Skip parsing if we're manually updating wrap (to prevent state overwrite)
-                  if (isUpdatingWrap.current) {
-                    return;
-                  }
-                  
-                  // Parse the plain text back into lines
-                  const lines = newValue.split('\n').slice(0, 6);
-                  const newLines: string[] = [];
-                  
-                  for (let i = 0; i < 6; i++) {
-                    newLines.push(lines[i] || '');
-                  }
-                  
-                  setTemplateLines(newLines);
-                }}
-                lineAlignments={lineAlignments}
-                lineWrapEnabled={lineWrapEnabled}
-                onLineAlignmentChange={(lineIndex, alignment) => {
-                  const newAlignments = [...lineAlignments];
-                  newAlignments[lineIndex] = alignment;
-                  setLineAlignments(newAlignments);
-                }}
-                onLineWrapChange={(lineIndex, wrapEnabled) => {
-                  const newWrapStates = [...lineWrapEnabled];
-                  newWrapStates[lineIndex] = wrapEnabled;
-                  setLineWrapEnabled(newWrapStates);
-                }}
-                placeholder="Type template syntax like {{weather.temp}} or {{red}} for color tiles"
-                showAlignmentControls={true}
-                showToolbar={true}
-              />
+              <Tabs value={editorMode} onValueChange={(value) => setEditorMode(value as "rich" | "plain")}>
+                <TabsList className="grid w-full max-w-md grid-cols-2">
+                  <TabsTrigger value="rich">Rich Editor</TabsTrigger>
+                  <TabsTrigger value="plain">Plain Text</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="rich" className="mt-4">
+                  {/* Single 6-line template editor */}
+                  <TipTapTemplateEditor
+                    value={(() => {
+                      // Always ensure clean content without alignment prefixes for rich editor
+                      return templateLines.map(line => {
+                        const { content } = extractAlignment(line);
+                        return content;
+                      }).join('\n');
+                    })()}
+                    onChange={(newValue) => {
+                      // Skip parsing if we're manually updating wrap (to prevent state overwrite)
+                      if (isUpdatingWrap.current) {
+                        return;
+                      }
+                      
+                      // Parse the plain text back into lines and strip any alignment prefixes
+                      const lines = newValue.split('\n').slice(0, 6);
+                      const newLines: string[] = [];
+                      
+                      for (let i = 0; i < 6; i++) {
+                        // Strip any alignment prefixes that might have been typed
+                        const { content } = extractAlignment(lines[i] || '');
+                        newLines.push(content);
+                      }
+                      
+                      setTemplateLines(newLines);
+                    }}
+                    lineAlignments={lineAlignments}
+                    lineWrapEnabled={lineWrapEnabled}
+                    onLineAlignmentChange={(lineIndex, alignment) => {
+                      const newAlignments = [...lineAlignments];
+                      newAlignments[lineIndex] = alignment;
+                      setLineAlignments(newAlignments);
+                    }}
+                    onLineWrapChange={(lineIndex, wrapEnabled) => {
+                      const newWrapStates = [...lineWrapEnabled];
+                      newWrapStates[lineIndex] = wrapEnabled;
+                      setLineWrapEnabled(newWrapStates);
+                    }}
+                    placeholder="Type template syntax like {{weather.temp}} or {{red}} for color tiles"
+                    showAlignmentControls={true}
+                    showToolbar={true}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="plain" className="mt-4">
+                  <PlainTextEditor
+                    value={getTemplateWithAlignments().join('\n')}
+                    onChange={(newValue) => {
+                      // Parse raw text back into template lines and alignments
+                      const lines = newValue.split('\n');
+                      const newContents: string[] = [];
+                      const newAlignments: LineAlignment[] = [];
+                      const newWrapStates: boolean[] = [];
+                      
+                      for (let i = 0; i < 6; i++) {
+                        const line = lines[i] || "";
+                        const { alignment, wrapEnabled, content } = extractAlignment(line);
+                        newAlignments.push(alignment);
+                        newWrapStates.push(wrapEnabled);
+                        newContents.push(content);
+                      }
+                      
+                      setTemplateLines(newContents);
+                      setLineAlignments(newAlignments);
+                      setLineWrapEnabled(newWrapStates);
+                    }}
+                    placeholder="Type your template text with alignment prefixes like {center}, {right}, {wrap}"
+                  />
+                </TabsContent>
+              </Tabs>
 
               {/* Live preview */}
               <div className="mt-4">
