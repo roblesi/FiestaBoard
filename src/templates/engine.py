@@ -70,6 +70,7 @@ COLOR_PATTERN = re.compile(r'\{\{(red|orange|yellow|green|blue|violet|purple|whi
 SYMBOL_PATTERN = re.compile(r'\{(sun|star|cloud|rain|snow|storm|fog|partly|heart|check|x)\}', re.IGNORECASE)
 ALIGNMENT_PATTERN = re.compile(r'^\{(left|center|right)\}', re.IGNORECASE)
 FILL_SPACE_PATTERN = re.compile(r'\{\{fill_space\}\}', re.IGNORECASE)
+FILL_SPACE_REPEAT_PATTERN = re.compile(r'\{\{fill_space_repeat:(.+?)\}\}', re.IGNORECASE)
 
 
 @dataclass
@@ -765,6 +766,11 @@ class TemplateEngine:
         if expr.lower() == 'fill_space':
             return '\x00FILL_SPACE\x00'  # Special marker to be processed later
         
+        # Handle fill_space_repeat:char/string variable
+        if expr.lower().startswith('fill_space_repeat:'):
+            repeat_str = expr.split(':', 1)[1] if ':' in expr else ' '
+            return f'\x00FILL_SPACE_REPEAT:{repeat_str}\x00'  # Special marker with repeat pattern
+        
         parts = expr.split('.')
         
         if len(parts) < 2:
@@ -1086,7 +1092,11 @@ class TemplateEngine:
         
         If multiple fill_space markers exist, space is distributed evenly.
         The fill_space markers are represented by the special marker '\x00FILL_SPACE\x00'
-        after variable substitution.
+        or '\x00FILL_SPACE_REPEAT:pattern\x00' after variable substitution.
+        
+        Pattern can be:
+        - A color name (red, blue, etc.) - will repeat color tiles
+        - A text pattern (-, =, etc.) - will repeat characters
         
         Args:
             text: Rendered text with fill_space markers
@@ -1095,16 +1105,23 @@ class TemplateEngine:
         Returns:
             Text with fill_space markers replaced by appropriate padding
         """
-        # The fill_space marker after variable substitution
-        FILL_MARKER = '\x00FILL_SPACE\x00'
+        from src.board_chars import BoardChars
         
-        # Count fill_space markers
-        fill_count = text.count(FILL_MARKER)
+        # The fill_space marker patterns
+        FILL_MARKER = '\x00FILL_SPACE\x00'
+        FILL_REPEAT_PREFIX = '\x00FILL_SPACE_REPEAT:'
+        
+        # Find all fill markers (both regular and repeat)
+        import re
+        fill_pattern = re.compile(r'\x00FILL_SPACE(?:_REPEAT:(.+?))?\x00')
+        fill_matches = list(fill_pattern.finditer(text))
+        fill_count = len(fill_matches)
+        
         if fill_count == 0:
             return text
         
         # Calculate text width without fill_space markers
-        text_without_fills = text.replace(FILL_MARKER, '')
+        text_without_fills = fill_pattern.sub('', text)
         tile_count = self._count_tiles(text_without_fills)
         
         if tile_count >= width:
@@ -1118,10 +1135,31 @@ class TemplateEngine:
         
         # Replace each fill_space marker with calculated padding
         result = text
-        for i in range(fill_count):
+        for i, match in enumerate(fill_matches):
             # Distribute extra space to earlier fills
             fill_width = base_fill + (1 if i < extra else 0)
-            result = result.replace(FILL_MARKER, ' ' * fill_width, 1)
+            
+            # Get the repeat pattern (group 1 from regex, or space as default)
+            repeat_pattern = match.group(1) if match.group(1) else ' '
+            
+            # Check if pattern is a color name
+            color_code = BoardChars.get_color_code(repeat_pattern)
+            if color_code is not None:
+                # Repeat color tiles using the special color marker
+                fill_content = f'{{{color_code}}}' * fill_width
+            else:
+                # Calculate how many times to repeat the text pattern
+                pattern_len = len(repeat_pattern)
+                if pattern_len > 0:
+                    # Repeat pattern to fill width, may be truncated
+                    full_repeats = fill_width // pattern_len
+                    remainder = fill_width % pattern_len
+                    fill_content = (repeat_pattern * full_repeats) + repeat_pattern[:remainder]
+                else:
+                    fill_content = ' ' * fill_width
+            
+            # Replace this specific match with the repeated pattern
+            result = result.replace(match.group(0), fill_content, 1)
         
         return result
     

@@ -3,9 +3,11 @@
  */
 "use client";
 
+import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { ChevronsLeftRight } from "lucide-react";
+import { ChevronsLeftRight, ChevronRight } from "lucide-react";
+import { FIESTABOARD_COLORS } from "@/lib/board-colors";
 
 interface FormattingOption {
   name: string;
@@ -18,7 +20,23 @@ interface FormattingPickerContentProps {
   onInsert: (syntax: string) => void;
 }
 
+const COLOR_MAP: Record<string, { bg: string; needsDarkText: boolean }> = {
+  red: { bg: FIESTABOARD_COLORS.red, needsDarkText: false },
+  orange: { bg: FIESTABOARD_COLORS.orange, needsDarkText: false },
+  yellow: { bg: FIESTABOARD_COLORS.yellow, needsDarkText: true },
+  green: { bg: FIESTABOARD_COLORS.green, needsDarkText: true },
+  blue: { bg: FIESTABOARD_COLORS.blue, needsDarkText: false },
+  violet: { bg: FIESTABOARD_COLORS.violet, needsDarkText: false },
+  white: { bg: FIESTABOARD_COLORS.white, needsDarkText: true },
+  black: { bg: FIESTABOARD_COLORS.black, needsDarkText: false },
+};
+
+const COLOR_ORDER = ['red', 'orange', 'yellow', 'green', 'blue', 'violet', 'white', 'black'] as const;
+
 export function FormattingPickerContent({ formatting, onInsert }: FormattingPickerContentProps) {
+  const [showRepeatColorPicker, setShowRepeatColorPicker] = React.useState(false);
+  const [customChar, setCustomChar] = React.useState("");
+
   const options: FormattingOption[] = Object.entries(formatting).map(([name, info]) => ({
     name: name.replace(/_/g, " "),
     syntax: info.syntax,
@@ -33,59 +51,137 @@ export function FormattingPickerContent({ formatting, onInsert }: FormattingPick
     );
   }
 
-  return (
-    <div className="p-2 min-w-[280px]">
-      <div className="space-y-2">
-        {options.map((option) => (
-          <button
-            key={option.syntax}
-            type="button"
-            onClick={() => onInsert(option.syntax)}
-            className={cn(
-              "w-full text-left px-3 py-2.5 rounded-md text-sm",
-              "hover:bg-accent hover:text-accent-foreground transition-colors",
-              "flex flex-col gap-1.5 group"
-            )}
-          >
-            <div className="flex items-center gap-2">
-              <ChevronsLeftRight className="w-4 h-4 text-muted-foreground group-hover:text-accent-foreground flex-shrink-0" />
-              <div className="flex-1">
-                <div className="font-semibold capitalize">{option.name}</div>
-              </div>
-              <Badge variant="secondary" className="font-mono text-xs flex-shrink-0">
-                {option.syntax}
-              </Badge>
-            </div>
-            {option.description && (
-              <div className="text-xs text-muted-foreground pl-6 leading-relaxed">
-                {option.description}
-              </div>
-            )}
-          </button>
-        ))}
-      </div>
-      <div className="mt-4 pt-3 border-t border-border/50 space-y-2">
-        <div className="text-xs text-muted-foreground">
-          <p className="font-medium mb-1.5">Example usage:</p>
-          <div className="space-y-1.5 pl-2">
-            <div>
-              <code className="text-[11px] font-mono bg-muted px-2 py-1 rounded block">
-                Left{'{'}fill_space{'}'}Right
-              </code>
-              <p className="text-[10px] mt-1 opacity-75">
-                Creates space between &quot;Left&quot; and &quot;Right&quot;
-              </p>
-            </div>
-            <div>
-              <code className="text-[11px] font-mono bg-muted px-2 py-1 rounded block">
-                A{'{'}fill_space{'}'}B{'{'}fill_space{'}'}C
-              </code>
-              <p className="text-[10px] mt-1 opacity-75">
-                Creates three evenly-spaced columns
-              </p>
-            </div>
-          </div>
+  const handleOptionClick = (option: FormattingOption) => {
+    // Check if this is fill_space_repeat - show color picker
+    if (option.syntax.includes('fill_space_repeat')) {
+      setShowRepeatColorPicker(true);
+    } else {
+      onInsert(option.syntax);
+    }
+  };
+
+  const handleColorSelect = (colorName: string) => {
+    onInsert(`{{fill_space_repeat:${colorName}}}`);
+    setShowRepeatColorPicker(false);
+    setCustomChar("");
+  };
+
+  const handleCustomCharSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (customChar) {
+      handleColorSelect(customChar); // Reuse the same handler
+    }
+  };
+
+  // Show color + custom picker for fill_space_repeat
+  if (showRepeatColorPicker) {
+    return (
+      <div className="p-2 min-w-[240px] max-w-[280px]">
+        <button
+          type="button"
+          onClick={() => setShowRepeatColorPicker(false)}
+          className="text-xs text-muted-foreground hover:text-foreground mb-2 flex items-center gap-1"
+        >
+          ← Back
+        </button>
+        
+        {/* Colors Section */}
+        <div className="text-xs font-medium mb-2 text-muted-foreground">
+          Select color:
         </div>
+        
+        <div className="grid grid-cols-4 gap-2 mb-3">
+          {COLOR_ORDER.map((colorName) => {
+            const colorInfo = COLOR_MAP[colorName];
+            if (!colorInfo) return null;
+
+            return (
+              <button
+                key={colorName}
+                type="button"
+                onClick={() => handleColorSelect(colorName)}
+                style={{ backgroundColor: colorInfo.bg }}
+                className={cn(
+                  "h-10 rounded-md text-xs font-medium transition-all hover:scale-105 hover:shadow-md",
+                  "flex items-center justify-center",
+                  colorInfo.needsDarkText ? "text-black/80" : "text-white/90"
+                )}
+                aria-label={`${colorName} color`}
+                title={colorName}
+              >
+                {colorName}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Custom String */}
+        <div className="pt-2 border-t border-border/50">
+          <div className="text-xs text-muted-foreground mb-1.5">Or custom pattern:</div>
+          <form onSubmit={handleCustomCharSubmit} className="flex gap-1.5">
+            <input
+              type="text"
+              value={customChar}
+              onChange={(e) => setCustomChar(e.target.value)}
+              placeholder="e.g. - or =-"
+              maxLength={10}
+              className={cn(
+                "flex-1 px-2 py-1.5 text-sm font-mono rounded-md",
+                "border border-border bg-background",
+                "focus:outline-none focus:ring-2 focus:ring-ring"
+              )}
+            />
+            <button
+              type="submit"
+              disabled={!customChar}
+              className={cn(
+                "px-3 py-1.5 rounded-md text-xs font-medium",
+                "bg-primary text-primary-foreground",
+                "hover:bg-primary/90 transition-colors",
+                "disabled:opacity-50 disabled:cursor-not-allowed"
+              )}
+            >
+              Use
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // Show main formatting options
+  return (
+    <div className="p-1.5 min-w-[240px] max-w-[280px]">
+      <div className="space-y-0.5">
+        {options.map((option) => {
+          const isRepeat = option.syntax.includes('fill_space_repeat');
+          
+          return (
+            <button
+              key={option.syntax}
+              type="button"
+              onClick={() => handleOptionClick(option)}
+              className={cn(
+                "w-full text-left px-2.5 py-1.5 rounded-md text-sm",
+                "hover:bg-accent hover:text-accent-foreground transition-colors",
+                "flex items-center justify-between gap-2 group"
+              )}
+              title={option.description}
+            >
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <ChevronsLeftRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-accent-foreground flex-shrink-0" />
+                <span className="font-medium capitalize truncate">{option.name}</span>
+              </div>
+              {isRepeat ? (
+                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-accent-foreground flex-shrink-0" />
+              ) : (
+                <Badge variant="secondary" className="font-mono text-[10px] px-1.5 py-0 flex-shrink-0">
+                  {option.syntax}
+                </Badge>
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

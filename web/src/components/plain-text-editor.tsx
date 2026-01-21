@@ -43,9 +43,7 @@ export function PlainTextEditor({
       return;
     }
     
-    // Convert to uppercase
-    const uppercased = newValue.toUpperCase();
-    onChange(uppercased);
+    onChange(newValue);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -56,25 +54,6 @@ export function PlainTextEditor({
         e.preventDefault();
         return;
       }
-    }
-    
-    // Convert lowercase to uppercase on the fly
-    if (e.key.length === 1 && /[a-z]/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      e.preventDefault();
-      const start = e.currentTarget.selectionStart;
-      const end = e.currentTarget.selectionEnd;
-      const before = value.substring(0, start);
-      const after = value.substring(end);
-      const newValue = before + e.key.toUpperCase() + after;
-      onChange(newValue);
-      
-      // Move cursor after inserted character
-      setTimeout(() => {
-        if (textareaRef.current) {
-          textareaRef.current.selectionStart = start + 1;
-          textareaRef.current.selectionEnd = start + 1;
-        }
-      }, 0);
     }
   };
 

@@ -8,6 +8,7 @@ import { FillSpaceNodeView } from '../node-views/FillSpaceNodeView';
 
 export interface FillSpaceAttrs {
   id: string;
+  repeatChar?: string;
 }
 
 export const FillSpaceNode = Node.create({
@@ -27,6 +28,16 @@ export const FillSpaceNode = Node.create({
         renderHTML: attributes => ({
           'data-id': attributes.id,
         }),
+      },
+      repeatChar: {
+        default: undefined,
+        parseHTML: element => element.getAttribute('data-repeat-char') || undefined,
+        renderHTML: attributes => {
+          if (attributes.repeatChar) {
+            return { 'data-repeat-char': attributes.repeatChar };
+          }
+          return {};
+        },
       },
     };
   },

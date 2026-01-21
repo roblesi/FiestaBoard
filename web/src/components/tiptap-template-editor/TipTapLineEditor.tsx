@@ -1,6 +1,6 @@
 /**
- * Simplified TipTap Line Editor - Direct drop-in replacement
- * Maintains same interface as template-line-editor.tsx
+ * TipTap Line Editor - Single line template editing
+ * Provides basic single-line template editing with variables/colors
  */
 "use client";
 
@@ -27,7 +27,7 @@ interface TipTapLineEditorProps {
 }
 
 /**
- * TipTap-based line editor - drop-in replacement for TemplateLineEditor
+ * TipTap-based single line editor
  */
 export function TipTapLineEditor({
   value,
