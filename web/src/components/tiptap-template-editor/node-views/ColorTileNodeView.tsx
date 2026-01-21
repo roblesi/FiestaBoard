@@ -48,10 +48,10 @@ export function ColorTileNodeView({ node, deleteNode, selected }: ColorTileNodeV
       data-drag-handle
       style={{ 
         backgroundColor: bgColor,
-        width: '1.2ch',
-        height: '1.4rem',
-        maxHeight: '1.4rem',
-        minHeight: '1.4rem',
+        width: '1.5ch',
+        height: '1rem',
+        maxHeight: '1rem',
+        minHeight: '1rem',
         boxShadow,
         display: 'inline-block',
         verticalAlign: 'middle',
