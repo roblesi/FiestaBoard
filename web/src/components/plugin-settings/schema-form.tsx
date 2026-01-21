@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -66,25 +66,83 @@ function StringField({ name, property, value, onChange, required, disabled }: Fi
   const isTextarea = property["ui:widget"] === "textarea";
   const isTimezone = property["ui:widget"] === "timezone";
   
-  if (property.enum && property.enum.length > 0) {
-    return (
-      <Select
-        value={String(value || "")}
-        onValueChange={onChange}
-        disabled={disabled}
-      >
-        <SelectTrigger id={name}>
-          <SelectValue placeholder={property["ui:placeholder"] || `Select ${property.title || name}`} />
-        </SelectTrigger>
-        <SelectContent>
-          {property.enum.map((option) => (
-            <SelectItem key={option} value={option}>
+  if (property.enum) {
+    // Normalize enum to array of strings - handle all possible formats
+    let enumArray: string[] = [];
+    
+    // Handle array format
+    if (Array.isArray(property.enum)) {
+      enumArray = property.enum
+        .map(opt => {
+          if (opt === null || opt === undefined) return '';
+          return String(opt).trim();
+        })
+        .filter(opt => opt.length > 0);
+    } 
+    // Handle single string (shouldn't happen but be defensive)
+    else if (typeof property.enum === 'string') {
+      enumArray = [property.enum.trim()].filter(opt => opt.length > 0);
+    }
+    // Handle object with array property (defensive)
+    else if (typeof property.enum === 'object' && property.enum !== null) {
+      const enumObj = property.enum as Record<string, unknown>;
+      if (Array.isArray(enumObj.values)) {
+        enumArray = enumObj.values
+          .map((opt: unknown) => String(opt).trim())
+          .filter(opt => opt.length > 0);
+      }
+    }
+    
+    if (enumArray.length > 0) {
+      // Use default value if value is undefined, or ensure value matches an enum option
+      const defaultValue = property.default !== undefined ? String(property.default) : enumArray[0];
+      const currentValue = value !== undefined && value !== null ? String(value) : defaultValue;
+      // Ensure value matches one of the enum options, fallback to default or first option
+      const selectValue = currentValue && enumArray.includes(currentValue) 
+        ? currentValue 
+        : (defaultValue && enumArray.includes(defaultValue) ? defaultValue : enumArray[0]);
+      
+      // Ensure we have all enum options - remove duplicates
+      const allOptions = [...new Set(enumArray)];
+      
+      // Render all enum options
+      const selectItems = React.useMemo(() => {
+        return allOptions.map((option, idx) => {
+          const itemKey = `${name}-option-${idx}-${option}`;
+          return (
+            <SelectItem 
+              key={itemKey}
+              value={option}
+            >
               {option}
             </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    );
+          );
+        });
+      }, [name, allOptions]);
+      
+      // Stable onChange handler to prevent re-renders
+      const handleValueChange = React.useCallback((newValue: string) => {
+        onChange(newValue);
+      }, [onChange]);
+      
+      return (
+        <Select
+          value={selectValue}
+          onValueChange={handleValueChange}
+          disabled={disabled}
+        >
+          <SelectTrigger id={name}>
+            <SelectValue placeholder={property["ui:placeholder"] || `Select ${property.title || name}`} />
+          </SelectTrigger>
+          <SelectContent 
+            className="max-h-[300px] z-[120] pointer-events-auto"
+            disableHeightConstraint={allOptions.length > 1}
+          >
+            {selectItems}
+          </SelectContent>
+        </Select>
+      );
+    }
   }
 
   if (isTextarea) {
@@ -592,7 +650,7 @@ export function SchemaForm({ schema, values, onChange, disabled, className }: Sc
             <FormField
               name={name}
               property={property}
-              value={values[name]}
+              value={values[name] !== undefined ? values[name] : property.default}
               onChange={(val) => handleFieldChange(name, val)}
               required={isRequired}
               disabled={disabled}

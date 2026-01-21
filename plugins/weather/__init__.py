@@ -123,12 +123,22 @@ class WeatherPlugin(PluginBase):
             data = {
                 # Primary location fields (backward compatibility)
                 "temperature": primary.get("temperature"),
+                "temperature_c": primary.get("temperature_c"),
                 "feels_like": primary.get("feels_like"),
+                "feels_like_c": primary.get("feels_like_c"),
                 "condition": primary.get("condition"),
                 "humidity": primary.get("humidity"),
                 "wind_speed": primary.get("wind_speed"),
                 "location": primary.get("location"),
                 "location_name": primary.get("location_name"),
+                # New forecast fields
+                "precipitation_chance": primary.get("precipitation_chance"),
+                "high_temp": primary.get("high_temp"),
+                "high_temp_c": primary.get("high_temp_c"),
+                "low_temp": primary.get("low_temp"),
+                "low_temp_c": primary.get("low_temp_c"),
+                "uv_index": primary.get("uv_index"),
+                "sunset": primary.get("sunset"),
                 # Aggregate fields
                 "location_count": len(all_data),
                 # All locations array
