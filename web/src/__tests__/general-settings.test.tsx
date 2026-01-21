@@ -53,11 +53,12 @@ describe("GeneralSettings", () => {
   });
 
   it("shows timezone picker", async () => {
-    render(<GeneralSettings />, { wrapper: TestWrapper });
+    const { container } = render(<GeneralSettings />, { wrapper: TestWrapper });
 
     await waitFor(() => {
       expect(screen.getByText("Timezone")).toBeInTheDocument();
-      expect(screen.getByRole("combobox")).toBeInTheDocument();
+      const select = container.querySelector("select");
+      expect(select).toBeInTheDocument();
     });
   });
 
@@ -107,21 +108,22 @@ describe("GeneralSettings", () => {
 
   it("shows save button when changes are made", async () => {
     const user = userEvent.setup();
-    render(<GeneralSettings />, { wrapper: TestWrapper });
+    const { container } = render(<GeneralSettings />, { wrapper: TestWrapper });
 
     await waitFor(() => {
-      expect(screen.getByRole("combobox")).toBeInTheDocument();
+      const select = container.querySelector("select");
+      expect(select).toBeInTheDocument();
     });
 
     // Change timezone
-    const timezoneSelect = screen.getByRole("combobox");
+    const timezoneSelect = container.querySelector("select") as HTMLSelectElement;
     await user.selectOptions(timezoneSelect, "America/New_York");
 
     // Save button should appear
     await waitFor(() => {
       const saveButton = screen.queryByText(/Save Changes/i);
       // Button might appear after state changes
-      expect(saveButton || screen.getByRole("combobox")).toBeInTheDocument();
+      expect(saveButton || container.querySelector("select")).toBeInTheDocument();
     });
   });
 
@@ -136,14 +138,15 @@ describe("GeneralSettings", () => {
 
   it("disables controls while saving", async () => {
     const user = userEvent.setup();
-    render(<GeneralSettings />, { wrapper: TestWrapper });
+    const { container } = render(<GeneralSettings />, { wrapper: TestWrapper });
 
     await waitFor(() => {
-      expect(screen.getByRole("combobox")).toBeInTheDocument();
+      const select = container.querySelector("select");
+      expect(select).toBeInTheDocument();
     });
 
     // Attempt to change settings
-    const timezoneSelect = screen.getByRole("combobox");
+    const timezoneSelect = container.querySelector("select") as HTMLSelectElement;
     await user.selectOptions(timezoneSelect, "America/New_York");
 
     // Component should handle saving state
