@@ -64,7 +64,7 @@ FiestaBoard uses a **plugin architecture** - each feature is a self-contained pl
 ### Available Plugins
 - 💨 **[Air Quality & Fog](./plugins/air_fog/docs/SETUP.md)**: Monitor AQI and fog conditions
 - 🚴 **[Bay Wheels](./plugins/baywheels/docs/SETUP.md)**: Track bike availability at multiple stations
-- 📅 **[Date & Time](./plugins/date_time/README.md)**: Current date and time with timezone support
+- 📅 **[Date & Time](./plugins/date_time/README.md)**: Current date and time with multiple formats (12h/24h, US dates) and timezone autocomplete
 - 📶 **[Guest WiFi](./plugins/guest_wifi/docs/SETUP.md)**: Display WiFi credentials for guests
 - 🏠 **[Home Assistant](./plugins/home_assistant/docs/SETUP.md)**: House status display (doors, garage, locks, etc.)
 - 🚇 **[Muni Transit](./plugins/muni/docs/SETUP.md)**: Real-time SF Muni arrival predictions
@@ -184,7 +184,7 @@ All plugins can be configured via the web UI (**Integrations** page) or environm
 |--------|-----------------|-------------|
 | Air/Fog | Yes (PurpleAir/OWM) | [plugins/air_fog/docs/SETUP.md](./plugins/air_fog/docs/SETUP.md) |
 | Bay Wheels | No | [plugins/baywheels/docs/SETUP.md](./plugins/baywheels/docs/SETUP.md) |
-| Date & Time | No | [plugins/date_time/README.md](./plugins/date_time/README.md) |
+| Date & Time | No | [plugins/date_time/docs/SETUP.md](./plugins/date_time/docs/SETUP.md) |
 | Guest WiFi | No | [plugins/guest_wifi/docs/SETUP.md](./plugins/guest_wifi/docs/SETUP.md) |
 | Home Assistant | Yes (HA token) | [plugins/home_assistant/docs/SETUP.md](./plugins/home_assistant/docs/SETUP.md) |
 | Muni Transit | Yes (free 511.org) | [plugins/muni/docs/SETUP.md](./plugins/muni/docs/SETUP.md) |

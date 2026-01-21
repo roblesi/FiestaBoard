@@ -57,7 +57,7 @@ describe("GeneralSettings", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Timezone")).toBeInTheDocument();
-      expect(screen.getByRole("combobox")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Search timezone...")).toBeInTheDocument();
     });
   });
 
@@ -110,18 +110,29 @@ describe("GeneralSettings", () => {
     render(<GeneralSettings />, { wrapper: TestWrapper });
 
     await waitFor(() => {
-      expect(screen.getByRole("combobox")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Search timezone...")).toBeInTheDocument();
     });
 
-    // Change timezone
-    const timezoneSelect = screen.getByRole("combobox");
-    await user.selectOptions(timezoneSelect, "America/New_York");
+    // Change timezone by typing and selecting
+    const timezoneInput = screen.getByPlaceholderText("Search timezone...");
+    await user.click(timezoneInput);
+    await user.clear(timezoneInput);
+    await user.type(timezoneInput, "New York");
+    
+    // Wait for dropdown and select New York
+    await waitFor(() => {
+      const newYorkOption = screen.queryByText(/America\/New York/i);
+      expect(newYorkOption).toBeInTheDocument();
+    }, { timeout: 3000 });
+    
+    const newYorkOption = screen.getByText(/America\/New York/i);
+    await user.click(newYorkOption);
 
     // Save button should appear
     await waitFor(() => {
       const saveButton = screen.queryByText(/Save Changes/i);
       // Button might appear after state changes
-      expect(saveButton || screen.getByRole("combobox")).toBeInTheDocument();
+      expect(saveButton || screen.getByPlaceholderText("Search timezone...")).toBeInTheDocument();
     });
   });
 
@@ -139,12 +150,23 @@ describe("GeneralSettings", () => {
     render(<GeneralSettings />, { wrapper: TestWrapper });
 
     await waitFor(() => {
-      expect(screen.getByRole("combobox")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Search timezone...")).toBeInTheDocument();
     });
 
     // Attempt to change settings
-    const timezoneSelect = screen.getByRole("combobox");
-    await user.selectOptions(timezoneSelect, "America/New_York");
+    const timezoneInput = screen.getByPlaceholderText("Search timezone...");
+    await user.click(timezoneInput);
+    await user.clear(timezoneInput);
+    await user.type(timezoneInput, "New York");
+    
+    // Wait for dropdown and select New York
+    await waitFor(() => {
+      const newYorkOption = screen.queryByText(/America\/New York/i);
+      expect(newYorkOption).toBeInTheDocument();
+    }, { timeout: 3000 });
+    
+    const newYorkOption = screen.getByText(/America\/New York/i);
+    await user.click(newYorkOption);
 
     // Component should handle saving state
     await waitFor(() => {

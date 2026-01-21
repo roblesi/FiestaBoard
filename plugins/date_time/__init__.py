@@ -26,7 +26,7 @@ class DateTimePlugin(PluginBase):
     @property
     def plugin_id(self) -> str:
         """Return plugin identifier."""
-        return "datetime"
+        return "date_time"
     
     def validate_config(self, config: Dict[str, Any]) -> List[str]:
         """Validate datetime configuration."""
@@ -48,6 +48,7 @@ class DateTimePlugin(PluginBase):
             now = datetime.now(tz)
             
             data = {
+                # Existing variables (backward compatible)
                 "date": now.strftime("%Y-%m-%d"),
                 "time": now.strftime("%H:%M"),
                 "datetime": now.strftime("%Y-%m-%d %H:%M"),
@@ -58,6 +59,22 @@ class DateTimePlugin(PluginBase):
                 "year": str(now.year),
                 "hour": str(now.hour),
                 "minute": str(now.minute).zfill(2),
+                
+                # New time formats
+                "time_12h": now.strftime("%I:%M %p").lstrip("0"),  # 12-hour format without leading zero from hour, e.g., "2:30 PM"
+                "time_24h": now.strftime("%H:%M"),  # Same as "time" but explicit
+                
+                # New date formats (US format)
+                "date_us": now.strftime("%m/%d/%Y"),  # MM/DD/YYYY
+                "date_us_short": now.strftime("%m/%d/%y"),  # MM/DD/YY
+                
+                # New month formats
+                "month_number": str(now.month),  # 1-12 (unpadded)
+                "month_number_padded": now.strftime("%m"),  # 01-12 (zero-padded)
+                "month_abbr": now.strftime("%b"),  # 3-letter abbreviation (Jan, Feb, etc.)
+                
+                # Additional timezone info
+                "timezone": timezone_str,  # Full timezone name from config
             }
             
             return PluginResult(
