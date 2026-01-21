@@ -37,7 +37,7 @@ export function ColorTileNodeView({ node, deleteNode, selected }: ColorTileNodeV
     <NodeViewWrapper
       as="span"
       className={cn(
-        'group inline-flex items-center justify-center relative rounded-[3px] cursor-grab select-none',
+        'group relative rounded-[3px] cursor-grab select-none',
         'transition-all duration-150',
         'hover:scale-105',
         'active:cursor-grabbing active:scale-100',
@@ -53,9 +53,9 @@ export function ColorTileNodeView({ node, deleteNode, selected }: ColorTileNodeV
         maxHeight: '1.4rem',
         minHeight: '1.4rem',
         boxShadow,
-        flexShrink: 0,
         display: 'inline-block',
         verticalAlign: 'middle',
+        marginRight: '1px',
       }}
       title={`${color} tile (code ${code})`}
     >

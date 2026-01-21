@@ -7,6 +7,126 @@ import { JSONContent } from '@tiptap/react';
 import { BOARD_COLORS, SYMBOL_CHARS, FILL_SPACE_VAR, FILL_SPACE_REPEAT_VAR } from './constants';
 
 /**
+ * Simplified parser - treats template as single block with line breaks
+ */
+export function parseTemplateSimple(template: string): JSONContent {
+  const lines = template.split('\n').slice(0, 6); // Max 6 lines
+  
+  // Build a single paragraph with content and hardBreaks between lines
+  const content: JSONContent[] = [];
+  
+  lines.forEach((line, index) => {
+    // Parse line content (plain text, no alignment prefixes to extract)
+    if (line) {
+      const lineNodes = parseLineContent(line);
+      content.push(...lineNodes);
+    }
+    
+    // Add hard break between lines (except after last line)
+    if (index < lines.length - 1) {
+      content.push({ type: 'hardBreak' });
+    }
+  });
+  
+  // Pad with empty breaks to ensure 6 lines total
+  const currentLines = lines.length;
+  for (let i = currentLines; i < 6; i++) {
+    if (content.length > 0 && content[content.length - 1].type !== 'hardBreak') {
+      content.push({ type: 'hardBreak' });
+    }
+    if (i < 5) { // Don't add break after 6th line
+      content.push({ type: 'hardBreak' });
+    }
+  }
+  
+  return {
+    type: 'doc',
+    content: [
+      {
+        type: 'paragraph',
+        content: content.length > 0 ? content : undefined,
+      },
+    ],
+  };
+}
+
+/**
+ * Simplified serializer - converts back to plain text with \n
+ */
+export function serializeTemplateSimple(doc: JSONContent): string {
+  if (!doc.content || doc.content.length === 0) {
+    return '\n\n\n\n\n'; // 6 empty lines
+  }
+  
+  const lines: string[] = [];
+  let currentLine = '';
+  
+  // Get the first paragraph (should be the only one)
+  const paragraph = doc.content[0];
+  if (!paragraph || !paragraph.content) {
+    return '\n\n\n\n\n';
+  }
+  
+  // Iterate through paragraph content
+  for (const node of paragraph.content) {
+    if (node.type === 'hardBreak') {
+      // Line break - push current line and start new one
+      lines.push(currentLine);
+      currentLine = '';
+    } else {
+      // Add node content to current line
+      currentLine += serializeNodeContent(node);
+    }
+  }
+  
+  // Push final line
+  if (currentLine || lines.length < 6) {
+    lines.push(currentLine);
+  }
+  
+  // Ensure exactly 6 lines
+  while (lines.length < 6) {
+    lines.push('');
+  }
+  
+  return lines.slice(0, 6).join('\n');
+}
+
+/**
+ * Serialize a single node to string
+ */
+function serializeNodeContent(node: JSONContent): string {
+  switch (node.type) {
+    case 'text':
+      return node.text || '';
+    
+    case 'variable':
+      const filters = node.attrs?.filters || [];
+      const filterStr = filters.length > 0 ? filters.map((f: any) => `|${f.name}${f.args ? ':' + f.args.join(',') : ''}`).join('') : '';
+      return `{{${node.attrs?.pluginId}.${node.attrs?.field}${filterStr}}}`;
+    
+    case 'colorTile':
+      return `{{${node.attrs?.color}}}`;
+    
+    case 'fillSpace':
+      const repeatChar = node.attrs?.repeatChar;
+      if (repeatChar && repeatChar !== ' ') {
+        return `{{fill_space_repeat:${repeatChar}}}`;
+      }
+      return `{{fill_space}}`;
+    
+    case 'symbol':
+      return `{${node.attrs?.name}}`;
+    
+    case 'wrappedText':
+      return `{{${node.attrs?.text}|wrap}}`;
+    
+    default:
+      return '';
+  }
+}
+
+/**
  * Parse a template string into TipTap JSON document
  */
 export function parseTemplate(template: string): JSONContent {

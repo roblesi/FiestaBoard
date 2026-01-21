@@ -27,7 +27,7 @@ export function VariableNodeView({ node, deleteNode, selected }: VariableNodeVie
     <NodeViewWrapper
       as="span"
       className={cn(
-        'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium cursor-grab select-none',
+        'inline-block align-middle rounded-full px-2 py-0.5 text-xs font-medium cursor-grab select-none',
         'border transition-all duration-150',
         'bg-indigo-500/15 border-indigo-500/30 text-indigo-700 dark:text-indigo-300',
         'hover:bg-indigo-500/20',
@@ -39,19 +39,23 @@ export function VariableNodeView({ node, deleteNode, selected }: VariableNodeVie
       contentEditable={false}
       draggable
       data-drag-handle
+      style={{
+        display: 'inline-block',
+        verticalAlign: 'middle',
+      }}
     >
       {/* Variable display */}
-      <span className="font-mono text-[11px]">
+      <span className="font-mono text-[11px] inline-block">
         {pluginId}.{field}
       </span>
 
       {/* Filters */}
       {filters && filters.length > 0 && (
-        <span className="flex items-center gap-0.5 ml-0.5">
+        <span className="inline-flex items-center gap-0.5 ml-0.5">
           {filters.map((filter, idx) => (
             <span
               key={idx}
-              className="inline-flex items-center px-1 py-0.5 rounded text-[10px] bg-indigo-500/20"
+              className="inline-block px-1 py-0.5 rounded text-[10px] bg-indigo-500/20"
               title={`Filter: ${filter.name}${filter.arg ? `:${filter.arg}` : ''}`}
             >
               {filter.name}
