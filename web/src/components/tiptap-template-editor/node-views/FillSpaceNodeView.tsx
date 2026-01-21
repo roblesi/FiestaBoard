@@ -10,6 +10,7 @@ interface FillSpaceNodeViewProps {
   node: {
     attrs: {
       id: string;
+      repeatChar?: string;
     };
   };
   deleteNode: () => void;
@@ -17,6 +18,9 @@ interface FillSpaceNodeViewProps {
 }
 
 export function FillSpaceNodeView({ node, deleteNode, selected }: FillSpaceNodeViewProps) {
+  const { repeatChar } = node.attrs;
+  const hasRepeatChar = repeatChar && repeatChar !== ' ';
+  
   return (
     <NodeViewWrapper
       as="span"
@@ -30,14 +34,16 @@ export function FillSpaceNodeView({ node, deleteNode, selected }: FillSpaceNodeV
       contentEditable={false}
       draggable
       data-drag-handle
-      title="Fill space - expands to fill remaining line width"
+      title={hasRepeatChar ? `Fill space repeating: ${repeatChar}` : "Fill space - expands to fill remaining line width"}
       style={{
         display: 'inline-flex',
         verticalAlign: 'baseline',
         whiteSpace: 'nowrap',
       }}
     >
-      <span className="font-mono text-[11px] leading-none">fill_space</span>
+      <span className="font-mono text-[11px] leading-none">
+        fill_space{hasRepeatChar && `_repeat:${repeatChar}`}
+      </span>
     </NodeViewWrapper>
   );
 }

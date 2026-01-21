@@ -104,7 +104,10 @@ export function TipTapTemplateLineEditor({
     if (editor) {
       const currentSerialized = serializeTemplate(editor.getJSON());
       if (value !== currentSerialized) {
-        editor.commands.setContent(parseTemplate(value || ''));
+        // Preserve history to allow undo/redo after external updates
+        editor.commands.setContent(parseTemplate(value || ''), false, {
+          preserveWhitespace: true,
+        });
       }
     }
   }, [value, editor]);

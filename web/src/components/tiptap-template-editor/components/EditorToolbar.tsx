@@ -28,10 +28,7 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
         <button
           type="button"
           onClick={() => setAlignment('left')}
-          className={cn(
-            'p-1.5 rounded hover:bg-accent transition-colors',
-            currentAlignment === 'left' && 'bg-accent text-accent-foreground'
-          )}
+          className="p-1.5 rounded hover:bg-accent transition-colors"
           title="Align left"
           aria-label="Align left"
         >
@@ -41,10 +38,7 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
         <button
           type="button"
           onClick={() => setAlignment('center')}
-          className={cn(
-            'p-1.5 rounded hover:bg-accent transition-colors',
-            currentAlignment === 'center' && 'bg-accent text-accent-foreground'
-          )}
+          className="p-1.5 rounded hover:bg-accent transition-colors"
           title="Align center"
           aria-label="Align center"
         >
@@ -54,10 +48,7 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
         <button
           type="button"
           onClick={() => setAlignment('right')}
-          className={cn(
-            'p-1.5 rounded hover:bg-accent transition-colors',
-            currentAlignment === 'right' && 'bg-accent text-accent-foreground'
-          )}
+          className="p-1.5 rounded hover:bg-accent transition-colors"
           title="Align right"
           aria-label="Align right"
         >

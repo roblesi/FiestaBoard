@@ -171,12 +171,7 @@ export function TemplateEditorToolbar({
               <button
                 type="button"
                 onClick={() => handleAlignmentClick('left')}
-                className={cn(
-                  'px-2 py-1.5 transition-colors',
-                  currentAlignment === 'left'
-                    ? 'bg-muted/70 text-foreground'
-                    : 'hover:bg-muted/50 text-muted-foreground'
-                )}
+                className="px-2 py-1.5 transition-colors hover:bg-muted/50"
                 aria-label="Align left"
               >
                 <AlignLeft className="w-4 h-4" />
@@ -190,12 +185,7 @@ export function TemplateEditorToolbar({
               <button
                 type="button"
                 onClick={() => handleAlignmentClick('center')}
-                className={cn(
-                  'px-2 py-1.5 border-x border-border/50 transition-colors',
-                  currentAlignment === 'center'
-                    ? 'bg-muted/70 text-foreground'
-                    : 'hover:bg-muted/50 text-muted-foreground'
-                )}
+                className="px-2 py-1.5 border-x border-border/50 transition-colors hover:bg-muted/50"
                 aria-label="Align center"
               >
                 <AlignCenter className="w-4 h-4" />
@@ -209,12 +199,7 @@ export function TemplateEditorToolbar({
               <button
                 type="button"
                 onClick={() => handleAlignmentClick('right')}
-                className={cn(
-                  'px-2 py-1.5 transition-colors',
-                  currentAlignment === 'right'
-                    ? 'bg-muted/70 text-foreground'
-                    : 'hover:bg-muted/50 text-muted-foreground'
-                )}
+                className="px-2 py-1.5 transition-colors hover:bg-muted/50"
                 aria-label="Align right"
               >
                 <AlignRight className="w-4 h-4" />
