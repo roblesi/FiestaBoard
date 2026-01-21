@@ -263,7 +263,10 @@ export function TipTapTemplateEditor({
     if (editor) {
       const currentSerialized = serializeTemplateSimple(editor.getJSON());
       if (value !== currentSerialized) {
-        editor.commands.setContent(parseTemplateSimple(value || ''));
+        // Preserve history to allow undo/redo after external updates
+        editor.commands.setContent(parseTemplateSimple(value || ''), false, {
+          preserveWhitespace: true,
+        });
       }
     }
   }, [value, editor]);

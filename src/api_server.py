@@ -3286,6 +3286,10 @@ async def get_template_variables():
             "fill_space": {
                 "syntax": "{{fill_space}}",
                 "description": "Expands to fill remaining space on the line. Use multiple for multi-column layouts."
+            },
+            "fill_space_repeat": {
+                "syntax": "{{fill_space_repeat:pattern}}",
+                "description": "Fills remaining space with repeating colors or characters. Examples: {{fill_space_repeat:red}} or {{fill_space_repeat:-}}"
             }
         },
         "syntax_examples": {
