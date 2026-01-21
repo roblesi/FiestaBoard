@@ -11,16 +11,16 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { useEffect, useCallback, useRef } from 'react';
 import { cn } from '@/lib/utils';
-import { TemplateParagraph } from './extensions/template-paragraph';
+// No longer using custom paragraph extension
 import { VariableNode } from './extensions/variable-node';
 import { ColorTileNode } from './extensions/color-tile-node';
 import { FillSpaceNode } from './extensions/fill-space-node';
 import { SymbolNode } from './extensions/symbol-node';
 import { WrappedTextNode } from './extensions/wrapped-text-node';
-import { parseTemplate, serializeTemplate } from './utils/serialization';
+import { parseTemplateSimple, serializeTemplateSimple } from './utils/serialization';
 import { BOARD_LINES, BOARD_WIDTH } from './utils/constants';
 import { AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
-import type { LineAlignment } from './extensions/template-paragraph';
+export type LineAlignment = 'left' | 'center' | 'right';
 import { TemplateEditorToolbar } from './components/TemplateEditorToolbar';
 
 interface TipTapTemplateEditorProps {
@@ -74,17 +74,16 @@ export function TipTapTemplateEditor({
         history: true,
         document: true,
         text: true,
-        hardBreak: false,
-        paragraph: false, // We use TemplateParagraph instead
+        paragraph: true, // Use standard paragraphs
+        hardBreak: true, // Enable hard breaks (Shift+Enter for line breaks within paragraph)
       }),
-      TemplateParagraph,
       VariableNode,
       ColorTileNode,
       FillSpaceNode,
       SymbolNode,
       WrappedTextNode,
     ],
-    content: parseTemplate(value || ''),
+    content: parseTemplateSimple(value || ''),
     editorProps: {
       attributes: {
         class: cn(
@@ -93,11 +92,9 @@ export function TipTapTemplateEditor({
           '[&_.ProseMirror]:outline-none',
           '[&_.ProseMirror]:font-mono',
           '[&_.ProseMirror]:text-sm',
+          '[&_.ProseMirror]:resize-none',
           '[&_.ProseMirror_p]:my-0 [&_.ProseMirror_p]:leading-tight',
           '[&_.ProseMirror_p]:min-h-[1.5rem]',
-          // Constrain each paragraph to 22 characters visually
-          '[&_.ProseMirror_p]:max-w-[22ch]',
-          '[&_.ProseMirror_p]:overflow-hidden',
           className
         ),
         'data-placeholder': placeholder,
@@ -106,22 +103,35 @@ export function TipTapTemplateEditor({
         'aria-multiline': 'true',
       },
       handleKeyDown: (view, event) => {
-        // Let the extension handle Enter key logic
-        // The extension's addKeyboardShortcuts will handle all Enter behavior
+        const { state } = view;
+        
+        // Handle Enter key - limit to 6 lines (5 hard breaks)
         if (event.key === 'Enter') {
-          return false; // Let it propagate to extension
+          // Count existing hard breaks
+          let hardBreakCount = 0;
+          state.doc.descendants((node) => {
+            if (node.type.name === 'hardBreak') {
+              hardBreakCount++;
+            }
+          });
+          
+          // If we already have 5 or more hard breaks (6+ lines), prevent adding more
+          if (hardBreakCount >= 5) {
+            event.preventDefault();
+            return true; // Block
+          }
+          
+          // Otherwise allow default hard break behavior
+          return false;
         }
         
-        // Convert lowercase letters to uppercase
-        if (event.key.length === 1 && /[a-z]/.test(event.key) && !event.ctrlKey && !event.metaKey) {
+        // Handle text input - convert lowercase to uppercase
+        if (event.key.length === 1 && /[a-z]/.test(event.key) && !event.ctrlKey && !event.metaKey && !event.altKey) {
           event.preventDefault();
-          const { state, dispatch } = view;
           const { selection } = state;
           const uppercaseChar = event.key.toUpperCase();
-          
-          // Insert uppercase character
           const tr = state.tr.insertText(uppercaseChar, selection.from, selection.to);
-          dispatch(tr);
+          view.dispatch(tr);
           return true;
         }
         
@@ -130,6 +140,45 @@ export function TipTapTemplateEditor({
       transformPastedText: (text) => {
         // Convert pasted text to uppercase
         return text.toUpperCase();
+      },
+      handlePaste: (view, event, slice) => {
+        const { state } = view;
+        const { selection } = state;
+        const { $from } = selection;
+        
+        // Find the current paragraph (line)
+        const currentParagraph = $from.node($from.depth);
+        if (currentParagraph.type.name === 'templateParagraph') {
+          // Get current line content
+          const lineContent = currentParagraph.content.toJSON() || [];
+          const currentLength = calculateLineLength(lineContent);
+          
+          // Calculate how many characters would be added from paste
+          const pastedText = slice.content.textContent || '';
+          const selectedText = state.doc.textBetween(selection.from, selection.to);
+          const charsToAdd = pastedText.length;
+          const charsToRemove = selectedText.length;
+          const newLength = currentLength - charsToRemove + charsToAdd;
+          
+          // If paste would exceed limit, truncate it
+          if (newLength > BOARD_WIDTH) {
+            const maxChars = BOARD_WIDTH - currentLength + charsToRemove;
+            if (maxChars > 0) {
+              // Truncate pasted text to fit
+              const truncatedText = pastedText.slice(0, maxChars);
+              const tr = state.tr.replaceSelection(
+                state.schema.text(truncatedText.toUpperCase())
+              );
+              view.dispatch(tr);
+              return true; // Handled
+            } else {
+              // No room for any pasted content
+              return true; // Block paste
+            }
+          }
+        }
+        
+        return false; // Let TipTap handle normally
       },
       handleDrop: (view, event, slice, moved) => {
         // Enable drag and drop for nodes with data-drag-handle
@@ -145,7 +194,7 @@ export function TipTapTemplateEditor({
         return;
       }
       const doc = editor.getJSON();
-      const templateString = serializeTemplate(doc);
+      const templateString = serializeTemplateSimple(doc);
       onChange(templateString);
     },
     onFocus: () => {
@@ -156,126 +205,35 @@ export function TipTapTemplateEditor({
   // Update editor content when value changes externally
   useEffect(() => {
     if (editor) {
-      const currentSerialized = serializeTemplate(editor.getJSON());
+      const currentSerialized = serializeTemplateSimple(editor.getJSON());
       if (value !== currentSerialized) {
-        editor.commands.setContent(parseTemplate(value || ''));
+        editor.commands.setContent(parseTemplateSimple(value || ''));
       }
     }
   }, [value, editor]);
 
-  // Ensure editor always has exactly 6 paragraphs
-  useEffect(() => {
-    if (editor) {
-      const { doc } = editor.state;
-      const paragraphCount = doc.content.childCount;
-      
-      if (paragraphCount < BOARD_LINES) {
-        // Add missing paragraphs
-        const tr = editor.state.tr;
-        for (let i = paragraphCount; i < BOARD_LINES; i++) {
-          tr.insert(tr.doc.content.size, editor.schema.nodes.templateParagraph.create({ alignment: 'left' }));
-        }
-        editor.view.dispatch(tr);
-      } else if (paragraphCount > BOARD_LINES) {
-        // Remove extra paragraphs (shouldn't happen, but handle it)
-        const currentValue = serializeTemplate(editor.getJSON());
-        editor.commands.setContent(parseTemplate(currentValue));
-      }
-    }
-  }, [editor]);
+  // No need to enforce paragraph count - we use line breaks now
 
-  // Update alignments when they change externally
-  useEffect(() => {
-    if (editor && lineAlignments) {
-      const { doc } = editor.state;
-      const tr = editor.state.tr;
-      let modified = false;
-      
-      // Iterate through paragraphs in document order
-      let paragraphIndex = 0;
-      doc.descendants((node, pos) => {
-        if (node.type.name === 'templateParagraph') {
-          // Use the current paragraph index (0-based)
-          if (paragraphIndex < BOARD_LINES) {
-            const currentAlignment = node.attrs.alignment || 'left';
-            const newAlignment = lineAlignments[paragraphIndex] || 'left';
-            
-            if (currentAlignment !== newAlignment) {
-              tr.setNodeMarkup(pos, undefined, {
-                ...node.attrs,
-                alignment: newAlignment,
-              });
-              modified = true;
-            }
-          }
-          paragraphIndex++;
-        }
-      });
-      
-      if (modified) {
-        editor.view.dispatch(tr);
-      }
-    }
-  }, [editor, lineAlignments]);
+  // Alignment is now handled at serialization level, not in editor
 
-  // Sync wrapEnabled state from props
-  useEffect(() => {
-    if (!editor) return;
-    
-    const { state } = editor;
-    const { doc } = state;
-    const tr = state.tr;
-    let modified = false;
-    
-    // Iterate through paragraphs in document order
-    let paragraphIndex = 0;
-    doc.descendants((node, pos) => {
-      if (node.type.name === 'templateParagraph') {
-        // Use the current paragraph index (0-based)
-        if (paragraphIndex >= 0 && paragraphIndex < BOARD_LINES) {
-          const expectedWrap = lineWrapEnabled[paragraphIndex] || false;
-          const currentWrap = node.attrs.wrapEnabled || false;
-          
-          if (currentWrap !== expectedWrap) {
-            tr.setNodeMarkup(pos, undefined, {
-              ...node.attrs,
-              wrapEnabled: expectedWrap,
-            });
-            modified = true;
-          }
-        }
-        paragraphIndex++;
-      }
-    });
-    
-    if (modified) {
-      editor.view.dispatch(tr);
-    }
-  }, [editor, lineWrapEnabled]);
+  // Wrap is now handled at serialization level, not in editor
 
-  // Get current line index from cursor position
+  // Get current line index from cursor position (counting hardBreaks)
   const getCurrentLineIndex = useCallback((): number | null => {
     if (!editor) return null;
     const { state } = editor;
     const { selection } = state;
     const { $from } = selection;
     
-    // Count paragraphs before the current position
-    let paragraphIndex = 0;
+    // Count hard breaks before cursor to determine line index
+    let lineIndex = 0;
     state.doc.nodesBetween(0, $from.pos, (node) => {
-      if (node.type.name === 'templateParagraph') {
-        paragraphIndex++;
+      if (node.type.name === 'hardBreak') {
+        lineIndex++;
       }
     });
     
-    // If we're inside a paragraph, return its index (0-based)
-    // Otherwise return null
-    const currentParagraph = $from.node($from.depth);
-    if (currentParagraph.type.name === 'templateParagraph') {
-      return paragraphIndex - 1; // -1 because we counted the current paragraph
-    }
-    
-    return null;
+    return lineIndex;
   }, [editor]);
 
   // Handle alignment button clicks
@@ -287,29 +245,10 @@ export function TipTapTemplateEditor({
       return; // Can't apply alignment if no line is selected
     }
 
-    // Apply to specific line
-    const { state } = editor;
-    const { doc } = state;
-    let paragraphCount = 0;
-    
-    doc.descendants((node, pos) => {
-      if (node.type.name === 'templateParagraph') {
-        if (paragraphCount === lineIndex) {
-          const tr = state.tr;
-          tr.setNodeMarkup(pos, undefined, {
-            ...node.attrs,
-            alignment,
-          });
-          editor.view.dispatch(tr);
-          
-          // Notify parent of alignment change
-          if (onLineAlignmentChange) {
-            onLineAlignmentChange(lineIndex, alignment);
-          }
-        }
-        paragraphCount++;
-      }
-    });
+    // Notify parent of alignment change (parent handles state)
+    if (onLineAlignmentChange) {
+      onLineAlignmentChange(lineIndex, alignment);
+    }
   }, [editor, getCurrentLineIndex, onLineAlignmentChange]);
 
   // Handle wrap toggle
@@ -321,48 +260,15 @@ export function TipTapTemplateEditor({
       return; // Can't apply wrap if no line is selected
     }
 
-    // Toggle wrap for specific line
-    const { state } = editor;
-    const { doc } = state;
-    let paragraphCount = 0;
+    // Get current wrap state and toggle it
+    const currentWrap = lineWrapEnabled[lineIndex] || false;
+    const newWrap = !currentWrap;
     
-    doc.descendants((node, pos) => {
-      if (node.type.name === 'templateParagraph') {
-        if (paragraphCount === lineIndex) {
-          const currentWrap = node.attrs.wrapEnabled || false;
-          const newWrap = !currentWrap;
-          
-          const tr = state.tr;
-          tr.setNodeMarkup(pos, undefined, {
-            ...node.attrs,
-            wrapEnabled: newWrap,
-          });
-          editor.view.dispatch(tr);
-          
-          // Set flag to prevent onUpdate from overwriting state
-          isUpdatingWrap.current = true;
-          
-          // Notify parent of wrap change (updates state immediately)
-          if (onLineWrapChange) {
-            onLineWrapChange(lineIndex, newWrap);
-          }
-          
-          // Manually trigger onChange to ensure wrap state is included in serialization
-          // Use requestAnimationFrame to ensure transaction is fully applied and DOM is updated
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              const doc = editor.getJSON();
-              const templateString = serializeTemplate(doc);
-              onChange(templateString);
-              // Clear flag after onChange is called
-              isUpdatingWrap.current = false;
-            });
-          });
-        }
-        paragraphCount++;
-      }
-    });
-  }, [editor, getCurrentLineIndex, onLineWrapChange]);
+    // Notify parent of wrap change (parent handles state)
+    if (onLineWrapChange) {
+      onLineWrapChange(lineIndex, newWrap);
+    }
+  }, [editor, getCurrentLineIndex, onLineWrapChange, lineWrapEnabled]);
 
   if (!editor) {
     return (
@@ -401,76 +307,17 @@ export function TipTapTemplateEditor({
         />
       )}
       
-      {/* Editor container */}
+      {/* Editor container - styled like a single textarea */}
       <div className="flex-1">
         <div className={cn(
-          "border bg-background relative",
-          showToolbar ? "rounded-b-md border-t-0" : "rounded-md"
+          "border bg-background relative rounded-md",
+          showToolbar ? "rounded-t-none" : ""
         )} style={{ 
-          padding: '0.5rem', 
-          paddingLeft: '2.5rem', 
+          padding: '0.75rem', 
           overflow: 'hidden',
-          minHeight: `${BOARD_LINES * 1.5 + 1}rem`, // 6 lines * 1.5rem + 1rem padding
-          height: `${BOARD_LINES * 1.5 + 1}rem`, // Fixed height to match exactly 6 lines
+          minHeight: `${BOARD_LINES * 1.5 + 1.5}rem`, // 6 lines * 1.5rem + padding
         }}>
-            {/* Line numbers - rendered as absolute positioned elements, aligned with editor lines */}
-            <div 
-              className="absolute left-0 pointer-events-none z-20"
-              style={{
-                top: '0.5rem',
-                width: '2rem',
-                display: 'flex',
-                flexDirection: 'column',
-                height: `${BOARD_LINES * 1.5}rem`, // Exactly match 6 lines height
-              }}
-            >
-              {Array.from({ length: BOARD_LINES }).map((_, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-end text-xs text-muted-foreground font-semibold"
-                  style={{ 
-                    height: '1.5rem',
-                    lineHeight: '1.5rem',
-                    margin: 0,
-                    padding: 0,
-                    paddingRight: '0.5rem',
-                    marginRight: '0.25rem',
-                  }}
-                >
-                  {i + 1}
-                </div>
-              ))}
-            </div>
-            
-            {/* Grid overlay - 22 columns × 6 rows matching board display */}
-            <div 
-              className="absolute pointer-events-none z-0"
-              style={{
-                top: '0.5rem',
-                left: '0.5rem',
-                right: '0.5rem',
-                height: `${BOARD_LINES * 1.5}rem`, // Match exactly 6 lines height
-                backgroundImage: `
-                  repeating-linear-gradient(
-                    to right,
-                    transparent 0,
-                    transparent calc(1ch - 0.5px),
-                    hsl(var(--border) / 0.2) calc(1ch - 0.5px),
-                    hsl(var(--border) / 0.2) calc(1ch + 0.5px),
-                    transparent calc(1ch + 0.5px)
-                  ),
-                  repeating-linear-gradient(
-                    to bottom,
-                    transparent 0,
-                    transparent calc(1.5rem - 0.5px),
-                    hsl(var(--border) / 0.2) calc(1.5rem - 0.5px),
-                    hsl(var(--border) / 0.2) calc(1.5rem + 0.5px),
-                    transparent calc(1.5rem + 0.5px)
-                  )
-                `,
-              }}
-            />
-          <div className="relative z-10" style={{ height: `${BOARD_LINES * 1.5}rem` }}>
+          <div className="relative" style={{ height: `${BOARD_LINES * 1.5}rem` }}>
             <EditorContent editor={editor} />
           </div>
         </div>
@@ -531,142 +378,84 @@ export function TipTapTemplateEditor({
 
       {/* Placeholder styling */}
       <style jsx global>{`
-        /* Ensure ProseMirror container has no spacing that affects line alignment */
+        /* Ensure ProseMirror container looks like a single textarea */
         .ProseMirror {
           margin: 0;
           padding: 0;
+          width: 100%;
+          max-width: 100%;
+          overflow: hidden;
+          outline: none;
         }
         
-        .ProseMirror[data-placeholder]:empty::before {
+        /* Placeholder for first empty line only - textarea-like */
+        .ProseMirror[data-placeholder] > p:first-child:empty::before {
           content: attr(data-placeholder);
           color: hsl(var(--muted-foreground));
-          float: left;
-          height: 0;
           pointer-events: none;
+          position: absolute;
         }
         
-        .ProseMirror:focus[data-placeholder]:empty::before {
+        .ProseMirror:focus[data-placeholder] > p:first-child:empty::before {
           opacity: 0.5;
         }
 
-        /* Ensure each paragraph is treated as a line with FIXED height */
-        .ProseMirror > div[data-node-view-wrapper],
+        /* Standard paragraph - natural text flow */
         .ProseMirror > p {
-          display: flex;
-          flex-wrap: nowrap;
-          align-items: center;
-          width: 100%;
-          max-width: ${BOARD_WIDTH}ch;
-          min-height: 1.5rem;
-          max-height: 1.5rem;
-          height: 1.5rem;
-          line-height: 1.5rem;
           margin: 0;
           padding: 0;
-          padding-left: 6px; /* Space for cursor at position 0 */
           text-transform: uppercase;
-          gap: 0;
           font-family: 'Courier New', 'Courier', monospace;
           font-size: 0.875rem;
           letter-spacing: 0;
-          position: relative;
-          overflow: visible;
+          line-height: 1.5rem;
+          white-space: pre-wrap;
+          word-break: break-all;
+          max-width: ${BOARD_WIDTH}ch;
         }
         
-        /* Ensure no gaps between lines */
-        .ProseMirror > div[data-node-view-wrapper] + div[data-node-view-wrapper],
-        .ProseMirror > p + p {
-          margin-top: 0;
+        /* Hard breaks create line breaks naturally */
+        .ProseMirror br {
+          display: block;
+          content: '';
+          margin: 0;
+          padding: 0;
+          line-height: 0;
         }
         
-        /* Ensure empty paragraphs are visible and maintain height */
-        .ProseMirror > div[data-node-view-wrapper]:empty,
+        /* Prevent any extra spacing around hard breaks */
+        .ProseMirror br::before,
+        .ProseMirror br::after {
+          content: none;
+        }
+        
+        /* Empty paragraph minimum height */
         .ProseMirror > p:empty {
-          min-height: 1.5rem !important;
-          height: 1.5rem !important;
-          position: relative;
+          min-height: 1.5rem;
         }
         
-        /* Make it a block cursor on the currently selected empty line */
-        .ProseMirror-focused > p:empty:has(+ *):first-of-type::after,
-        .ProseMirror > p:empty:focus-within::after {
-          width: 1ch;
-          background-color: hsl(var(--primary) / 0.3);
-          border: 2px solid hsl(var(--primary));
-        }
-        
-        /* Block-style blinking cursor (dogbone) */
-        .ProseMirror-focused .ProseMirror-gapcursor {
-          display: block !important;
-        }
-        
-        .ProseMirror .ProseMirror-cursor {
-          position: relative;
-          display: inline-block;
-          width: 1ch;
-          height: 1.4rem;
-          background-color: hsl(var(--primary) / 0.5);
-          border: 2px solid hsl(var(--primary));
-          animation: blink 1s step-end infinite;
-          pointer-events: none;
-        }
-        
-        @keyframes blink {
-          0%, 50% {
-            opacity: 1;
-          }
-          50.1%, 100% {
-            opacity: 0;
-          }
-        }
-        
-        /* Force caret to always be visible */
-        .ProseMirror {
-          caret-shape: block;
-        }
-        
-        /* Ensure paragraphs can receive cursor even when empty */
-        .ProseMirror > p {
-          min-width: 1ch;
-        }
-        
-        .ProseMirror > p br {
-          display: none;
-        }
-        
-        /* Make caret a visible block */
+        /* Cursor styling */
         .ProseMirror {
           caret-color: hsl(var(--primary));
         }
         
         .ProseMirror:focus {
-          caret-color: hsl(var(--primary));
-        }
-        
-        /* Override default caret with a block style using a pseudo-element trick */
-        @supports (caret-shape: block) {
-          .ProseMirror {
-            caret-shape: block;
-          }
-        }
-        
-        /* Reduce or remove focus ring on the container */
-        .ProseMirror:focus-visible {
           outline: none;
         }
         
-        /* Ensure text nodes have proper spacing */
-        .ProseMirror > p > .text {
-          padding-left: 0;
+        /* Inline nodes - keep them truly inline */
+        .ProseMirror [data-type="variable"],
+        .ProseMirror [data-type="color-tile"],
+        .ProseMirror [data-type="symbol"],
+        .ProseMirror [data-type="fill-space"],
+        .ProseMirror [data-type="wrapped-text"] {
+          display: inline;
+          vertical-align: baseline;
         }
         
-        /* Make each character/node appear in a grid cell with FIXED height */
-        .ProseMirror > p > * {
-          display: inline-flex;
-          align-items: center;
-          vertical-align: middle;
-          max-height: 1.4rem;
-          height: auto;
+        /* Node view wrappers */
+        .ProseMirror [data-node-view-wrapper] {
+          display: inline;
         }
         
         /* All inline nodes must not exceed line height */
@@ -687,24 +476,6 @@ export function TipTapTemplateEditor({
           font-variant-numeric: tabular-nums;
         }
         
-        /* Subtle cell background for each character position */
-        .ProseMirror > p {
-          background-image: repeating-linear-gradient(
-            to right,
-            transparent 0,
-            transparent calc(1ch - 0.5px),
-            hsl(var(--muted) / 0.05) calc(1ch - 0.5px),
-            hsl(var(--muted) / 0.05) calc(1ch + 0.5px),
-            transparent calc(1ch + 0.5px)
-          );
-        }
-        
-        /* Make fill-space nodes expand to fill available space */
-        .ProseMirror > p [data-type="fill-space"] {
-          flex: 1 1 auto;
-          min-width: 3rem;
-        }
-        
         /* Don't transform node views (they handle their own display) */
         .ProseMirror [data-type="variable"],
         .ProseMirror [data-type="color-tile"],
@@ -722,64 +493,13 @@ export function TipTapTemplateEditor({
         .ProseMirror [data-drag-handle]:active {
           cursor: grabbing;
         }
-
-        /* Apply text alignment based on data-alignment attribute */
-        .ProseMirror p[data-alignment="center"] {
-          text-align: center;
-        }
-        .ProseMirror p[data-alignment="right"] {
-          text-align: right;
-        }
-        .ProseMirror p[data-alignment="left"] {
-          text-align: left;
-        }
         
-        /* Visual alignment guides - show where text aligns */
-        .ProseMirror > p[data-alignment="center"] {
-          position: relative;
-        }
-        
-        /* Visual alignment guides - use a wrapper div approach via CSS */
-        .ProseMirror > p[data-alignment="center"] {
-          position: relative;
-          background-image: 
-            linear-gradient(to bottom,
-              transparent 0%,
-              hsl(var(--primary) / 0.15) calc(50% - 0.5px),
-              hsl(var(--primary) / 0.15) calc(50% + 0.5px),
-              transparent 100%),
-            repeating-linear-gradient(
-              to right,
-              transparent 0,
-              transparent calc(1ch - 0.5px),
-              hsl(var(--muted) / 0.05) calc(1ch - 0.5px),
-              hsl(var(--muted) / 0.05) calc(1ch + 0.5px),
-              transparent calc(1ch + 0.5px)
-            );
-          background-size: 1px 100%, auto;
-          background-position: center, 0 0;
-          background-repeat: no-repeat, repeat;
-        }
-        
-        .ProseMirror > p[data-alignment="right"] {
-          position: relative;
-          background-image: 
-            linear-gradient(to bottom,
-              transparent 0%,
-              hsl(var(--primary) / 0.15) calc(50% - 0.5px),
-              hsl(var(--primary) / 0.15) calc(50% + 0.5px),
-              transparent 100%),
-            repeating-linear-gradient(
-              to right,
-              transparent 0,
-              transparent calc(1ch - 0.5px),
-              hsl(var(--muted) / 0.05) calc(1ch - 0.5px),
-              hsl(var(--muted) / 0.05) calc(1ch + 0.5px),
-              transparent calc(1ch + 0.5px)
-            );
-          background-size: 1px 100%, auto;
-          background-position: right, 0 0;
-          background-repeat: no-repeat, repeat;
+        /* Ensure no weird spacing around inline nodes */
+        .ProseMirror [data-type="variable"]::before,
+        .ProseMirror [data-type="variable"]::after,
+        .ProseMirror [data-type="color-tile"]::before,
+        .ProseMirror [data-type="color-tile"]::after {
+          content: none;
         }
       `}</style>
     </div>

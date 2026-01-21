@@ -24,7 +24,7 @@ export function WrappedTextView({ node, deleteNode, selected }: WrappedTextViewP
     <NodeViewWrapper
       as="span"
       className={cn(
-        'inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium cursor-grab select-none',
+        'inline-block align-middle rounded-md px-2 py-0.5 text-xs font-medium cursor-grab select-none',
         'border transition-all duration-150',
         'bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-300',
         'hover:bg-amber-500/20',
@@ -36,12 +36,16 @@ export function WrappedTextView({ node, deleteNode, selected }: WrappedTextViewP
       contentEditable={false}
       draggable
       data-drag-handle
+      style={{
+        display: 'inline-block',
+        verticalAlign: 'middle',
+      }}
     >
       {/* Wrap icon */}
-      <WrapText className="w-3 h-3 flex-shrink-0" />
+      <WrapText className="w-3 h-3 inline-block align-middle" />
       
       {/* Wrapped text display */}
-      <span className="font-mono text-[11px]">
+      <span className="font-mono text-[11px] inline-block align-middle ml-1">
         {text}
       </span>
 
