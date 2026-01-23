@@ -1,8 +1,24 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import dynamic from "next/dynamic";
 import { shouldShowWizard, clearWizardCompletion } from "@/lib/setup-detection";
-import { SetupWizard } from "@/components/wizard";
+
+// Lazy load SetupWizard since it's only needed on first visit or when manually triggered
+const SetupWizard = dynamic(
+  () => import("@/components/wizard").then(mod => ({ default: mod.SetupWizard })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="fixed inset-0 flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <p className="mt-4 text-muted-foreground">Loading setup wizard...</p>
+        </div>
+      </div>
+    ),
+  }
+);
 
 interface WizardContextType {
   isWizardActive: boolean;

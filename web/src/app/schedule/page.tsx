@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,21 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ScheduleEntryForm } from "@/components/schedule-entry-form";
 import { PagePickerDialog } from "@/components/page-picker-dialog";
-import { ScheduleListView, ScheduleCalendarView } from "./components";
+import { ScheduleListView } from "./components";
+import { queryKeys } from "@/hooks/use-board";
+
+// Lazy load ScheduleCalendarView since it includes react-big-calendar (~150KB+)
+const ScheduleCalendarView = dynamic(
+  () => import("./components").then(mod => ({ default: mod.ScheduleCalendarView })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="space-y-4">
+        <Skeleton className="h-96 w-full" />
+      </div>
+    ),
+  }
+);
 import { Plus, AlertCircle, CheckCircle2, AlertTriangle, List, CalendarDays } from "lucide-react";
 import { api, type ScheduleEntry, type ScheduleCreate, type ScheduleUpdate, type DayPattern } from "@/lib/api";
 import { toast } from "sonner";
@@ -84,8 +99,9 @@ export default function SchedulePage() {
   const toggleSchedule = useMutation({
     mutationFn: (enabled: boolean) => api.setScheduleEnabled(enabled),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["schedules"] });
-      queryClient.invalidateQueries({ queryKey: ["schedules", "active"] });
+      queryClient.invalidateQueries({ queryKey: ["schedules"], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: ["schedules", "active"], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activePage, refetchType: 'active' });
       toast.success(schedulesData?.enabled ? "Schedule mode disabled" : "Schedule mode enabled");
     },
     onError: () => {
@@ -97,9 +113,10 @@ export default function SchedulePage() {
   const createSchedule = useMutation({
     mutationFn: (data: ScheduleCreate) => api.createSchedule(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["schedules"] });
-      queryClient.invalidateQueries({ queryKey: ["schedules", "active"] });
-      queryClient.invalidateQueries({ queryKey: ["schedules", "validation"] });
+      queryClient.invalidateQueries({ queryKey: ["schedules"], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: ["schedules", "active"], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: ["schedules", "validation"], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activePage, refetchType: 'active' });
       toast.success("Schedule created");
       setShowForm(false);
       setPrefillData(null);
@@ -115,9 +132,10 @@ export default function SchedulePage() {
     mutationFn: ({ id, data }: { id: string; data: ScheduleUpdate }) =>
       api.updateSchedule(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["schedules"] });
-      queryClient.invalidateQueries({ queryKey: ["schedules", "active"] });
-      queryClient.invalidateQueries({ queryKey: ["schedules", "validation"] });
+      queryClient.invalidateQueries({ queryKey: ["schedules"], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: ["schedules", "active"], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: ["schedules", "validation"], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activePage, refetchType: 'active' });
       toast.success("Schedule updated");
       setShowForm(false);
       setEditingSchedule(null);
@@ -132,9 +150,10 @@ export default function SchedulePage() {
   const deleteSchedule = useMutation({
     mutationFn: (id: string) => api.deleteSchedule(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["schedules"] });
-      queryClient.invalidateQueries({ queryKey: ["schedules", "active"] });
-      queryClient.invalidateQueries({ queryKey: ["schedules", "validation"] });
+      queryClient.invalidateQueries({ queryKey: ["schedules"], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: ["schedules", "active"], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: ["schedules", "validation"], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activePage, refetchType: 'active' });
       toast.success("Schedule deleted");
       setDeleteScheduleId(null);
     },
@@ -147,8 +166,9 @@ export default function SchedulePage() {
   const setDefaultPage = useMutation({
     mutationFn: (pageId: string | null) => api.setDefaultPage(pageId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["schedules"] });
-      queryClient.invalidateQueries({ queryKey: ["schedules", "active"] });
+      queryClient.invalidateQueries({ queryKey: ["schedules"], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: ["schedules", "active"], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activePage, refetchType: 'active' });
       toast.success("Default page updated");
       setShowDefaultPageSelector(false);
     },
