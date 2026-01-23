@@ -3,7 +3,7 @@
 import { useEffect, useCallback, useMemo, useState, memo } from "react";
 import { usePages, useBoardSettings } from "@/hooks/use-board";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LayoutTemplate } from "lucide-react";
+import { LayoutTemplate, Loader2 } from "lucide-react";
 import { BoardDisplay } from "@/components/board-display";
 import type { Page, PagePreviewResponse, PagePreviewBatchResponse } from "@/lib/api";
 import { api } from "@/lib/api";
@@ -83,6 +83,16 @@ const PageButtonPreview = memo(function PageButtonPreview({
   isLoading: boolean;
   boardType?: "black" | "white" | null;
 }) {
+  // Show simple spinner when loading instead of BoardDisplay loading animation
+  // This prevents lag when all displays try to load at once
+  if (isLoading && !preview) {
+    return (
+      <div className="w-full flex items-center justify-center py-4">
+        <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div 
       className="w-full hover-stable overflow-hidden -mr-3"
@@ -93,7 +103,7 @@ const PageButtonPreview = memo(function PageButtonPreview({
     >
       <BoardDisplay 
         message={preview?.message || null} 
-        isLoading={isLoading}
+        isLoading={false}
         size="sm"
         boardType={boardType ?? "black"}
       />
