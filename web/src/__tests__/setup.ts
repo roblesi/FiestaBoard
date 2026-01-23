@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach, beforeAll, afterAll, vi } from "vitest";
+import React from "react";
 import { server } from "./mocks/server";
 
 // Filter out jsdom localStorage file warnings
@@ -57,6 +58,26 @@ Object.defineProperty(window, "matchMedia", {
     dispatchEvent: vi.fn(),
   })),
 });
+
+// Mock next/dynamic to return components synchronously in tests
+vi.mock("next/dynamic", () => ({
+  default: (loader: () => Promise<any>, options?: any) => {
+    // In tests, immediately resolve and return the component
+    return (props: any) => {
+      const [Component, setComponent] = React.useState<any>(null);
+      React.useEffect(() => {
+        loader().then((mod) => {
+          setComponent(() => mod.default || mod);
+        });
+      }, []);
+      if (!Component) {
+        // Return loading state if provided
+        return options?.loading ? React.createElement(options.loading) : null;
+      }
+      return React.createElement(Component, props);
+    };
+  },
+}));
 
 // Mock DOM APIs needed by ProseMirror/TipTap
 if (typeof document !== 'undefined') {

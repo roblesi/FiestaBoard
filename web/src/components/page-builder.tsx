@@ -1,14 +1,29 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { BoardDisplay } from "@/components/board-display";
-import { TipTapTemplateEditor } from "@/components/tiptap-template-editor/TipTapTemplateEditor";
 import { PlainTextEditor } from "@/components/plain-text-editor";
+
+// Lazy load TipTapTemplateEditor to reduce initial bundle size
+const TipTapTemplateEditor = dynamic(
+  () => import("@/components/tiptap-template-editor/TipTapTemplateEditor").then(mod => ({ default: mod.TipTapTemplateEditor })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="space-y-2">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-10 w-full" />
+        ))}
+      </div>
+    ),
+  }
+);
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { queryKeys } from "@/hooks/use-board";
@@ -31,6 +46,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { api, PageCreate, PageUpdate, PageType } from "@/lib/api";
 import { useBoardSettings } from "@/hooks/use-board";
+import { clearPreviewCacheForPage } from "@/lib/preview-cache";
 
 // Alignment type for template lines
 type LineAlignment = "left" | "center" | "right";
@@ -347,20 +363,27 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
         localStorage.removeItem(getDraftKey());
       }
       
-      // Invalidate pages list
-      queryClient.invalidateQueries({ queryKey: queryKeys.pages });
-      
-      // Invalidate the specific page and its preview to bust the cache
-      // Use the returned page ID for new pages, or the existing pageId for updates
+      // Clear preview cache for this page
       const targetPageId = pageId || data.id;
       if (targetPageId) {
-        queryClient.invalidateQueries({ queryKey: ["page", targetPageId] });
-        queryClient.invalidateQueries({ queryKey: queryKeys.pagePreview(targetPageId) });
+        clearPreviewCacheForPage(targetPageId);
       }
       
+      // Invalidate pages list with active refetch
+      queryClient.invalidateQueries({ queryKey: queryKeys.pages, refetchType: 'active' });
+      
+      // Invalidate the specific page and its preview to bust the cache
+      if (targetPageId) {
+        queryClient.invalidateQueries({ queryKey: ["page", targetPageId], refetchType: 'active' });
+        queryClient.invalidateQueries({ queryKey: queryKeys.pagePreview(targetPageId), refetchType: 'active' });
+      }
+      
+      // Invalidate all page previews since they may have changed
+      queryClient.invalidateQueries({ queryKey: ["pagePreview"], refetchType: 'active' });
+      
       // If this page is currently active, refresh the active page data
-      queryClient.invalidateQueries({ queryKey: queryKeys.activePage });
-      queryClient.invalidateQueries({ queryKey: queryKeys.status });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activePage, refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: queryKeys.status, refetchType: 'active' });
       
       toast.success(pageId ? "Page updated" : "Page created");
       onSave?.();
@@ -375,18 +398,26 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
   const deleteMutation = useMutation({
     mutationFn: () => api.deletePage(pageId!),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.pages });
+      // Clear preview cache for deleted page
+      if (pageId) {
+        clearPreviewCacheForPage(pageId);
+      }
+      
+      queryClient.invalidateQueries({ queryKey: queryKeys.pages, refetchType: 'active' });
       
       // Invalidate the specific page and its preview to bust the cache
       if (pageId) {
-        queryClient.invalidateQueries({ queryKey: ["page", pageId] });
-        queryClient.invalidateQueries({ queryKey: queryKeys.pagePreview(pageId) });
+        queryClient.invalidateQueries({ queryKey: ["page", pageId], refetchType: 'active' });
+        queryClient.invalidateQueries({ queryKey: queryKeys.pagePreview(pageId), refetchType: 'active' });
       }
+      
+      // Invalidate all page previews
+      queryClient.invalidateQueries({ queryKey: ["pagePreview"], refetchType: 'active' });
       
       // Also invalidate active page if it was updated
       if (data.active_page_updated) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.activePage });
-        queryClient.invalidateQueries({ queryKey: queryKeys.status });
+        queryClient.invalidateQueries({ queryKey: queryKeys.activePage, refetchType: 'active' });
+        queryClient.invalidateQueries({ queryKey: queryKeys.status, refetchType: 'active' });
       }
       
       // Show appropriate message

@@ -106,9 +106,11 @@ export function GeneralSettings() {
     mutationFn: (data: Record<string, unknown>) => 
       api.updatePluginConfig("silence_schedule", data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["plugin", "silence_schedule"] });
-      queryClient.invalidateQueries({ queryKey: ["plugins"] });
-      queryClient.invalidateQueries({ queryKey: ["config"] });
+      queryClient.invalidateQueries({ queryKey: ["plugin", "silence_schedule"], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: ["plugins"], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: ["config"], refetchType: 'active' });
+      // Invalidate template variables since plugin config may affect available variables
+      queryClient.invalidateQueries({ queryKey: ["template-variables"], refetchType: 'active' });
       toast.success("Settings saved successfully");
     },
     onError: (error: Error) => {

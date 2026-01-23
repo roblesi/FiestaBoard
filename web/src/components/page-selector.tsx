@@ -40,16 +40,22 @@ export function PageSelector({ onCreateNew, onEditPage }: PageSelectorProps) {
   const _deleteMutation = useMutation({
     mutationFn: (pageId: string) => api.deletePage(pageId),
     onSuccess: (data, pageId) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.pages });
+      // Clear preview cache for deleted page
+      clearPreviewCacheForPage(pageId);
+      
+      queryClient.invalidateQueries({ queryKey: queryKeys.pages, refetchType: 'active' });
       
       // Invalidate the specific page and its preview to bust the cache
-      queryClient.invalidateQueries({ queryKey: ["page", pageId] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.pagePreview(pageId) });
+      queryClient.invalidateQueries({ queryKey: ["page", pageId], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: queryKeys.pagePreview(pageId), refetchType: 'active' });
+      
+      // Invalidate all page previews
+      queryClient.invalidateQueries({ queryKey: ["pagePreview"], refetchType: 'active' });
       
       // Also invalidate active page if it was updated
       if (data.active_page_updated) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.activePage });
-        queryClient.invalidateQueries({ queryKey: queryKeys.status });
+        queryClient.invalidateQueries({ queryKey: queryKeys.activePage, refetchType: 'active' });
+        queryClient.invalidateQueries({ queryKey: queryKeys.status, refetchType: 'active' });
       }
       
       // Show appropriate message

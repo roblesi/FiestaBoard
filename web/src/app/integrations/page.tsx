@@ -1294,7 +1294,13 @@ export default function IntegrationsPage() {
     },
     onSettled: () => {
       // Refetch to ensure consistency
-      queryClient.invalidateQueries({ queryKey: ["plugins"] });
+      queryClient.invalidateQueries({ queryKey: ["plugins"], refetchType: 'active' });
+      // Invalidate template variables since plugin availability changed
+      queryClient.invalidateQueries({ queryKey: ["template-variables"], refetchType: 'active' });
+      // Invalidate plugin display data
+      queryClient.invalidateQueries({ queryKey: ["plugin-displays-batch"], refetchType: 'active' });
+      // Invalidate page previews since they may use plugin variables
+      queryClient.invalidateQueries({ queryKey: ["pagePreview"], refetchType: 'active' });
     },
   });
 
