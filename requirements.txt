@@ -19,6 +19,9 @@ httpx>=0.25.0
 yfinance>=0.2.0
 finnhub-python>=2.4.0
 
+# Sun position calculations
+astral>=3.2
+
 # Optional: Board Python library (alternative to manual implementation)
 # fiesta>=0.1.0
 

@@ -213,6 +213,10 @@ Optional but recommended:
 - Minimum coverage requirement: **80%**
 - CI will fail if coverage is below threshold
 - Run tests with: `python scripts/run_plugin_tests.py --plugin=my_plugin`
+- **No dead code**: Remove unreachable code paths identified by coverage reports
+  - If coverage shows unreachable lines (e.g., `elif` branches that can never execute), remove them
+  - Dead code reduces code clarity and can confuse future maintainers
+  - Use coverage reports to identify and eliminate dead code before completing a plugin
 
 ### Plugin Validation
 
