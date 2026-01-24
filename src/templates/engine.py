@@ -320,10 +320,26 @@ class TemplateEngine:
             else:
                 # Normal rendering
                 rendered_line = self.render(content, context)
-                # Process fill_space first
-                rendered_line = self._process_fill_space(rendered_line, width=22)
-                # Apply alignment (this also truncates if needed)
-                rendered[i] = self._apply_alignment(rendered_line, alignment, width=22)
+                
+                # Check if the rendered line contains newlines (from multi-line variables)
+                if '\n' in rendered_line:
+                    # Split into multiple lines and fill subsequent output lines
+                    split_lines = rendered_line.split('\n')
+                    for line_idx, split_line in enumerate(split_lines):
+                        if i + line_idx >= 6:
+                            break  # Don't exceed 6 lines
+                        # Process fill_space first
+                        processed_line = self._process_fill_space(split_line, width=22)
+                        # Apply alignment (this also truncates if needed)
+                        rendered[i + line_idx] = self._apply_alignment(processed_line, alignment, width=22)
+                    # Mark subsequent lines as filled (skip them in future iterations)
+                    if len(split_lines) > 1:
+                        skip_until = min(i + len(split_lines) - 1, 5)
+                else:
+                    # Process fill_space first
+                    rendered_line = self._process_fill_space(rendered_line, width=22)
+                    # Apply alignment (this also truncates if needed)
+                    rendered[i] = self._apply_alignment(rendered_line, alignment, width=22)
         
         return '\n'.join(rendered)
     

@@ -209,154 +209,200 @@ class SunArtPlugin(PluginBase):
     def _determine_sun_stage(self, elevation: float, is_rising: bool) -> str:
         """Determine current sun stage based on elevation and direction.
         
+        Uses 11 stages for smooth visual progression:
+        Rising: night -> late_night -> dawn -> early_sunrise -> sunrise -> morning -> noon
+        Setting: noon -> afternoon -> sunset -> late_sunset -> dusk -> twilight -> night
+        
         Args:
             elevation: Sun elevation angle in degrees
             is_rising: True if sun is rising, False if setting
             
         Returns:
-            Sun stage name
+            Sun stage name (one of 11 stages)
         """
-        if elevation < -6:
-            return "night"
-        elif elevation < 0:
-            # Below horizon but in twilight
-            return "dawn" if is_rising else "dusk"
-        elif elevation < 5:
-            # Low sun (rising or setting)
-            return "sunrise" if is_rising else "sunset"
-        elif elevation < 30:
-            # Medium elevation
-            return "morning" if is_rising else "afternoon"
+        if is_rising:
+            # Sun is rising (before solar noon)
+            if elevation < -12:
+                return "night"
+            elif elevation < -6:
+                return "late_night"
+            elif elevation < -1:
+                return "dawn"
+            elif elevation < 3:
+                return "early_sunrise"
+            elif elevation < 10:
+                return "sunrise"
+            elif elevation < 30:
+                return "morning"
+            else:
+                return "noon"
         else:
-            # High sun (noon)
-            return "noon"
+            # Sun is setting (after solar noon)
+            if elevation >= 30:
+                return "noon"
+            elif elevation >= 10:
+                return "afternoon"
+            elif elevation >= 3:
+                return "sunset"
+            elif elevation >= -1:
+                return "late_sunset"
+            elif elevation >= -6:
+                return "dusk"
+            elif elevation >= -12:
+                return "twilight"
+            else:
+                return "night"
     
     def _generate_pattern(self, stage: str, elevation: float) -> List[List[int]]:
         """Generate 6x22 pattern for given sun stage.
         
+        Uses 11 stages showing sun rising/setting line by line:
+        night -> late_night -> dawn -> early_sunrise -> sunrise -> morning -> noon
+        noon -> afternoon -> sunset -> late_sunset -> dusk -> twilight -> night
+        
         Args:
-            stage: Sun stage name
-            elevation: Sun elevation angle
+            stage: Sun stage name (one of 11 stages)
+            elevation: Sun elevation angle (unused - patterns are hardcoded)
             
         Returns:
             6x22 array of character codes
         """
-        # Initialize empty board
-        pattern = [[BoardChars.SPACE] * COLS for _ in range(ROWS)]
+        # Color shortcuts for readability
+        K = BoardChars.BLACK   # 70
+        R = BoardChars.RED     # 63
+        O = BoardChars.ORANGE  # 64
+        Y = BoardChars.YELLOW  # 65
+        B = BoardChars.BLUE    # 67
+        V = BoardChars.VIOLET  # 68
+        W = BoardChars.WHITE   # 69
         
-        if stage == "night":
-            # Dark pattern - mostly black with some blue
-            for row in range(ROWS):
-                for col in range(COLS):
-                    # Create subtle gradient
-                    if (row + col) % 3 == 0:
-                        pattern[row][col] = BoardChars.BLUE
-                    else:
-                        pattern[row][col] = BoardChars.BLACK
+        # Hardcoded patterns for each of 11 stages (6 rows x 22 columns)
+        # Sun rises from bottom to top, then sets from top to bottom
+        # Based on reference images from issue #115
         
-        elif stage == "dawn":
-            # Gradual lightening - blue to orange gradient
-            for row in range(ROWS):
-                for col in range(COLS):
-                    # Vertical gradient: darker at top, lighter at bottom
-                    if row < 2:
-                        pattern[row][col] = BoardChars.BLUE
-                    elif row < 4:
-                        pattern[row][col] = BoardChars.ORANGE if col % 2 == 0 else BoardChars.BLUE
-                    else:
-                        pattern[row][col] = BoardChars.ORANGE
+        patterns = {
+            # 1. NIGHT: Black with white stars scattered
+            "night": [
+                [K,K,K,W,K,K,K,K,K,K,K,K,K,K,K,K,K,W,K,K,K,K],
+                [K,K,K,K,K,K,K,K,W,K,K,K,K,K,K,K,K,K,K,K,K,K],
+                [K,K,K,K,K,K,K,K,K,K,K,K,W,K,K,K,K,K,K,K,W,K],
+                [K,W,K,K,K,K,K,K,K,K,K,K,K,K,K,K,K,K,K,K,K,K],
+                [K,K,K,K,K,K,K,K,K,K,K,K,K,K,K,W,K,K,K,K,K,K],
+                [K,K,K,K,K,W,K,K,K,K,K,K,K,K,K,K,K,K,K,W,K,K],
+            ],
+            
+            # 2. LATE_NIGHT: Stars with faint violet/orange glow at horizon
+            "late_night": [
+                [K,K,K,W,K,K,K,K,K,K,K,K,K,K,K,K,K,W,K,K,K,K],
+                [K,K,K,K,K,K,K,K,W,K,K,K,K,K,K,K,K,K,K,K,K,K],
+                [K,K,K,K,K,K,K,K,K,K,K,K,W,K,K,K,K,K,K,K,W,K],
+                [K,W,K,K,K,K,K,K,K,K,K,K,K,K,K,K,K,K,K,K,K,K],
+                [V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V],
+                [V,V,V,V,V,O,O,O,O,O,O,O,O,O,O,O,O,V,V,V,V,V],
+            ],
+            
+            # 3. DAWN: Purple/violet sky, orange glow at horizon, sun just below
+            "dawn": [
+                [V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V],
+                [V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V],
+                [V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V],
+                [V,V,V,V,V,O,O,O,O,O,O,O,O,O,O,O,O,V,V,V,V,V],
+                [O,O,O,O,O,O,O,O,Y,Y,Y,Y,Y,Y,O,O,O,O,O,O,O,O],
+                [O,O,O,O,O,O,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,O,O,O,O,O,O],
+            ],
+            
+            # 4. EARLY_SUNRISE: Sun peeking (1 row), orange/violet sky
+            "early_sunrise": [
+                [V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V],
+                [V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V],
+                [O,O,O,O,O,O,O,O,O,O,O,O,O,O,O,O,O,O,O,O,O,O],
+                [O,O,O,O,O,O,O,O,Y,Y,Y,Y,Y,Y,O,O,O,O,O,O,O,O],
+                [O,O,O,O,O,O,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,O,O,O,O,O,O],
+                [O,O,O,O,O,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,O,O,O,O,O],
+            ],
+            
+            # 5. SUNRISE: Sun rising, transitioning to morning style
+            "sunrise": [
+                [B,B,B,B,B,B,O,Y,Y,Y,Y,Y,Y,Y,Y,O,B,B,B,B,B,B],
+                [B,B,B,B,B,O,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,O,B,B,B,B,B],
+                [O,O,O,O,O,O,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,O,O,O,O,O,O],
+                [O,O,O,O,O,O,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,O,O,O,O,O,O],
+                [O,O,O,O,O,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,O,O,O,O,O],
+                [O,O,O,O,O,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,O,O,O,O,O],
+            ],
+            
+            # 6. MORNING: Matches reference image 2 - blue sides, yellow sun column, orange bottom sides
+            "morning": [
+                [B,B,B,B,B,B,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,B,B,B,B,B,B],
+                [B,B,B,B,B,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,B,B,B,B,B],
+                [B,B,B,B,B,O,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,O,B,B,B,B,B],
+                [O,O,O,O,O,O,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,O,O,O,O,O,O],
+                [O,O,O,O,O,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,O,O,O,O,O],
+                [O,O,O,O,O,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,O,O,O,O,O],
+            ],
+            
+            # 7. NOON: Brightest - blue sides, white/yellow sun column, orange bottom sides
+            "noon": [
+                [B,B,B,B,B,Y,Y,W,W,W,W,W,W,W,W,Y,Y,B,B,B,B,B],
+                [B,B,B,B,B,Y,W,W,W,W,W,W,W,W,W,W,Y,B,B,B,B,B],
+                [B,B,B,B,B,Y,Y,W,W,W,W,W,W,W,W,Y,Y,B,B,B,B,B],
+                [O,O,O,O,O,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,O,O,O,O,O],
+                [O,O,O,O,O,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,O,O,O,O,O],
+                [O,O,O,O,O,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,O,O,O,O,O],
+            ],
+            
+            # 8. AFTERNOON: Same as morning - blue sides, yellow sun column, orange bottom sides
+            "afternoon": [
+                [B,B,B,B,B,B,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,B,B,B,B,B,B],
+                [B,B,B,B,B,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,B,B,B,B,B],
+                [B,B,B,B,B,O,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,O,B,B,B,B,B],
+                [O,O,O,O,O,O,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,O,O,O,O,O,O],
+                [O,O,O,O,O,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,O,O,O,O,O],
+                [O,O,O,O,O,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,O,O,O,O,O],
+            ],
+            
+            # 9. SUNSET: Matches reference image 3 - orange sky, yellow sun, red accents, purple corners
+            "sunset": [
+                [O,O,O,O,O,O,O,O,O,O,O,O,O,O,O,O,O,O,O,O,O,O],
+                [O,O,O,O,O,O,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,O,O,O,O,O,O],
+                [R,R,R,R,R,O,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,O,R,R,R,R,R],
+                [R,R,R,R,R,O,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,O,R,R,R,R,R],
+                [O,O,O,O,O,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,O,O,O,O,O],
+                [V,V,O,O,O,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,O,O,O,V,V],
+            ],
+            
+            # 10. LATE_SUNSET: Sun almost gone, transitioning to dusk style
+            "late_sunset": [
+                [R,R,R,R,R,R,R,R,R,R,R,R,R,R,R,R,R,R,R,R,R,R],
+                [R,R,R,R,R,R,O,O,O,O,O,O,O,O,O,O,R,R,R,R,R,R],
+                [R,R,R,R,V,V,V,V,V,V,V,V,V,V,V,V,V,V,R,R,R,R],
+                [V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V],
+                [V,V,V,V,V,V,V,V,Y,Y,Y,Y,Y,Y,V,V,V,V,V,V,V,V],
+                [V,V,V,V,V,V,V,Y,Y,Y,Y,Y,Y,Y,Y,V,V,V,V,V,V,V],
+            ],
+            
+            # 11. DUSK: Matches reference image 1 - red top, orange band, purple middle, yellow sun at bottom
+            "dusk": [
+                [R,R,R,R,R,R,R,R,R,R,R,R,R,R,R,R,R,R,R,R,R,R],
+                [R,R,R,R,R,R,O,O,O,O,O,O,O,O,O,O,R,R,R,R,R,R],
+                [R,R,R,R,V,V,V,V,V,V,V,V,V,V,V,V,V,V,R,R,R,R],
+                [V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V],
+                [V,V,V,V,V,V,V,V,Y,Y,Y,Y,Y,Y,V,V,V,V,V,V,V,V],
+                [V,V,V,V,V,V,V,Y,Y,Y,Y,Y,Y,Y,Y,V,V,V,V,V,V,V],
+            ],
+            
+            # 12. TWILIGHT: Fading to night, stars appearing
+            "twilight": [
+                [K,K,K,W,K,K,K,K,K,K,K,K,K,K,K,K,K,W,K,K,K,K],
+                [K,K,K,K,K,K,K,K,W,K,K,K,K,K,K,K,K,K,K,K,K,K],
+                [V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V],
+                [V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V,V],
+                [V,V,V,V,V,V,O,O,O,O,O,O,O,O,O,O,V,V,V,V,V,V],
+                [V,V,V,V,V,O,O,O,Y,Y,Y,Y,Y,Y,O,O,O,V,V,V,V,V],
+            ],
+        }
         
-        elif stage == "sunrise":
-            # Brightening with sun symbol
-            center_row, center_col = 2, 11
-            # Create orange/yellow gradient
-            for row in range(ROWS):
-                for col in range(COLS):
-                    dist = abs(row - center_row) + abs(col - center_col)
-                    if dist == 0:
-                        pattern[row][col] = BoardChars.O  # Sun symbol
-                    elif dist <= 2:
-                        pattern[row][col] = BoardChars.YELLOW
-                    elif dist <= 4:
-                        pattern[row][col] = BoardChars.ORANGE
-                    else:
-                        pattern[row][col] = BoardChars.ORANGE if row > center_row else BoardChars.BLUE
-        
-        elif stage == "morning":
-            # Full sun pattern - yellow/orange
-            center_row, center_col = 2, 11
-            for row in range(ROWS):
-                for col in range(COLS):
-                    dist = abs(row - center_row) + abs(col - center_col)
-                    if dist <= 1:
-                        pattern[row][col] = BoardChars.O  # Sun symbol
-                    elif dist <= 3:
-                        pattern[row][col] = BoardChars.YELLOW
-                    elif dist <= 6:
-                        pattern[row][col] = BoardChars.ORANGE
-                    else:
-                        pattern[row][col] = BoardChars.YELLOW if (row + col) % 2 == 0 else BoardChars.ORANGE
-        
-        elif stage == "noon":
-            # Brightest pattern - yellow/white
-            center_row, center_col = 2, 11
-            for row in range(ROWS):
-                for col in range(COLS):
-                    dist = abs(row - center_row) + abs(col - center_col)
-                    if dist == 0:
-                        pattern[row][col] = BoardChars.O  # Sun symbol
-                    elif dist <= 2:
-                        pattern[row][col] = BoardChars.WHITE
-                    elif dist <= 4:
-                        pattern[row][col] = BoardChars.YELLOW
-                    elif dist <= 6:
-                        pattern[row][col] = BoardChars.ORANGE
-                    else:
-                        pattern[row][col] = BoardChars.YELLOW
-        
-        elif stage == "afternoon":
-            # Similar to morning but slightly dimmer
-            center_row, center_col = 2, 11
-            for row in range(ROWS):
-                for col in range(COLS):
-                    dist = abs(row - center_row) + abs(col - center_col)
-                    if dist <= 1:
-                        pattern[row][col] = BoardChars.O  # Sun symbol
-                    elif dist <= 3:
-                        pattern[row][col] = BoardChars.YELLOW
-                    elif dist <= 6:
-                        pattern[row][col] = BoardChars.ORANGE
-                    else:
-                        pattern[row][col] = BoardChars.ORANGE if (row + col) % 2 == 0 else BoardChars.YELLOW
-        
-        elif stage == "sunset":
-            # Dimming with sun symbol - orange/red
-            center_row, center_col = 2, 11
-            for row in range(ROWS):
-                for col in range(COLS):
-                    dist = abs(row - center_row) + abs(col - center_col)
-                    if dist == 0:
-                        pattern[row][col] = BoardChars.O  # Sun symbol
-                    elif dist <= 2:
-                        pattern[row][col] = BoardChars.ORANGE
-                    elif dist <= 4:
-                        pattern[row][col] = BoardChars.RED
-                    else:
-                        pattern[row][col] = BoardChars.ORANGE if row < center_row else BoardChars.BLUE
-        
-        elif stage == "dusk":
-            # Fading to dark - orange to blue to black
-            for row in range(ROWS):
-                for col in range(COLS):
-                    # Vertical gradient: orange at top, dark at bottom
-                    if row < 2:
-                        pattern[row][col] = BoardChars.ORANGE
-                    elif row < 4:
-                        pattern[row][col] = BoardChars.BLUE if col % 2 == 0 else BoardChars.ORANGE
-                    else:
-                        pattern[row][col] = BoardChars.BLACK if (row + col) % 2 == 0 else BoardChars.BLUE
-        
-        return pattern
+        return patterns.get(stage, patterns["night"])
     
     def _pattern_to_string(self, pattern: List[List[int]]) -> str:
         """Convert pattern array to string format with color markers.

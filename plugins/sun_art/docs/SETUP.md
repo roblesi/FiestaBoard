@@ -89,23 +89,47 @@ The plugin uses the timezone from **General Settings** for sun calculations. Mak
 
 ## Understanding Sun Stages
 
-The pattern changes through 8 distinct stages throughout the day:
+The pattern changes through 8 distinct stages throughout the day. The transitions are based on the sun's elevation angle and whether it's rising or setting.
 
-| Stage | Time | Pattern Description |
-|-------|------|---------------------|
-| **Night** | After dusk, before dawn | Dark pattern with black and blue tiles |
-| **Dawn** | Before sunrise (twilight) | Gradual lightening from blue to orange |
-| **Sunrise** | Sun rising (0° to 5°) | Brightening with sun symbol, orange/yellow |
-| **Morning** | After sunrise (5° to 30°) | Full sun pattern, yellow/orange colors |
-| **Noon** | Peak sun (30° to 90°) | Brightest pattern, yellow/white, centered sun |
-| **Afternoon** | Before sunset (5° to 30°) | Similar to morning, slightly dimmer |
-| **Sunset** | Sun setting (0° to 5°) | Dimming with sun symbol, orange/red |
-| **Dusk** | After sunset (twilight) | Fading to dark, orange to blue to black |
+### Stage Transitions
+
+| Stage | Elevation Range | When It Occurs | Pattern Description |
+|-------|----------------|----------------|---------------------|
+| **Night** | < -6° | After dusk ends, before dawn begins | Dark pattern with black and blue tiles |
+| **Dawn** | -6° to 0° | ~30-40 min before sunrise (twilight) | Gradual lightening from blue sky to orange horizon |
+| **Sunrise** | 0° to 5° | At sunrise, first ~20-30 min after | Brightening with circular sun at horizon, orange/yellow gradient |
+| **Morning** | 5° to 30° | ~30 min after sunrise until ~2 hours | Full circular sun pattern, yellow/orange colors, clear sky/land separation |
+| **Noon** | 30° to 90° | Peak sun elevation (midday) | Brightest pattern, white/yellow sun high in sky |
+| **Afternoon** | 5° to 30° | ~2 hours before sunset until ~30 min before | Similar to morning, sun lower in sky |
+| **Sunset** | 0° to 5° | At sunset, last ~20-30 min before | Dimming with circular sun at horizon, orange/red colors |
+| **Dusk** | -6° to 0° | ~30-40 min after sunset (twilight) | Fading to dark, orange to blue to black |
+
+### Visual Pattern Details
+
+Each stage has distinct visual characteristics:
+
+- **Night**: Dark background with subtle blue accents
+- **Dawn/Dusk**: Clear horizon line separating blue sky from orange land
+- **Sunrise/Sunset**: Circular sun visible at horizon with distinct sky, sun, and land zones
+- **Morning/Afternoon**: Full circular sun in blue sky, with clear horizon line and distinct land pattern
+- **Noon**: Brightest white/yellow sun high in sky
+
+### Transition Times
 
 The exact times for each stage depend on:
-- Your location (latitude/longitude)
-- The date (season)
-- Your timezone
+- **Your location** (latitude/longitude) - affects sunrise/sunset times
+- **The date** (season) - affects sun elevation and day length
+- **Your timezone** - must be correctly configured in General Settings
+
+**Example transitions** (varies by location and season):
+- **Dawn begins**: ~30-40 minutes before sunrise
+- **Sunrise**: When sun elevation reaches 0° (sun appears on horizon)
+- **Morning begins**: ~20-30 minutes after sunrise (sun elevation > 5°)
+- **Noon**: When sun reaches peak elevation (varies by season)
+- **Afternoon begins**: When sun elevation drops below 30° (afternoon)
+- **Sunset begins**: ~20-30 minutes before sunset (sun elevation < 5°)
+- **Sunset**: When sun elevation reaches 0° (sun disappears below horizon)
+- **Dusk ends**: ~30-40 minutes after sunset (sun elevation < -6°)
 
 ## Using Sun Art in Templates
 

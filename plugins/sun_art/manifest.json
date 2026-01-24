@@ -7,7 +7,7 @@
   "repository": "https://github.com/FiestaBoard/FiestaBoard",
   "documentation": "README.md",
   "icon": "sun",
-  "category": "display",
+  "category": "weather",
 
   "settings_schema": {
     "type": "object",

@@ -1,18 +1,19 @@
 # Sun Art Plugin
 
-Display a full-screen 6x22 bit image pattern that changes based on the sun's position throughout the day. The pattern evolves through different stages: night, dawn, sunrise, morning, noon, afternoon, sunset, and dusk.
+Display a full-screen 6x22 bit image pattern that changes based on the sun's position throughout the day. The sun rises line-by-line from the bottom to full at noon, then sets line-by-line back to night.
 
-![Sun Art Display](./docs/sun-art-display.png)
+![Sun Art Display](./docs/sun-art-noon.png)
 
 ## Overview
 
-The Sun Art plugin generates visual patterns representing the sun's position using latitude/longitude coordinates. It calculates accurate sun positions using the `astral` library and creates distinct patterns for each stage of the day.
+The Sun Art plugin generates visual patterns representing the sun's position using latitude/longitude coordinates. It calculates accurate sun positions using the `astral` library and creates 12 distinct patterns showing the sun's progression throughout the day.
 
 ## Features
 
-- **Full-screen patterns**: 6x22 grid of color tiles and characters
+- **Full-screen patterns**: 6x22 grid of color tiles
 - **Real-time sun tracking**: Calculates sun position based on your location
-- **8 distinct stages**: Night, dawn, sunrise, morning, noon, afternoon, sunset, dusk
+- **12 distinct stages**: Smooth progression showing sun rising/setting line-by-line
+- **Night sky with stars**: White dots scattered on black background
 - **Dual format output**: String format (with color markers) and array format (nested arrays)
 - **Location-based**: Uses latitude/longitude for accurate calculations
 - **Timezone aware**: Uses general timezone settings for proper time calculations
@@ -28,33 +29,98 @@ The plugin uses the `astral` library to calculate:
 
 ### Sun Stage Determination
 
-Stages are determined by sun elevation and direction:
+The plugin uses 12 stages to show the sun rising line-by-line then setting line-by-line:
 
-| Stage | Elevation Range | Description |
-|-------|----------------|-------------|
-| **Night** | < -6° | Sun below horizon, no twilight |
-| **Dawn** | -6° to 0° | Civil dawn (rising, below horizon) |
-| **Sunrise** | 0° to 5° | Sun rising above horizon |
-| **Morning** | 5° to 30° | Morning sun (rising) |
-| **Noon** | 30° to 90° | High sun (peak elevation) |
-| **Afternoon** | 5° to 30° | Afternoon sun (setting) |
-| **Sunset** | 0° to 5° | Sun setting below horizon |
-| **Dusk** | -6° to 0° | Civil dusk (setting, below horizon) |
+**Rising (before solar noon):**
+
+| Stage | Elevation | Description |
+|-------|-----------|-------------|
+| **Night** | < -12° | Black sky with white stars |
+| **Late Night** | -12° to -6° | Stars with faint glow at horizon |
+| **Dawn** | -6° to -1° | Purple sky, orange glow, sun approaching |
+| **Early Sunrise** | -1° to 3° | Sun peeking (1-2 rows visible) |
+| **Sunrise** | 3° to 10° | Sun rising (3 rows), blue sky appearing |
+| **Morning** | 10° to 30° | Sun high (5 rows), mostly blue sky |
+| **Noon** | > 30° | Full sun (6 rows), brightest with white core |
+
+**Setting (after solar noon):**
+
+| Stage | Elevation | Description |
+|-------|-----------|-------------|
+| **Afternoon** | 10° to 30° | Sun lowering (5 rows), blue sky |
+| **Sunset** | 3° to 10° | Sun setting (3 rows), orange/red sky |
+| **Late Sunset** | -1° to 3° | Sun almost gone (2 rows), red/purple sky |
+| **Dusk** | -6° to -1° | Sun just set, afterglow fading |
+| **Twilight** | -12° to -6° | Fading to night, stars appearing |
+| **Night** | < -12° | Black sky with white stars |
 
 ### Pattern Generation
 
-Each stage has a unique visual pattern:
+Each stage has a hardcoded 6x22 pattern showing the sun progressively rising then setting:
 
-- **Night**: Dark pattern with black and blue tiles
-- **Dawn**: Gradual lightening from blue to orange (vertical gradient)
-- **Sunrise**: Brightening with sun symbol (O) in center, orange/yellow gradient
-- **Morning**: Full sun pattern with yellow/orange colors
-- **Noon**: Brightest pattern with yellow/white colors, centered sun
-- **Afternoon**: Similar to morning, slightly dimmer
-- **Sunset**: Dimming with sun symbol, orange/red colors
-- **Dusk**: Fading to dark, orange to blue to black gradient
+- **Night/Twilight**: Black background with scattered white stars
+- **Dawn/Dusk**: Purple/violet sky with orange glow at horizon
+- **Sunrise/Sunset stages**: Yellow sun column grows/shrinks row-by-row
+- **Morning/Afternoon**: Sun fills most of the display, blue sky at top
+- **Noon**: Full 6-row sun with white core (brightest)
 
-Patterns use color tiles (codes 63-71) and the 'O' character (code 15) for the sun symbol.
+**Pattern Design Features:**
+- **Vertical sun column** centered at column 11
+- **Stars at night** using white tiles on black background
+- **Color tiles only** (codes 63-71) - no character symbols
+- **Smooth progression**: Each stage adds/removes approximately one row of sun
+
+## Stage Examples
+
+The pattern changes through 12 distinct stages. Here are visual examples:
+
+### Night
+![Night Stage](./docs/sun-art-night.png)
+*Black sky with scattered white stars - sun well below horizon*
+
+### Late Night
+![Late Night Stage](./docs/sun-art-late-night.png)
+*Stars with faint violet/orange glow at horizon - pre-dawn*
+
+### Dawn
+![Dawn Stage](./docs/sun-art-dawn.png)
+*Purple sky with orange glow - sun approaching from below*
+
+### Early Sunrise
+![Early Sunrise Stage](./docs/sun-art-early-sunrise.png)
+*Sun peeking above horizon (1-2 rows visible)*
+
+### Sunrise
+![Sunrise Stage](./docs/sun-art-sunrise.png)
+*Sun rising (3 rows visible), blue sky appearing*
+
+### Morning
+![Morning Stage](./docs/sun-art-morning.png)
+*Sun high (5 rows), blue sky dominant*
+
+### Noon
+![Noon Stage](./docs/sun-art-noon.png)
+*Full sun (6 rows), brightest with white core*
+
+### Afternoon
+![Afternoon Stage](./docs/sun-art-afternoon.png)
+*Sun lowering (5 rows), same as morning*
+
+### Sunset
+![Sunset Stage](./docs/sun-art-sunset.png)
+*Sun setting (3 rows), orange/red sky*
+
+### Late Sunset
+![Late Sunset Stage](./docs/sun-art-late-sunset.png)
+*Sun almost gone (2 rows), red/purple sky*
+
+### Dusk
+![Dusk Stage](./docs/sun-art-dusk.png)
+*Sun just set, red/orange fading to purple*
+
+### Twilight
+![Twilight Stage](./docs/sun-art-twilight.png)
+*Fading to night, stars appearing*
 
 ## Template Variables
 
@@ -195,7 +261,7 @@ The plugin includes comprehensive tests with >80% coverage:
 
 - Configuration validation
 - Sun position calculations
-- Stage determination (all 8 stages)
+- Stage determination (all 12 stages)
 - Pattern generation (verify 6x22 dimensions)
 - String and array format outputs
 - Error handling

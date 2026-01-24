@@ -160,8 +160,8 @@ class TestSunArtPlugin:
             "noon": now.replace(hour=12, minute=0)
         }
         
-        # Night: elevation below -6
-        mock_elevation.return_value = -10.0
+        # Night: elevation below -12
+        mock_elevation.return_value = -15.0
         mock_azimuth.return_value = 0.0
         
         plugin = SunArtPlugin(sample_manifest)
@@ -214,49 +214,76 @@ class TestSunArtPlugin:
         assert result.data["sun_position"] > 0
     
     def test_determine_sun_stage_night(self, sample_manifest):
-        """Test sun stage determination for night."""
+        """Test sun stage determination for night (elevation < -12)."""
         plugin = SunArtPlugin(sample_manifest)
-        stage = plugin._determine_sun_stage(-10.0, False)
+        # Both rising and setting should return night when very low
+        stage = plugin._determine_sun_stage(-15.0, False)
+        assert stage == "night"
+        stage = plugin._determine_sun_stage(-15.0, True)
         assert stage == "night"
     
+    def test_determine_sun_stage_late_night(self, sample_manifest):
+        """Test sun stage determination for late_night (-12 to -6, rising)."""
+        plugin = SunArtPlugin(sample_manifest)
+        stage = plugin._determine_sun_stage(-9.0, True)
+        assert stage == "late_night"
+    
+    def test_determine_sun_stage_twilight(self, sample_manifest):
+        """Test sun stage determination for twilight (-12 to -6, setting)."""
+        plugin = SunArtPlugin(sample_manifest)
+        stage = plugin._determine_sun_stage(-9.0, False)
+        assert stage == "twilight"
+    
     def test_determine_sun_stage_dawn(self, sample_manifest):
-        """Test sun stage determination for dawn."""
+        """Test sun stage determination for dawn (-6 to -1, rising)."""
         plugin = SunArtPlugin(sample_manifest)
         stage = plugin._determine_sun_stage(-3.0, True)
         assert stage == "dawn"
     
     def test_determine_sun_stage_dusk(self, sample_manifest):
-        """Test sun stage determination for dusk."""
+        """Test sun stage determination for dusk (-6 to -1, setting)."""
         plugin = SunArtPlugin(sample_manifest)
         stage = plugin._determine_sun_stage(-3.0, False)
         assert stage == "dusk"
     
-    def test_determine_sun_stage_sunrise(self, sample_manifest):
-        """Test sun stage determination for sunrise."""
+    def test_determine_sun_stage_early_sunrise(self, sample_manifest):
+        """Test sun stage determination for early_sunrise (-1 to 3, rising)."""
         plugin = SunArtPlugin(sample_manifest)
-        stage = plugin._determine_sun_stage(2.0, True)
+        stage = plugin._determine_sun_stage(1.0, True)
+        assert stage == "early_sunrise"
+    
+    def test_determine_sun_stage_late_sunset(self, sample_manifest):
+        """Test sun stage determination for late_sunset (-1 to 3, setting)."""
+        plugin = SunArtPlugin(sample_manifest)
+        stage = plugin._determine_sun_stage(1.0, False)
+        assert stage == "late_sunset"
+    
+    def test_determine_sun_stage_sunrise(self, sample_manifest):
+        """Test sun stage determination for sunrise (3 to 10, rising)."""
+        plugin = SunArtPlugin(sample_manifest)
+        stage = plugin._determine_sun_stage(6.0, True)
         assert stage == "sunrise"
     
     def test_determine_sun_stage_sunset(self, sample_manifest):
-        """Test sun stage determination for sunset."""
+        """Test sun stage determination for sunset (3 to 10, setting)."""
         plugin = SunArtPlugin(sample_manifest)
-        stage = plugin._determine_sun_stage(2.0, False)
+        stage = plugin._determine_sun_stage(6.0, False)
         assert stage == "sunset"
     
     def test_determine_sun_stage_morning(self, sample_manifest):
-        """Test sun stage determination for morning."""
+        """Test sun stage determination for morning (10 to 30, rising)."""
         plugin = SunArtPlugin(sample_manifest)
-        stage = plugin._determine_sun_stage(15.0, True)
+        stage = plugin._determine_sun_stage(20.0, True)
         assert stage == "morning"
     
     def test_determine_sun_stage_afternoon(self, sample_manifest):
-        """Test sun stage determination for afternoon."""
+        """Test sun stage determination for afternoon (10 to 30, setting)."""
         plugin = SunArtPlugin(sample_manifest)
-        stage = plugin._determine_sun_stage(15.0, False)
+        stage = plugin._determine_sun_stage(20.0, False)
         assert stage == "afternoon"
     
     def test_determine_sun_stage_noon(self, sample_manifest):
-        """Test sun stage determination for noon."""
+        """Test sun stage determination for noon (>30)."""
         plugin = SunArtPlugin(sample_manifest)
         stage = plugin._determine_sun_stage(45.0, False)
         assert stage == "noon"
