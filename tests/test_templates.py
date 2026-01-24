@@ -219,6 +219,41 @@ class TestRenderLines:
         result = engine.render_lines(lines, {})
         output_lines = result.split('\n')
         assert len(output_lines[0]) <= 22
+    
+    def test_render_lines_multiline_variable(self, engine):
+        """Test that variables with newlines are split across multiple output lines."""
+        # Create a context with a multi-line variable
+        context = {
+            "test": {
+                "multiline": "Line 1\nLine 2\nLine 3"
+            }
+        }
+        lines = ["{{test.multiline}}"]
+        result = engine.render_lines(lines, context)
+        
+        output_lines = result.split('\n')
+        assert len(output_lines) == 6  # Should still be 6 lines total
+        assert "Line 1" in output_lines[0]
+        assert "Line 2" in output_lines[1]
+        assert "Line 3" in output_lines[2]
+        # Remaining lines should be empty or padded
+        assert output_lines[3] == "" or output_lines[3].strip() == ""
+    
+    def test_render_lines_multiline_variable_exceeds_6_lines(self, engine):
+        """Test that multi-line variables exceeding 6 lines are truncated."""
+        # Create a variable with more than 6 lines
+        context = {
+            "test": {
+                "multiline": "\n".join([f"Line {i}" for i in range(1, 10)])
+            }
+        }
+        lines = ["{{test.multiline}}"]
+        result = engine.render_lines(lines, context)
+        
+        output_lines = result.split('\n')
+        assert len(output_lines) == 6  # Should be exactly 6 lines
+        assert "Line 1" in output_lines[0]
+        assert "Line 6" in output_lines[5]  # Last line should be Line 6, not Line 9
 
 
 class TestAvailableVariables:

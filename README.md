@@ -71,6 +71,7 @@ FiestaBoard uses a **plugin architecture** - each feature is a self-contained pl
 - 🚇 **[Muni Transit](./plugins/muni/docs/SETUP.md)**: Real-time SF Muni arrival predictions
 - 🛩️ **[Nearby Aircraft](./plugins/nearby_aircraft/docs/SETUP.md)**: Real-time nearby aircraft information from OpenSky Network API
 - 🏆 **[Sports Scores](./plugins/sports_scores/docs/SETUP.md)**: Display recent match scores from NFL, Soccer, NHL, and NBA
+- ☀️ **[Sun Art](./plugins/sun_art/docs/SETUP.md)**: Full-screen sun art pattern that changes based on sun position throughout the day
 - 🖖 **[Star Trek Quotes](./plugins/star_trek_quotes/docs/SETUP.md)**: Random quotes from TNG, Voyager, and DS9
 - 📈 **[Stocks](./plugins/stocks/docs/SETUP.md)**: Monitor stock prices with color-coded indicators
 - 🌊 **[Surf Conditions](./plugins/surf/docs/SETUP.md)**: Live surf reports with wave height and quality ratings
