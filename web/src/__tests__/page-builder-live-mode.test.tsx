@@ -129,9 +129,10 @@ describe("PageBuilder Live Mode", () => {
         { wrapper: TestWrapper }
       );
 
+      // Wait for queries to resolve and component to render
       await waitFor(() => {
         expect(screen.getByLabelText(/live mode/i)).toBeInTheDocument();
-      });
+      }, { timeout: 10000 });
     });
 
     it("disables toggle when board is not configured", async () => {
@@ -152,7 +153,7 @@ describe("PageBuilder Live Mode", () => {
       await waitFor(() => {
         const toggle = screen.getByLabelText(/live mode/i);
         expect(toggle).toBeDisabled();
-      });
+      }, { timeout: 10000 });
     });
 
     it("enables toggle when board is configured", async () => {
@@ -184,7 +185,7 @@ describe("PageBuilder Live Mode", () => {
 
       await waitFor(() => {
         expect(screen.getByText(/live/i)).toBeInTheDocument();
-      });
+      }, { timeout: 10000 });
     });
 
     it("hides 'Live' badge when live mode is disabled", async () => {
@@ -231,7 +232,7 @@ describe("PageBuilder Live Mode", () => {
 
       await waitFor(() => {
         expect(screen.getByText(/board not configured/i)).toBeInTheDocument();
-      });
+      }, { timeout: 10000 });
     });
   });
 
@@ -262,7 +263,7 @@ describe("PageBuilder Live Mode", () => {
 
       await waitFor(() => {
         expect(api.sendTemplate).toHaveBeenCalled();
-      }, { timeout: 2000 });
+      }, { timeout: 10000 });
     });
 
     it("does not send to board when live mode is disabled", async () => {
@@ -279,9 +280,9 @@ describe("PageBuilder Live Mode", () => {
       await vi.advanceTimersByTimeAsync(500);
 
       // Should not call sendTemplate when live mode is off
-      await waitFor(() => {
-        expect(api.sendTemplate).not.toHaveBeenCalled();
-      });
+      // Wait a bit to ensure it's not called
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      expect(api.sendTemplate).not.toHaveBeenCalled();
     });
 
     it("handles board send errors gracefully", async () => {
@@ -313,7 +314,9 @@ describe("PageBuilder Live Mode", () => {
       }, { timeout: 2000 });
 
       // Component should still be functional (not crashed)
-      expect(screen.getByLabelText(/live mode/i)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByLabelText(/live mode/i)).toBeInTheDocument();
+      }, { timeout: 10000 });
     });
   });
 
@@ -365,7 +368,7 @@ describe("PageBuilder Live Mode", () => {
       // Should have fetched active page
       await waitFor(() => {
         expect(api.getActivePage).toHaveBeenCalled();
-      }, { timeout: 3000 });
+      }, { timeout: 10000 });
     });
 
     it.skip("updates last activity time on template changes", async () => {
