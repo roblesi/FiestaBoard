@@ -29,6 +29,20 @@ const isColorTile = (char: string) => {
   return ['63', '64', '65', '66', '67', '68', '69', '70', '71'].includes(char);
 };
 
+// Helper function to find character index in BOARD_CHARS array
+function getCharIndex(char: string): number {
+  const index = BOARD_CHARS.indexOf(char);
+  return index >= 0 ? index : 0; // Default to space if not found
+}
+
+// Helper function to get character from token
+function getCharFromToken(token: Token): string {
+  if (token.type === "color") {
+    return token.code; // Color tiles are represented by their code
+  }
+  return token.value;
+}
+
 // Parse a line into tokens (characters and color codes)
 type Token = { type: "char"; value: string } | { type: "color"; code: string };
 
@@ -108,18 +122,28 @@ const GridRow = memo(function GridRow({
   rowIdx, 
   size, 
   gapClass,
-  boardType = "black"
+  boardType = "black",
+  isAnimating = false
 }: { 
   row: Token[]; 
   rowIdx: number; 
   size: "sm" | "md" | "lg"; 
   gapClass: string;
   boardType?: "black" | "white";
+  isAnimating?: boolean;
 }) {
   return (
     <div className={`flex ${gapClass} justify-center`}>
       {row.map((token, colIdx) => (
-        <CharTile key={`col-${rowIdx}-${colIdx}`} token={token} size={size} boardType={boardType} />
+        <CharTile 
+          key={`col-${rowIdx}-${colIdx}`} 
+          token={token} 
+          size={size} 
+          boardType={boardType}
+          isAnimating={isAnimating}
+          rowIdx={rowIdx}
+          colIdx={colIdx}
+        />
       ))}
     </div>
   );
@@ -129,6 +153,7 @@ const GridRow = memo(function GridRow({
   if (prevProps.size !== nextProps.size) return false;
   if (prevProps.gapClass !== nextProps.gapClass) return false;
   if (prevProps.boardType !== nextProps.boardType) return false;
+  if (prevProps.isAnimating !== nextProps.isAnimating) return false;
   
   // Deep compare tokens
   for (let i = 0; i < prevProps.row.length; i++) {
@@ -143,7 +168,22 @@ const GridRow = memo(function GridRow({
 });
 
 // Individual character tile component - memoized to prevent unnecessary re-renders
-const CharTile = memo(function CharTile({ token, size = "md", boardType = "black" }: { token: Token; size?: "sm" | "md" | "lg"; boardType?: "black" | "white" }) {
+// Now pre-renders all 71 characters and uses CSS to show/hide them
+const CharTile = memo(function CharTile({ 
+  token, 
+  size = "md", 
+  boardType = "black",
+  isAnimating = false,
+  rowIdx = 0,
+  colIdx = 0
+}: { 
+  token: Token; 
+  size?: "sm" | "md" | "lg"; 
+  boardType?: "black" | "white";
+  isAnimating?: boolean;
+  rowIdx?: number;
+  colIdx?: number;
+}) {
   const sizeClasses = {
     sm: "w-[14px] h-[18px]", // Small previews stay fixed size
     md: "w-[14px] h-[20px] sm:w-[20px] sm:h-[28px] md:w-[24px] md:h-[34px] lg:w-[28px] lg:h-[40px]", // Responsive
@@ -158,14 +198,66 @@ const CharTile = memo(function CharTile({ token, size = "md", boardType = "black
   
   // White board inverts character text colors
   const isWhiteBoard = boardType === "white";
+  const tileBg = isWhiteBoard ? "#fafafa" : "#0d0d0d";
+  const textColor = isWhiteBoard ? "#0d0d0d" : "#f0f0e8";
   
+  // Get target character index
+  const targetChar = getCharFromToken(token);
+  const targetCharIndex = getCharIndex(targetChar);
+  
+  // All tiles flip in sync - same duration, no random delay
+  // Slowed down significantly so flips are visible (800ms per flip)
+  const animationDuration = 800; // Uniform duration for all tiles
+  const delay = 0; // All tiles start at the same time
+  
+  // State for current character index during animation
+  // Always start from target character so all tiles begin together
+  const [currentCharIndex, setCurrentCharIndex] = useState(targetCharIndex);
+  
+  // Animation effect - cycle through all 71 characters in order
+  // All tiles start from their target and cycle forward: 0, 1, 2, ... 70, 0, 1, ...
+  // Each tick advances one character in the sequence
+  useEffect(() => {
+    if (!isAnimating) {
+      setCurrentCharIndex(targetCharIndex);
+      return;
+    }
+    
+    // Reset to target when animation starts
+    setCurrentCharIndex(targetCharIndex);
+    
+    // Cycle through all characters in order, one per tick
+    // Each tick advances: (current + 1) % 71
+    const interval = setInterval(() => {
+      setCurrentCharIndex((prev) => (prev + 1) % BOARD_CHARS.length);
+    }, animationDuration);
+    
+    return () => {
+      clearInterval(interval);
+    };
+  }, [isAnimating, targetCharIndex, animationDuration]);
+  
+  // Enhanced 3D shadows for flip tile effect
+  const boxShadow = isWhiteBoard
+    ? `
+      0 2px 4px rgba(0,0,0,0.2),
+      inset 0 1px 2px rgba(0,0,0,0.1),
+      inset 0 -1px 2px rgba(255,255,255,0.5),
+      inset 1px 0 1px rgba(0,0,0,0.08),
+      inset -1px 0 1px rgba(255,255,255,0.4)
+    `
+    : `
+      0 2px 4px rgba(0,0,0,0.5),
+      inset 0 1px 2px rgba(0,0,0,0.8),
+      inset 0 -1px 1px rgba(255,255,255,0.08),
+      inset 1px 0 1px rgba(0,0,0,0.5),
+      inset -1px 0 1px rgba(255,255,255,0.05)
+    `;
+  
+  // Handle color tiles - they don't need pre-rendering since they're simple
   if (token.type === "color") {
     const bgColor = ALL_COLOR_CODES[token.code] || BOARD_COLORS.black;
     
-    // Responsive margin classes using CSS custom properties
-    // For sm size: fixed margins (no responsive needed)
-    // For md size: responsive margins matching tile size progression (20px → 28px → 34px → 40px)
-    // For lg size: responsive margins matching tile size progression (26px → 34px → 40px → 46px)
     const marginClasses = size === "sm"
       ? "[--color-margin-top:3px] [--color-margin-bottom:4px] [--color-margin-h:1px]"
       : size === "md"
@@ -193,72 +285,203 @@ const CharTile = memo(function CharTile({ token, size = "md", boardType = "black
             `
           }}
         >
-          {/* Subtle split flip effect */}
           <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-black/10" />
         </div>
       </div>
     );
   }
   
-  // Character tile styling depends on board type
-  const isWhite = isWhiteBoard;
-  const tileBg = isWhite ? "#fafafa" : "#0d0d0d";
-  const textColor = isWhite ? "#0d0d0d" : "#f0f0e8";
-  
-  // Enhanced 3D shadows for flip tile effect
-  const boxShadow = isWhite
-    ? `
-      0 2px 4px rgba(0,0,0,0.2),
-      inset 0 1px 2px rgba(0,0,0,0.1),
-      inset 0 -1px 2px rgba(255,255,255,0.5),
-      inset 1px 0 1px rgba(0,0,0,0.08),
-      inset -1px 0 1px rgba(255,255,255,0.4)
-    `
-    : `
-      0 2px 4px rgba(0,0,0,0.5),
-      inset 0 1px 2px rgba(0,0,0,0.8),
-      inset 0 -1px 1px rgba(255,255,255,0.08),
-      inset 1px 0 1px rgba(0,0,0,0.5),
-      inset -1px 0 1px rgba(255,255,255,0.05)
-    `;
+  // Character tiles - pre-render all 71 characters
+  const currentChar = BOARD_CHARS[currentCharIndex];
+  // Next character is simply the next one in sequence (cycling forward)
+  const nextChar = BOARD_CHARS[(currentCharIndex + 1) % BOARD_CHARS.length];
   
   return (
-    <div 
-      className={`relative ${sizeClasses[size]} rounded-[3px] flex items-center justify-center overflow-hidden`}
-      style={{ 
-        backgroundColor: tileBg,
-        boxShadow
-      }}
-    >
-      {/* Subtle split flip effect - horizontal line in middle */}
-      <div className={`absolute top-1/2 left-0 right-0 h-[1px] ${isWhite ? 'bg-black/10' : 'bg-black/30'}`} />
-      
-      {/* Subtle gradient for curvature */}
+    <>
+      <style>{`
+        @keyframes flapRotate {
+          0% {
+            transform: rotateX(0deg);
+          }
+          100% {
+            transform: rotateX(180deg);
+          }
+        }
+        
+        @keyframes flapShadow {
+          0% {
+            opacity: 0;
+          }
+          25% {
+            opacity: 0.3;
+          }
+          50% {
+            opacity: 0.8;
+          }
+          75% {
+            opacity: 0.3;
+          }
+          100% {
+            opacity: 0;
+          }
+        }
+        
+        @keyframes flapShadowLight {
+          0% {
+            opacity: 0;
+          }
+          25% {
+            opacity: 0.05;
+          }
+          50% {
+            opacity: 0.15;
+          }
+          75% {
+            opacity: 0.05;
+          }
+          100% {
+            opacity: 0;
+          }
+        }
+        
+        @keyframes castShadow {
+          0% {
+            opacity: 0;
+          }
+          50% {
+            opacity: 0.4;
+          }
+          100% {
+            opacity: 0;
+          }
+        }
+      `}</style>
       <div 
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: isWhite 
-            ? 'linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 50%, rgba(0,0,0,0.05) 100%)'
-            : 'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 50%, rgba(0,0,0,0.2) 100%)'
+        className={`relative ${sizeClasses[size]} rounded-[3px] overflow-hidden`}
+        style={{ 
+          backgroundColor: tileBg,
+          boxShadow,
+          contain: 'layout style paint',
+          ...(isAnimating ? { perspective: '800px', isolation: 'isolate' } : {})
         }}
-      />
-      
-      <span 
-        className={`${textSizeClasses[size]} font-mono font-semibold select-none leading-none relative z-10`}
-        style={{ color: textColor }}
       >
-        {token.value}
-      </span>
-    </div>
+        {/* Pre-render all 71 characters, stacked absolutely - use CSS to show/hide */}
+        {BOARD_CHARS.map((char, charIdx) => {
+          const isActive = !isAnimating && charIdx === targetCharIndex;
+          
+          const isColor = isColorTile(char);
+          const charBg = isColor ? (ALL_COLOR_CODES[char] || tileBg) : tileBg;
+          
+          return (
+            <div
+              key={charIdx}
+              className="absolute inset-0 flex items-center justify-center"
+              style={{
+                opacity: isActive ? 1 : 0,
+                zIndex: isActive ? 2 : 0,
+                pointerEvents: isActive ? 'auto' : 'none',
+                visibility: isActive ? 'visible' : 'hidden',
+                contentVisibility: isActive ? 'visible' : 'hidden',
+                backgroundColor: charBg,
+              }}
+            >
+              {!isColor && (
+                <span 
+                  className={`${textSizeClasses[size]} font-mono font-semibold select-none leading-none relative z-10`}
+                  style={{ color: textColor }}
+                >
+                  {char}
+                </span>
+              )}
+              {isColor && (
+                <div 
+                  className="absolute inset-0 rounded-[3px]"
+                  style={{ backgroundColor: charBg }}
+                />
+              )}
+            </div>
+          );
+        })}
+        
+        {/* Simple character transition - no flip animation, just direct character changes */}
+        {isAnimating && (
+          <>
+            {/* Show current character directly - no flip animation */}
+            <div 
+              className="absolute inset-0 flex items-center justify-center overflow-hidden"
+              style={{ 
+                zIndex: 2,
+                backgroundColor: isColorTile(currentChar) ? ALL_COLOR_CODES[currentChar] || tileBg : tileBg,
+                marginLeft: isColorTile(currentChar) ? '-4px' : 0,
+                marginRight: isColorTile(currentChar) ? '-4px' : 0
+              }}
+            >
+              {!isColorTile(currentChar) && (
+                <span 
+                  className={`${textSizeClasses[size]} font-mono font-semibold select-none leading-none relative z-10`}
+                  style={{ color: textColor }}
+                >
+                  {currentChar}
+                </span>
+              )}
+              {isColorTile(currentChar) && (
+                <div 
+                  className="absolute inset-0 rounded-[3px]"
+                  style={{ 
+                    backgroundColor: ALL_COLOR_CODES[currentChar] || tileBg,
+                    boxShadow: `
+                      0 2px 4px rgba(0,0,0,0.3),
+                      inset 0 1px 1px rgba(255,255,255,0.15),
+                      inset 0 -1px 1px rgba(0,0,0,0.25),
+                      inset 1px 0 1px rgba(255,255,255,0.1),
+                      inset -1px 0 1px rgba(0,0,0,0.2)
+                    `
+                  }}
+                />
+              )}
+            </div>
+            
+            {/* Subtle split flip effect - horizontal line in middle */}
+            <div className={`absolute top-1/2 left-0 right-0 h-[1px] ${isWhiteBoard ? 'bg-black/10' : 'bg-black/30'}`} />
+            
+            {/* Subtle gradient for curvature */}
+            <div 
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: isWhiteBoard 
+                  ? 'linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 50%, rgba(0,0,0,0.05) 100%)'
+                  : 'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 50%, rgba(0,0,0,0.2) 100%)'
+              }}
+            />
+          </>
+        )}
+        
+        {/* Static display - when not animating */}
+        {!isAnimating && (
+          <>
+            <div className={`absolute top-1/2 left-0 right-0 h-[1px] ${isWhiteBoard ? 'bg-black/10' : 'bg-black/30'}`} />
+            <div 
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: isWhiteBoard 
+                  ? 'linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 50%, rgba(0,0,0,0.05) 100%)'
+                  : 'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 50%, rgba(0,0,0,0.2) 100%)'
+              }}
+            />
+          </>
+        )}
+      </div>
+    </>
   );
 }, (prevProps, nextProps) => {
-  // Only re-render if token, size, or boardType changes
+  // Only re-render if token, size, boardType, or isAnimating changes
   return prevProps.token.type === nextProps.token.type &&
          (prevProps.token.type === "char" 
            ? prevProps.token.value === nextProps.token.value
            : prevProps.token.code === nextProps.token.code) &&
          prevProps.size === nextProps.size &&
-         prevProps.boardType === nextProps.boardType;
+         prevProps.boardType === nextProps.boardType &&
+         prevProps.isAnimating === nextProps.isAnimating;
 });
 
 // Flip tile for loading state - mimics physical board flip animation
@@ -712,8 +935,8 @@ export const BoardDisplay = memo(function BoardDisplay({ message, isLoading = fa
             className={`flex flex-col ${gapClasses[size]}`}
             style={(isLoading || !grid) ? { perspective: '600px' } : undefined}
           >
-            {(isLoading || !grid) ? (
-              // Loading or no message - show flip animation grid
+            {!grid ? (
+              // No grid yet - show random flip animation
               Array.from({ length: ROWS }).map((_, rowIdx) => (
                 <div key={rowIdx} className={`flex ${gapClasses[size]} justify-center`}>
                   {Array.from({ length: COLS }).map((_, colIdx) => (
@@ -728,7 +951,7 @@ export const BoardDisplay = memo(function BoardDisplay({ message, isLoading = fa
                 </div>
               ))
             ) : (
-              // Actual character grid - memoize rows to prevent row-level re-renders
+              // Grid exists - show actual tiles (with animation if loading)
               grid.map((row, rowIdx) => (
                 <GridRow 
                   key={`row-${rowIdx}`} 
@@ -737,6 +960,7 @@ export const BoardDisplay = memo(function BoardDisplay({ message, isLoading = fa
                   size={size} 
                   gapClass={gapClasses[size]} 
                   boardType={boardType}
+                  isAnimating={isLoading}
                 />
               ))
             )}
