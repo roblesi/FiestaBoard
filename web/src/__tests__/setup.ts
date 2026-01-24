@@ -125,11 +125,12 @@ if (typeof Element !== 'undefined') {
 }
 
 // Mock ResizeObserver for components that use it (e.g., ScrollArea)
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}));
+global.ResizeObserver = class ResizeObserver {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+  constructor(_callback: ResizeObserverCallback) {}
+} as any;
 
 // Setup MSW
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
