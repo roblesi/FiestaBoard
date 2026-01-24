@@ -205,13 +205,10 @@ class TestStatusEndpoint:
     @patch('src.api_server.get_service')
     @patch('src.api_server.get_settings_service')
     @patch('src.api_server.Config.get_summary')
-    @patch('src.api_server.Config.BOARD_HOST')
-    @patch('src.api_server.Config.BOARD_API_MODE')
-    @patch('src.api_server.Config.BOARD_LOCAL_API_KEY')
-    @patch('src.api_server.Config.BOARD_READ_WRITE_KEY')
+    @patch('src.api_server.Config')
     @patch('src.api_server._service_running', False)
     @patch('src.api_server._dev_mode', False)
-    def test_get_status_with_board_configured_cloud(self, mock_cloud_key, mock_local_key, mock_mode, mock_host, mock_summary, mock_settings, mock_service, client):
+    def test_get_status_with_board_configured_cloud(self, mock_config_class, mock_summary, mock_settings, mock_service, client):
         """Test GET /status with board configured (cloud mode)."""
         # Setup mocks
         mock_service_instance = Mock()
@@ -226,10 +223,11 @@ class TestStatusEndpoint:
             "datetime_enabled": True,
         }
         
-        mock_host.return_value = "192.168.1.100"
-        mock_mode.return_value = "cloud"
-        mock_cloud_key.return_value = "test-cloud-key"
-        mock_local_key.return_value = None
+        # Mock Config class attributes
+        mock_config_class.BOARD_HOST = "192.168.1.100"
+        mock_config_class.BOARD_API_MODE = "cloud"
+        mock_config_class.BOARD_LOCAL_API_KEY = None
+        mock_config_class.BOARD_READ_WRITE_KEY = "test-cloud-key"
         
         response = client.get("/status")
         
@@ -244,13 +242,10 @@ class TestStatusEndpoint:
     @patch('src.api_server.get_service')
     @patch('src.api_server.get_settings_service')
     @patch('src.api_server.Config.get_summary')
-    @patch('src.api_server.Config.BOARD_HOST')
-    @patch('src.api_server.Config.BOARD_API_MODE')
-    @patch('src.api_server.Config.BOARD_LOCAL_API_KEY')
-    @patch('src.api_server.Config.BOARD_READ_WRITE_KEY')
+    @patch('src.api_server.Config')
     @patch('src.api_server._service_running', False)
     @patch('src.api_server._dev_mode', False)
-    def test_get_status_with_board_configured_local(self, mock_cloud_key, mock_local_key, mock_mode, mock_host, mock_summary, mock_settings, mock_service, client):
+    def test_get_status_with_board_configured_local(self, mock_config_class, mock_summary, mock_settings, mock_service, client):
         """Test GET /status with board configured (local mode)."""
         # Setup mocks
         mock_service_instance = Mock()
@@ -264,10 +259,11 @@ class TestStatusEndpoint:
             "weather_enabled": False,
         }
         
-        mock_host.return_value = "192.168.1.100"
-        mock_mode.return_value = "local"
-        mock_cloud_key.return_value = None
-        mock_local_key.return_value = "test-local-key"
+        # Mock Config class attributes
+        mock_config_class.BOARD_HOST = "192.168.1.100"
+        mock_config_class.BOARD_API_MODE = "local"
+        mock_config_class.BOARD_LOCAL_API_KEY = "test-local-key"
+        mock_config_class.BOARD_READ_WRITE_KEY = None
         
         response = client.get("/status")
         
@@ -278,13 +274,10 @@ class TestStatusEndpoint:
     @patch('src.api_server.get_service')
     @patch('src.api_server.get_settings_service')
     @patch('src.api_server.Config.get_summary')
-    @patch('src.api_server.Config.BOARD_HOST')
-    @patch('src.api_server.Config.BOARD_API_MODE')
-    @patch('src.api_server.Config.BOARD_LOCAL_API_KEY')
-    @patch('src.api_server.Config.BOARD_READ_WRITE_KEY')
+    @patch('src.api_server.Config')
     @patch('src.api_server._service_running', False)
     @patch('src.api_server._dev_mode', False)
-    def test_get_status_with_board_not_configured(self, mock_cloud_key, mock_local_key, mock_mode, mock_host, mock_summary, mock_settings, mock_service, client):
+    def test_get_status_with_board_not_configured(self, mock_config_class, mock_summary, mock_settings, mock_service, client):
         """Test GET /status with board not configured."""
         # Setup mocks
         mock_service_instance = Mock()
@@ -296,10 +289,11 @@ class TestStatusEndpoint:
         
         mock_summary.return_value = {}
         
-        mock_host.return_value = ""
-        mock_mode.return_value = "cloud"
-        mock_cloud_key.return_value = None
-        mock_local_key.return_value = None
+        # Mock Config class attributes - board not configured
+        mock_config_class.BOARD_HOST = ""
+        mock_config_class.BOARD_API_MODE = "cloud"
+        mock_config_class.BOARD_LOCAL_API_KEY = None
+        mock_config_class.BOARD_READ_WRITE_KEY = None
         
         response = client.get("/status")
         
@@ -311,13 +305,10 @@ class TestStatusEndpoint:
     @patch('src.api_server.get_service')
     @patch('src.api_server.get_settings_service')
     @patch('src.api_server.Config.get_summary')
-    @patch('src.api_server.Config.BOARD_HOST')
-    @patch('src.api_server.Config.BOARD_API_MODE')
-    @patch('src.api_server.Config.BOARD_LOCAL_API_KEY')
-    @patch('src.api_server.Config.BOARD_READ_WRITE_KEY')
+    @patch('src.api_server.Config')
     @patch('src.api_server._service_running', False)
     @patch('src.api_server._dev_mode', False)
-    def test_get_status_includes_active_page_id(self, mock_cloud_key, mock_local_key, mock_mode, mock_host, mock_summary, mock_settings, mock_service, client):
+    def test_get_status_includes_active_page_id(self, mock_config_class, mock_summary, mock_settings, mock_service, client):
         """Test GET /status includes active_page_id in config_summary."""
         # Setup mocks
         mock_service_instance = Mock()
@@ -328,10 +319,12 @@ class TestStatusEndpoint:
         mock_settings.return_value = mock_settings_instance
         
         mock_summary.return_value = {}
-        mock_host.return_value = "192.168.1.100"
-        mock_mode.return_value = "cloud"
-        mock_cloud_key.return_value = "test-key"
-        mock_local_key.return_value = None
+        
+        # Mock Config class attributes
+        mock_config_class.BOARD_HOST = "192.168.1.100"
+        mock_config_class.BOARD_API_MODE = "cloud"
+        mock_config_class.BOARD_LOCAL_API_KEY = None
+        mock_config_class.BOARD_READ_WRITE_KEY = "test-key"
         
         response = client.get("/status")
         
