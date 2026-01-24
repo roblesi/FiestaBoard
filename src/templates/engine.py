@@ -467,6 +467,50 @@ class TemplateEngine:
         
         return lines
     
+    def _split_into_tokens(self, text: str) -> List[str]:
+        """Split text into tokens (complete color markers or single characters).
+        
+        This ensures color markers are never split in the middle.
+        
+        Args:
+            text: Text to split (may contain color markers like {67})
+            
+        Returns:
+            List of tokens, where each token is either a complete color marker
+            (like {67} or {red}) or a single character
+        """
+        tokens = []
+        i = 0
+        
+        while i < len(text):
+            if text[i] == "{":
+                # Found a potential color marker
+                closing_brace = text.find("}", i)
+                if closing_brace != -1:
+                    content = text[i + 1:closing_brace]
+                    # Check if it's a color code
+                    if content.isdigit() and 63 <= int(content) <= 70:
+                        # It's a numeric color marker
+                        tokens.append(text[i:closing_brace + 1])
+                        i = closing_brace + 1
+                        continue
+                    elif content.lower() in COLOR_CODES:
+                        # Named color marker
+                        tokens.append(text[i:closing_brace + 1])
+                        i = closing_brace + 1
+                        continue
+                    elif content.startswith("/"):
+                        # End tag - treat as single token
+                        tokens.append(text[i:closing_brace + 1])
+                        i = closing_brace + 1
+                        continue
+            
+            # Regular character
+            tokens.append(text[i])
+            i += 1
+        
+        return tokens
+    
     def _word_wrap_tiles(self, text: str, first_width: int, subsequent_width: int, max_lines: int) -> List[str]:
         """Word-wrap text across multiple lines using tile counts instead of character counts.
         
@@ -534,29 +578,43 @@ class TemplateEngine:
                 if word_tiles <= current_width:
                     current_line = word
                 else:
-                    # Word too long - break it across multiple lines
+                    # Word too long - break it across multiple lines using tokens
                     remaining_word = word
                     while remaining_word and len(lines) < max_lines:
-                        # Try to fit as much as possible on current line
-                        chars_to_take = 0
+                        # Split into tokens to avoid breaking color markers
+                        tokens = self._split_into_tokens(remaining_word)
                         test_line = ""
-                        for char in remaining_word:
-                            test_line += char
-                            if self._count_tiles(test_line) > current_width:
-                                break
-                            chars_to_take += 1
+                        tokens_to_take = 0
                         
-                        if chars_to_take > 0:
-                            current_line = remaining_word[:chars_to_take]
-                            remaining_word = remaining_word[chars_to_take:]
+                        for token in tokens:
+                            test_with_token = test_line + token
+                            if self._count_tiles(test_with_token) > current_width:
+                                break
+                            test_line = test_with_token
+                            tokens_to_take += 1
+                        
+                        if tokens_to_take > 0:
+                            # Reconstruct the line from tokens
+                            current_line = "".join(tokens[:tokens_to_take])
+                            remaining_word = "".join(tokens[tokens_to_take:])
                             lines.append(current_line)
                             if len(lines) >= max_lines:
                                 break
                             current_line = ""
                             current_width = subsequent_width
                         else:
-                            # Can't fit even one character (shouldn't happen, but handle it)
-                            break
+                            # Can't fit even one token (shouldn't happen, but handle it)
+                            # Force at least one token to prevent infinite loop
+                            if tokens:
+                                current_line = tokens[0]
+                                remaining_word = "".join(tokens[1:])
+                                lines.append(current_line)
+                                if len(lines) >= max_lines:
+                                    break
+                                current_line = ""
+                                current_width = subsequent_width
+                            else:
+                                break
                     # Set current_line to any remaining part
                     current_line = remaining_word if remaining_word else ""
             elif current_line_tiles + 1 + word_tiles <= current_width:
@@ -571,28 +629,42 @@ class TemplateEngine:
                 if word_tiles <= subsequent_width:
                     current_line = word
                 else:
-                    # Word too long - break it across multiple lines
+                    # Word too long - break it across multiple lines using tokens
                     remaining_word = word
                     current_line = ""
                     current_width = subsequent_width
                     while remaining_word and len(lines) < max_lines:
-                        chars_to_take = 0
+                        # Split into tokens to avoid breaking color markers
+                        tokens = self._split_into_tokens(remaining_word)
                         test_line = ""
-                        for char in remaining_word:
-                            test_line += char
-                            if self._count_tiles(test_line) > current_width:
-                                break
-                            chars_to_take += 1
+                        tokens_to_take = 0
                         
-                        if chars_to_take > 0:
-                            current_line = remaining_word[:chars_to_take]
-                            remaining_word = remaining_word[chars_to_take:]
+                        for token in tokens:
+                            test_with_token = test_line + token
+                            if self._count_tiles(test_with_token) > current_width:
+                                break
+                            test_line = test_with_token
+                            tokens_to_take += 1
+                        
+                        if tokens_to_take > 0:
+                            # Reconstruct the line from tokens
+                            current_line = "".join(tokens[:tokens_to_take])
+                            remaining_word = "".join(tokens[tokens_to_take:])
                             lines.append(current_line)
                             if len(lines) >= max_lines:
                                 break
                             current_line = ""
                         else:
-                            break
+                            # Can't fit even one token - force at least one to prevent infinite loop
+                            if tokens:
+                                current_line = tokens[0]
+                                remaining_word = "".join(tokens[1:])
+                                lines.append(current_line)
+                                if len(lines) >= max_lines:
+                                    break
+                                current_line = ""
+                            else:
+                                break
                     current_line = remaining_word if remaining_word else ""
                 current_width = subsequent_width
         
