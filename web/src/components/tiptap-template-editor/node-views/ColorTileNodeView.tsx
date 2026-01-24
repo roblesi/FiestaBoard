@@ -1,10 +1,10 @@
 /**
  * React NodeView for Color Tile nodes
  * Displays {{red}}, {{blue}}, etc. as solid colored tiles
+ * Can be dragged and dropped, deleted with backspace, and copied/pasted
  */
 import React from 'react';
 import { NodeViewWrapper } from '@tiptap/react';
-import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FIESTABOARD_COLORS } from '@/lib/board-colors';
 
@@ -37,7 +37,7 @@ export function ColorTileNodeView({ node, deleteNode, selected }: ColorTileNodeV
     <NodeViewWrapper
       as="span"
       className={cn(
-        'group relative rounded-[3px] cursor-grab select-none',
+        'relative rounded-[3px] cursor-grab select-none',
         'transition-all duration-150',
         'hover:scale-105',
         'active:cursor-grabbing active:scale-100',
@@ -58,7 +58,7 @@ export function ColorTileNodeView({ node, deleteNode, selected }: ColorTileNodeV
         marginRight: '1px',
         whiteSpace: 'nowrap',
       }}
-      title={`${color} tile (code ${code})`}
+      title={`${color} tile (code ${code}) - drag to move, backspace to delete`}
     >
       {/* Subtle split flip effect - horizontal line in middle */}
       <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-black/10" />
@@ -70,26 +70,6 @@ export function ColorTileNodeView({ node, deleteNode, selected }: ColorTileNodeV
           background: 'linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 50%, rgba(0,0,0,0.2) 100%)'
         }}
       />
-      
-      {/* Delete button - only show on hover */}
-      <button
-        type="button"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          deleteNode();
-        }}
-        className={cn(
-          'absolute -top-1 -right-1 rounded-full p-0.5 transition-all opacity-0 group-hover:opacity-100',
-          'bg-background border border-border shadow-sm',
-          'hover:bg-destructive hover:text-destructive-foreground',
-          'z-10'
-        )}
-        tabIndex={-1}
-        aria-label={`Remove ${color} color tile`}
-      >
-        <X className="w-3 h-3" />
-      </button>
       
       {/* Hidden text for screen readers */}
       <span className="sr-only">{color} color tile</span>
