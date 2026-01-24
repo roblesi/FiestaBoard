@@ -67,8 +67,8 @@ FOG: {{air_fog.fog_status}}
 | purpleair_api_key | string | - | PurpleAir API key |
 | openweathermap_api_key | string | - | OpenWeatherMap API key |
 | purpleair_sensor_id | string | - | Optional specific sensor ID |
-| latitude | number | 37.7749 | Location latitude |
-| longitude | number | -122.4194 | Location longitude |
+| latitude | number | 40.7128 | Location latitude |
+| longitude | number | -74.0060 | Location longitude |
 | refresh_seconds | integer | 300 | Update interval |
 
 ## AQI Levels

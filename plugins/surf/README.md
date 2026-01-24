@@ -39,7 +39,7 @@ The Surf plugin fetches real-time marine data from Open-Meteo (free, no API key 
 ### With Quality Color
 
 ```
-{center}OCEAN BEACH
+{center}EXAMPLE SURF SPOT
 {{surf.quality_color}} {{surf.quality}}
 WAVES: {{surf.wave_height}}ft
 PERIOD: {{surf.swell_period}}s
@@ -69,17 +69,17 @@ The quality rating is calculated based on swell period and wind speed:
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
 | enabled | boolean | false | Enable/disable the plugin |
-| latitude | number | 37.7599 | Surf spot latitude |
-| longitude | number | -122.5121 | Surf spot longitude |
+| latitude | number | 34.0259 | Surf spot latitude |
+| longitude | number | -118.7798 | Surf spot longitude |
 | refresh_seconds | integer | 300 | Update interval |
 
 ## Popular Surf Spots
 
 | Location | Latitude | Longitude |
 |----------|----------|-----------|
-| Ocean Beach, SF | 37.7599 | -122.5121 |
-| Mavericks, CA | 37.4947 | -122.4956 |
-| Santa Cruz, CA | 36.9541 | -122.0261 |
+| Example Location A | 34.0259 | -118.7798 |
+| Example Location B | 37.4947 | -122.4956 |
+| Example Location C | 36.9541 | -122.0261 |
 | Pipeline, HI | 21.6650 | -158.0530 |
 
 ## Author

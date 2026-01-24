@@ -63,8 +63,8 @@ Click "Use My Location"
 
 **Method C: Enter Coordinates**
 ```
-Latitude: 37.7749
-Longitude: -122.4194
+Latitude: 40.7128
+Longitude: -74.0060
 → Shows nearby stations
 ```
 
@@ -332,7 +332,7 @@ Emb:  {{baywheels.stations.2.electric_bikes}}E {{baywheels.stations.2.docks_avai
 GET /baywheels/stations
 
 # Find stations near location
-GET /baywheels/stations/nearby?lat=37.7749&lng=-122.4194&radius=2.0
+GET /baywheels/stations/nearby?lat=40.7128&lng=-74.0060&radius=2.0
 
 # Search stations by address
 GET /baywheels/stations/search?address=123+Market+St&radius=2.0

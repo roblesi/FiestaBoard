@@ -39,8 +39,8 @@ Via Environment Variables:
 ```bash
 # Add to .env
 NEARBY_AIRCRAFT_ENABLED=true
-NEARBY_AIRCRAFT_LATITUDE=37.7749
-NEARBY_AIRCRAFT_LONGITUDE=-122.4194
+NEARBY_AIRCRAFT_LATITUDE=40.7128
+NEARBY_AIRCRAFT_LONGITUDE=-74.0060
 NEARBY_AIRCRAFT_RADIUS_KM=50
 NEARBY_AIRCRAFT_MAX_COUNT=4
 NEARBY_AIRCRAFT_REFRESH_SECONDS=120
@@ -56,7 +56,7 @@ NEARBY_AIRCRAFT_REFRESH_SECONDS=120
 
 **Option 2: GPS Device**
 - Use your phone's GPS or a dedicated GPS device
-- Format: Decimal degrees (e.g., 37.7749, -122.4194)
+- Format: Decimal degrees (e.g., 40.7128, -74.0060)
 
 **Option 3: Online Tools**
 - [LatLong.net](https://www.latlong.net/)
@@ -107,8 +107,8 @@ For higher rate limits and better reliability:
 ```bash
 # Required
 NEARBY_AIRCRAFT_ENABLED=true
-NEARBY_AIRCRAFT_LATITUDE=37.7749
-NEARBY_AIRCRAFT_LONGITUDE=-122.4194
+NEARBY_AIRCRAFT_LATITUDE=40.7128
+NEARBY_AIRCRAFT_LONGITUDE=-74.0060
 
 # Optional
 NEARBY_AIRCRAFT_RADIUS_KM=50          # Default: 50 km
@@ -125,8 +125,8 @@ NEARBY_AIRCRAFT_REFRESH_SECONDS=120   # Default: 120 seconds (2 min)
   "features": {
     "nearby_aircraft": {
       "enabled": true,
-      "latitude": 37.7749,
-      "longitude": -122.4194,
+      "latitude": 40.7128,
+      "longitude": -74.0060,
       "radius_km": 50,
       "client_id": "your_client_id",
       "client_secret": "your_client_secret",

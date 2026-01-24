@@ -322,7 +322,7 @@ Paris, France
 
 **Coordinates** (lat,lon)
 ```
-37.7749,-122.4194
+40.7128,-74.0060
 40.7128,-74.0060
 ```
 
@@ -493,7 +493,7 @@ Common weather conditions and their icons:
 
 **Solutions:**
 1. **Use full format**: "San Francisco, CA" not just "San Francisco"
-2. **Try coordinates**: Use lat,lon format (37.7749,-122.4194)
+2. **Try coordinates**: Use lat,lon format (40.7128,-74.0060)
 3. **Check spelling**: Verify city/state spelling
 4. **Try zip code**: US zip codes work well
 5. **Test in browser**: Try location in weather provider's website

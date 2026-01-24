@@ -8,7 +8,7 @@ The Surf feature provides real-time surf conditions including wave height, swell
 - Real-time wave height (in feet) and swell period (in seconds)
 - Wind speed and direction
 - Automatic surf quality assessment based on conditions
-- Configurable location (defaults to Ocean Beach, SF)
+- Configurable location (uses example coordinates by default)
 - No API key required (uses free Open-Meteo Marine API)
 
 **Use Cases:**
@@ -37,14 +37,14 @@ Via Environment Variables:
 ```bash
 # Add to .env
 SURF_ENABLED=true
-SURF_LATITUDE=37.7599   # Ocean Beach, SF (default)
-SURF_LONGITUDE=-122.5121  # Ocean Beach, SF (default)
+SURF_LATITUDE=34.0259   # Example location (default)
+SURF_LONGITUDE=-118.7798  # Example location (default)
 SURF_REFRESH_SECONDS=600  # Optional: 10 minutes (default)
 ```
 
 ### 2. Configure Location (Optional)
 
-**Default Location:** Ocean Beach, San Francisco (37.7599, -122.5121)
+**Default Location:** Example coordinates (34.0259, -118.7798)
 
 To monitor a different surf spot:
 
@@ -122,7 +122,7 @@ Includes location abbreviation, wave height, and swell period.
 ### Location Info
 
 ```
-{{surf.location}}              # Location name (e.g., "Ocean Beach, SF")
+{{surf.location}}              # Location name (e.g., "Example Surf Spot")
 {{surf.latitude}}              # Configured latitude
 {{surf.longitude}}             # Configured longitude
 ```
@@ -177,7 +177,7 @@ Wind: 8mph W
 ### Detailed Conditions
 
 ```
-{center}OCEAN BEACH SURF
+{center}EXAMPLE SURF SPOT
 Wave Height: {{surf.wave_height}}ft
 Swell Period: {{surf.swell_period}}s
 Quality: {{surf.quality}}
@@ -206,10 +206,10 @@ Wind: {{surf.wind_direction_cardinal}} {{surf.wind_speed}}mph
 For multiple locations, configure different instances or create manual display:
 
 ```
-{center}BAY AREA SURF
-Ocean Beach: 4-5ft @ 12s GOOD
-Pacifica: 3-4ft @ 10s FAIR
-Santa Cruz: 5-6ft @ 14s EXCELLENT
+{center}EXAMPLE SURF SPOTS
+Spot A: 4-5ft @ 12s GOOD
+Spot B: 3-4ft @ 10s FAIR
+Spot C: 5-6ft @ 14s EXCELLENT
 ```
 
 ## Configuration Reference
@@ -220,9 +220,9 @@ Santa Cruz: 5-6ft @ 14s EXCELLENT
 # Enable surf monitoring
 SURF_ENABLED=true
 
-# Location coordinates (default: Ocean Beach, SF)
-SURF_LATITUDE=37.7599
-SURF_LONGITUDE=-122.5121
+# Location coordinates (example values)
+SURF_LATITUDE=34.0259
+SURF_LONGITUDE=-118.7798
 
 # Refresh interval in seconds (default: 600 = 10 minutes)
 SURF_REFRESH_SECONDS=600
@@ -235,18 +235,18 @@ SURF_REFRESH_SECONDS=600
   "features": {
     "surf": {
       "enabled": true,
-      "latitude": 37.7599,
-      "longitude": -122.5121,
+      "latitude": 34.0259,
+      "longitude": -118.7798,
       "refresh_seconds": 600
     }
   }
 }
 ```
 
-## Popular Bay Area Surf Spots
+## Example Surf Spot Coordinates
 
-**San Francisco**
-- Ocean Beach: `37.7599, -122.5121` (default)
+**Example Locations:**
+- Example location: `34.0259, -118.7798` (default)
 - Fort Point: `37.8107, -122.4744`
 
 **Pacifica**
@@ -350,7 +350,7 @@ Quality ratings are automated but consider:
 2. **Check logs**: Look for Open-Meteo API errors
 3. **Test API directly**:
    ```bash
-   curl "https://marine-api.open-meteo.com/v1/marine?latitude=37.7599&longitude=-122.5121&current=wave_height,swell_wave_period"
+   curl "https://marine-api.open-meteo.com/v1/marine?latitude=34.0259&longitude=-118.7798&current=wave_height,swell_wave_period"
    ```
 4. **Verify coastal location**: API works best for coastal coordinates
 5. **Restart service**: Docker containers might need restart
@@ -467,7 +467,7 @@ Response includes all surf variables (wave_height, swell_period, quality, etc.)
 
 While current implementation shows wave height and period, swell direction also matters:
 
-**For Ocean Beach, SF:**
+**For example surf locations:**
 - **NW Swell**: Most common, clean waves
 - **W Swell**: Good conditions
 - **SW Swell**: Can be good but depends on sandbar
