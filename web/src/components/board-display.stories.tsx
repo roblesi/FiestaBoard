@@ -217,8 +217,126 @@ FIESTABOARD
       
       <div className="text-sm text-gray-600 text-center max-w-md">
         <p className="font-semibold mb-2">Loading Transition Demo</p>
-        <p>Watch the tiles flip continuously in loading state, then instantly switch to display the message.</p>
+        <p>Watch the tiles flip continuously in loading state, then continue cycling until each lands on its target.</p>
         <p className="mt-2 text-blue-600">Click "Reset" to replay the animation</p>
+      </div>
+    </div>
+  );
+};
+
+// Interactive story to test message changes with real tile cycling
+// Uses actual CharTiles cycling during loading (not legacy FlipTiles)
+export const MessageTransition = () => {
+  const [message, setMessage] = useState(coloredMessage);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const message1 = coloredMessage; // "BRUSH YOUR TEETH!" with colors
+  const message2 = `GOOD MORNING!
+{blue}SPENCER{/blue}
+{green}ROBBIE{/green}
+{orange}ELI{/orange}
+HAVE A GREAT DAY!`;
+
+  const handleTransition = () => {
+    // Put into loading state
+    // Keep the current message visible so we see actual CharTiles cycling (not FlipTiles)
+    setIsLoading(true);
+    
+    // After 6 seconds, set new message and turn off loading
+    // Tiles will continue rotating until they reach their target characters
+    setTimeout(() => {
+      setMessage(message2);
+      setIsLoading(false);
+    }, 6000);
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-6">
+      <BoardDisplay
+        message={message}
+        isLoading={isLoading}
+        size="md"
+        boardType="black"
+      />
+      
+      <button
+        onClick={handleTransition}
+        disabled={isLoading}
+        className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
+          isLoading
+            ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+            : 'bg-blue-600 text-white hover:bg-blue-700'
+        }`}
+      >
+        {isLoading ? 'Loading...' : 'Change Message'}
+      </button>
+      
+      <div className="text-sm text-gray-600 text-center max-w-md">
+        <p className="font-semibold mb-2">Message Transition Demo</p>
+        <p>Click the button to start loading. During loading, actual tiles cycle through characters (like real FiestaBoard).</p>
+        <p className="mt-2">After 6 seconds, the message changes and tiles continue rotating until each reaches its target character.</p>
+        <p className="mt-2 text-blue-600">Uses real CharTiles, not legacy FlipTiles</p>
+      </div>
+    </div>
+  );
+};
+
+// Story to test loading -> loaded transition with visible individual stopping
+export const LoadingToLoadedTransition = () => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const testMessage = `{red}BRUSH YOUR TEETH!{/red}
+{blue}SPENCER{/blue}
+{green}ROBBIE{/green}
+{orange}ELI{/orange}
+{yellow}FLOSS TOO!{/yellow}`;
+
+  useEffect(() => {
+    // Start with loading for 3 seconds, then show message
+    const timer = setTimeout(() => {
+      setMessage(testMessage);
+      setIsLoading(false);
+    }, 3000);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleReset = () => {
+    setIsLoading(true);
+    setMessage(null);
+    
+    setTimeout(() => {
+      setMessage(testMessage);
+      setIsLoading(false);
+    }, 3000);
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-6">
+      <BoardDisplay
+        message={message}
+        isLoading={isLoading}
+        size="md"
+        boardType="black"
+      />
+      
+      <button
+        onClick={handleReset}
+        disabled={isLoading}
+        className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
+          isLoading
+            ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+            : 'bg-blue-600 text-white hover:bg-blue-700'
+        }`}
+      >
+        {isLoading ? 'Loading...' : 'Reset'}
+      </button>
+      
+      <div className="text-sm text-gray-600 text-center max-w-md">
+        <p className="font-semibold mb-2">Loading → Loaded Transition</p>
+        <p>Watch tiles cycle during loading, then continue cycling until each individually reaches its target.</p>
+        <p className="mt-2 text-blue-600">Tiles should stop one by one, not all at once</p>
       </div>
     </div>
   );
