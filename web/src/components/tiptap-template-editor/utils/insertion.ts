@@ -15,8 +15,8 @@ export function insertTemplateContent(
   editor: Editor,
   templateString: string
 ): void {
-  if (!editor) {
-    console.warn('Cannot insert content: editor is not available');
+  if (!editor || !editor.state) {
+    console.warn('Cannot insert content: editor is not available or not initialized');
     return;
   }
 
@@ -28,6 +28,11 @@ export function insertTemplateContent(
   }
 
   // Get current cursor position before insertion
+  if (!editor.state.selection) {
+    console.warn('Cannot insert content: editor selection is not available');
+    return;
+  }
+  
   const { from } = editor.state.selection;
   
   // Insert at current cursor position

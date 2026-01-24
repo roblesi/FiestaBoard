@@ -480,4 +480,51 @@ class TestTemplateAPIEndpoints:
         assert response.status_code == 200
         data = response.json()
         assert "rendered" in data
+    
+    def test_render_template_empty_list(self, client):
+        """Test POST /templates/render with empty list returns quickly."""
+        response = client.post("/templates/render", json={
+            "template": []
+        })
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "rendered" in data
+        assert data["line_count"] == 6
+        assert all(line == "" for line in data["lines"])
+    
+    def test_render_template_all_empty_strings(self, client):
+        """Test POST /templates/render with all empty strings."""
+        response = client.post("/templates/render", json={
+            "template": ["", "", "", "", "", ""]
+        })
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "rendered" in data
+        assert data["line_count"] == 6
+        assert all(line == "" for line in data["lines"])
+    
+    def test_render_template_empty_string(self, client):
+        """Test POST /templates/render with empty string."""
+        response = client.post("/templates/render", json={
+            "template": ""
+        })
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "rendered" in data
+        assert data["line_count"] == 6
+    
+    def test_render_template_whitespace_only(self, client):
+        """Test POST /templates/render with whitespace-only strings."""
+        response = client.post("/templates/render", json={
+            "template": ["   ", "  ", " ", "", "", ""]
+        })
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "rendered" in data
+        # Should treat as empty and return 6 empty lines
+        assert all(not line.strip() for line in data["lines"])
 

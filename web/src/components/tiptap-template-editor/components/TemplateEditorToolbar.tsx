@@ -6,7 +6,7 @@
 
 import { Editor } from '@tiptap/react';
 import { useQuery } from '@tanstack/react-query';
-import { AlignLeft, AlignCenter, AlignRight, Code2, Palette, Type, WrapText } from 'lucide-react';
+import { AlignLeft, AlignCenter, AlignRight, Code2, Palette, Type, WrapText, Undo2, Redo2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { insertTemplateContent } from '../utils/insertion';
 import { ToolbarDropdown } from './ToolbarDropdown';
@@ -16,6 +16,7 @@ import { FormattingPickerContent } from './FormattingPickerContent';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { LineAlignment } from '../extensions/template-paragraph';
+import { useState, useEffect } from 'react';
 
 interface TemplateEditorToolbarProps {
   editor: Editor | null;
@@ -56,6 +57,47 @@ export function TemplateEditorToolbar({
   const hasColors = templateVars?.colors && Object.keys(templateVars.colors).length > 0;
   const hasFormatting = templateVars?.formatting && Object.keys(templateVars.formatting).length > 0;
 
+  // Track undo/redo availability - update on editor state changes
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
+  useEffect(() => {
+    if (!editor) {
+      setCanUndo(false);
+      setCanRedo(false);
+      return;
+    }
+
+    const updateHistoryState = () => {
+      setCanUndo(editor.can().undo());
+      setCanRedo(editor.can().redo());
+    };
+
+    // Initial state
+    updateHistoryState();
+
+    // Update on editor state changes
+    editor.on('update', updateHistoryState);
+    editor.on('selectionUpdate', updateHistoryState);
+
+    return () => {
+      editor.off('update', updateHistoryState);
+      editor.off('selectionUpdate', updateHistoryState);
+    };
+  }, [editor]);
+
+  const handleUndo = () => {
+    if (editor && canUndo) {
+      editor.chain().focus().undo().run();
+    }
+  };
+
+  const handleRedo = () => {
+    if (editor && canRedo) {
+      editor.chain().focus().redo().run();
+    }
+  };
+
   return (
     <TooltipProvider>
       <div
@@ -65,6 +107,56 @@ export function TemplateEditorToolbar({
           className
         )}
       >
+        {/* Undo/Redo Controls */}
+        <div className="flex items-center gap-0.5 rounded-md border border-border/50 overflow-hidden bg-background">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={handleUndo}
+                disabled={!canUndo}
+                className={cn(
+                  "px-2 py-1.5 transition-colors",
+                  canUndo
+                    ? "hover:bg-muted/50"
+                    : "opacity-40 cursor-not-allowed",
+                  "border-r border-border/50"
+                )}
+                aria-label="Undo"
+              >
+                <Undo2 className="w-4 h-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Undo (Ctrl+Z)</p>
+            </TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={handleRedo}
+                disabled={!canRedo}
+                className={cn(
+                  "px-2 py-1.5 transition-colors",
+                  canRedo
+                    ? "hover:bg-muted/50"
+                    : "opacity-40 cursor-not-allowed"
+                )}
+                aria-label="Redo"
+              >
+                <Redo2 className="w-4 h-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Redo (Ctrl+Shift+Z)</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+
+        {/* Divider after undo/redo */}
+        <div className="h-6 w-px bg-border mx-1" />
         {/* Variables Dropdown */}
         {hasVariables ? (
           <ToolbarDropdown

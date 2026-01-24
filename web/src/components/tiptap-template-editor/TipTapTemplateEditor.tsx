@@ -9,7 +9,7 @@
 
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 // No longer using custom paragraph extension
 import { VariableNode } from './extensions/variable-node';
@@ -17,12 +17,71 @@ import { ColorTileNode } from './extensions/color-tile-node';
 import { FillSpaceNode } from './extensions/fill-space-node';
 import { SymbolNode } from './extensions/symbol-node';
 import { WrappedTextNode } from './extensions/wrapped-text-node';
-import { parseTemplateSimple, serializeTemplateSimple } from './utils/serialization';
+import { UppercaseText } from './extensions/uppercase-text';
+import { LineConstraints } from './extensions/line-constraints';
+import { parseTemplateSimple, serializeTemplateSimple, parseLineContent } from './utils/serialization';
 import { BOARD_LINES, BOARD_WIDTH } from './utils/constants';
 import { calculateLineLength } from './utils/length-calculator';
+import { Slice } from '@tiptap/pm/model';
+import { TextSelection } from '@tiptap/pm/state';
 import { AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
 export type LineAlignment = 'left' | 'center' | 'right';
 import { TemplateEditorToolbar } from './components/TemplateEditorToolbar';
+
+/**
+ * Serialize a TipTap slice to template string format
+ * Used for clipboard operations (copy/paste/cut)
+ */
+function serializeSliceToTemplate(slice: Slice | null | undefined): string {
+  try {
+    if (!slice || !slice.content || slice.content.size === 0) {
+      return '';
+    }
+    
+    let text = '';
+    
+    // Iterate over the fragment using ProseMirror's forEach method
+    slice.content.forEach((node) => {
+      if (!node || !node.type) {
+        return;
+      }
+      
+      try {
+        if (node.type.name === 'text') {
+          text += node.text || '';
+        } else if (node.type.name === 'variable') {
+          const { pluginId, field, filters } = node.attrs || {};
+          const filterStr = filters && filters.length > 0 
+            ? filters.map((f: any) => `|${f.name}${f.arg ? ':' + f.arg : ''}`).join('')
+            : '';
+          text += `{{${pluginId || ''}.${field || ''}${filterStr}}}`;
+        } else if (node.type.name === 'colorTile') {
+          text += `{{${node.attrs?.color || ''}}}`;
+        } else if (node.type.name === 'fillSpace') {
+          const repeatChar = node.attrs?.repeatChar;
+          if (repeatChar && repeatChar !== ' ') {
+            text += `{{fill_space_repeat:${repeatChar}}}`;
+          } else {
+            text += `{{fill_space}}`;
+          }
+        } else if (node.type.name === 'symbol') {
+          text += `{${node.attrs?.name || ''}}`;
+        } else if (node.type.name === 'wrappedText') {
+          text += `{{${node.attrs?.text || ''}|wrap}}`;
+        } else if (node.type.name === 'hardBreak') {
+          text += '\n';
+        }
+      } catch (error) {
+        console.warn('Error serializing node:', error);
+      }
+    });
+    
+    return text;
+  } catch (error) {
+    console.warn('Error in serializeSliceToTemplate:', error);
+    return '';
+  }
+}
 
 interface TipTapTemplateEditorProps {
   value: string; // Template string with 6 lines separated by \n
@@ -57,6 +116,11 @@ export function TipTapTemplateEditor({
   // Track if we're manually updating wrap to prevent onChange from overwriting state
   const isUpdatingWrap = useRef(false);
   
+  // Store editor ref for use in handlers
+  const editorRef = useRef<any>(null);
+  // Track drag state to handle moves properly
+  const dragStateRef = useRef<{ from: number; to: number } | null>(null);
+  
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -83,6 +147,8 @@ export function TipTapTemplateEditor({
       FillSpaceNode,
       SymbolNode,
       WrappedTextNode,
+      // UppercaseText, // Disabled - using CSS + serialization instead
+      // LineConstraints, // Disabled - handling in handleKeyDown and serialization instead
     ],
     content: parseTemplateSimple(value || ''),
     editorProps: {
@@ -94,6 +160,7 @@ export function TipTapTemplateEditor({
           '[&_.ProseMirror]:font-mono',
           '[&_.ProseMirror]:text-sm',
           '[&_.ProseMirror]:resize-none',
+          '[&_.ProseMirror]:uppercase', // Visual uppercase display
           '[&_.ProseMirror_p]:my-0 [&_.ProseMirror_p]:leading-tight',
           '[&_.ProseMirror_p]:min-h-[1.5rem]',
           className
@@ -104,9 +171,59 @@ export function TipTapTemplateEditor({
         'aria-multiline': 'true',
       },
       handleKeyDown: (view, event) => {
-        const { state } = view;
-        const { selection } = state;
-        const { $from } = selection;
+        // Handle undo/redo shortcuts explicitly
+        // Undo: Ctrl+Z (Windows/Linux) or Cmd+Z (macOS)
+        // Redo: Ctrl+Shift+Z, Ctrl+Y (Windows/Linux) or Cmd+Shift+Z, Cmd+Y (macOS)
+        const key = event.key.toLowerCase();
+        const isMod = event.ctrlKey || event.metaKey;
+        
+        if (isMod && key === 'z' && !event.shiftKey) {
+          // Undo
+          const editorInstance = editorRef.current;
+          if (editorInstance?.can().undo()) {
+            event.preventDefault();
+            editorInstance.chain().focus().undo().run();
+            return true;
+          }
+          // If editor not ready yet, don't prevent default - let browser/TipTap handle it
+          return false;
+        } else if (isMod && (key === 'y' || (key === 'z' && event.shiftKey))) {
+          // Redo (Ctrl+Y or Ctrl+Shift+Z)
+          const editorInstance = editorRef.current;
+          if (editorInstance?.can().redo()) {
+            event.preventDefault();
+            editorInstance.chain().focus().redo().run();
+            return true;
+          }
+          // If editor not ready yet, don't prevent default - let browser/TipTap handle it
+          return false;
+        }
+        
+        // Comprehensive safety checks - prevent any access if view/state not ready
+        if (!view) {
+          return false;
+        }
+        if (!view.state) {
+          return false;
+        }
+        if (!view.state.selection) {
+          return false;
+        }
+        if (!view.state.doc) {
+          return false;
+        }
+        if (!view.state.schema) {
+          return false;
+        }
+        
+        try {
+          const { state } = view;
+          const { selection } = state;
+          
+          // Additional safety check
+          if (!selection) {
+            return false;
+          }
         
         // Handle Enter key - insert hardBreak instead of new paragraph, limit to 6 lines
         if (event.key === 'Enter' && !event.shiftKey) {
@@ -131,122 +248,227 @@ export function TipTapTemplateEditor({
           return true;
         }
         
-        // Handle regular character input
-        if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
-          // Find current line boundaries (between hardBreaks)
-          const paragraph = $from.node($from.depth);
-          if (paragraph.type.name !== 'paragraph') {
-            return false;
+        // Handle Cut (Ctrl/Cmd + X) - copy to clipboard and delete
+        if ((event.ctrlKey || event.metaKey) && event.key === 'x') {
+          if (selection && !selection.empty) {
+            try {
+              // Copy selection to clipboard
+              const slice = selection.content();
+              if (slice) {
+                const text = serializeSliceToTemplate(slice);
+                
+                // Copy to clipboard
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                  navigator.clipboard.writeText(text).catch(() => {
+                    // Fallback if clipboard API fails
+                  });
+                }
+              }
+            } catch (error) {
+              console.warn('Error in cut handler:', error);
+            }
+            
+            // Delete selection (TipTap will handle this automatically)
+            return false; // Let TipTap handle the cut
           }
+        }
+        
+        // Handle Copy (Ctrl/Cmd + C) - clipboardTextSerializer handles this automatically
+        // We don't need to intercept it, TipTap will use clipboardTextSerializer
+        // if ((event.ctrlKey || event.metaKey) && event.key === 'c') {
+        //   // Let clipboardTextSerializer handle it
+        //   return false;
+        // }
+        
+          // Let all other keys work naturally - no blocking or manual conversion
+          // UppercaseText extension will handle lowercase conversion via validation
+          // Character limits will be handled via validation in onUpdate
+          return false;
+        } catch (error) {
+          console.warn('Error in handleKeyDown:', error);
+          return false;
+        }
+      },
+      handlePaste: (view, event, slice) => {
+        // Check if we're pasting a template string (contains {{ or {)
+        // If so, parse it and insert as nodes
+        try {
+          const pastedText = event.clipboardData?.getData('text/plain') || '';
           
-          // Find current line by collecting nodes between hardBreaks
-          const lineNodes: any[] = [];
-          let foundStart = false;
-          
-          // Traverse paragraph content to find current line
-          paragraph.content.forEach((node, offset) => {
-            const nodePos = $from.start() + offset;
-            
-            // If this is a hardBreak after cursor, we're done with this line
-            if (node.type.name === 'hardBreak' && nodePos >= $from.pos && foundStart) {
-              return false; // Stop iteration
+          if (pastedText && (pastedText.includes('{{') || pastedText.match(/\{[a-z]+\}/i))) {
+            const nodes = parseLineContent(pastedText);
+            if (nodes.length > 0 && editorRef.current?.state && editorRef.current?.chain) {
+              editorRef.current.chain().focus().insertContent(nodes).run();
+              return true; // Handled
             }
-            
-            // If we've passed a hardBreak before cursor, start collecting
-            if (node.type.name === 'hardBreak' && nodePos < $from.pos) {
-              lineNodes.length = 0; // Reset - new line starts after this break
-              foundStart = true;
-              return;
-            }
-            
-            // If this is a hardBreak after cursor position, we're done
-            if (node.type.name === 'hardBreak' && nodePos >= $from.pos) {
+          }
+        } catch (error) {
+          console.warn('Error in handlePaste:', error);
+        }
+        return false; // Let TipTap handle normally
+      },
+      transformPastedText: (text) => {
+        // Skip transformation for template strings (they'll be handled by handlePaste)
+        if (text && (text.includes('{{') || text.match(/\{[a-z]+\}/i))) {
+          return text; // Don't transform template strings
+        }
+        // Convert plain text to uppercase for consistency
+        // Final uppercase conversion happens during serialization
+        return text.toUpperCase();
+      },
+      handleDOMEvents: {
+        // Handle mousedown on drag handles to select the node before dragging
+        mousedown: (view, event) => {
+          const target = event.target as HTMLElement;
+          // Check if clicking on a drag handle or its children
+          const dragHandle = target.closest('[data-drag-handle]');
+          if (dragHandle && event.button === 0) {
+            // Don't handle if clicking on a button (like delete button)
+            if (target.closest('button')) {
               return false;
             }
             
-            // Collect non-hardBreak nodes for current line
-            if (node.type.name !== 'hardBreak') {
-              lineNodes.push(node.toJSON());
-              foundStart = true;
-            }
-          });
-          
-          // Calculate current line length using proper calculator
-          const currentLineLength = calculateLineLength(lineNodes);
-          
-          // If typing would exceed 22 characters and we're not replacing a selection, block it
-          const isReplacing = !selection.empty;
-          if (!isReplacing && currentLineLength >= BOARD_WIDTH) {
-            event.preventDefault();
-            return true; // Block
-          }
-          
-          // Convert lowercase to uppercase
-          if (/[a-z]/.test(event.key)) {
-            event.preventDefault();
-            const uppercaseChar = event.key.toUpperCase();
-            const tr = state.tr.insertText(uppercaseChar, selection.from, selection.to);
-            view.dispatch(tr);
-            return true;
-          }
-        }
-        
-        return false;
-      },
-      transformPastedText: (text) => {
-        // Convert pasted text to uppercase
-        return text.toUpperCase();
-      },
-      handlePaste: (view, event, slice) => {
-        const { state } = view;
-        const { selection } = state;
-        const { $from } = selection;
-        
-        // Find the current paragraph (line)
-        const currentParagraph = $from.node($from.depth);
-        if (currentParagraph.type.name === 'templateParagraph') {
-          // Get current line content
-          const lineContent = currentParagraph.content.toJSON() || [];
-          const currentLength = calculateLineLength(lineContent);
-          
-          // Calculate how many characters would be added from paste
-          const pastedText = slice.content.textContent || '';
-          const selectedText = state.doc.textBetween(selection.from, selection.to);
-          const charsToAdd = pastedText.length;
-          const charsToRemove = selectedText.length;
-          const newLength = currentLength - charsToRemove + charsToAdd;
-          
-          // If paste would exceed limit, truncate it
-          if (newLength > BOARD_WIDTH) {
-            const maxChars = BOARD_WIDTH - currentLength + charsToRemove;
-            if (maxChars > 0) {
-              // Truncate pasted text to fit
-              const truncatedText = pastedText.slice(0, maxChars);
-              const tr = state.tr.replaceSelection(
-                state.schema.text(truncatedText.toUpperCase())
-              );
-              view.dispatch(tr);
-              return true; // Handled
-            } else {
-              // No room for any pasted content
-              return true; // Block paste
+            // Get the position of the drag handle element
+            const pos = view.posAtDOM(dragHandle, 0);
+            if (pos !== null && pos >= 0) {
+              try {
+                const $pos = view.state.doc.resolve(pos);
+                // Try to find the node - it could be before or after the position
+                let node = $pos.nodeAfter;
+                let nodePos = $pos.pos;
+                
+                if (!node || (node.type.name !== 'variable' && 
+                             node.type.name !== 'colorTile' && 
+                             node.type.name !== 'fillSpace' && 
+                             node.type.name !== 'symbol' && 
+                             node.type.name !== 'wrappedText')) {
+                  // Try the node before
+                  node = $pos.nodeBefore;
+                  if (node) {
+                    nodePos = $pos.pos - node.nodeSize;
+                  }
+                }
+                
+                if (node && (node.type.name === 'variable' || 
+                             node.type.name === 'colorTile' || 
+                             node.type.name === 'fillSpace' || 
+                             node.type.name === 'symbol' || 
+                             node.type.name === 'wrappedText')) {
+                  // Store drag state for handleDrop
+                  dragStateRef.current = { from: nodePos, to: nodePos + node.nodeSize };
+                  
+                  // Let the drag continue naturally
+                  return false;
+                }
+              } catch (error) {
+                console.warn('Error selecting node for drag:', error);
+              }
             }
           }
-        }
-        
-        return false; // Let TipTap handle normally
+          return false;
+        },
+        // Allow dragstart to proceed - we need it for drop events to fire
+        dragstart: (view, event) => {
+          // Don't prevent - we need the drag to start for drop to work
+          return false;
+        },
       },
       handleDrop: (view, event, slice, moved) => {
-        // Enable drag and drop for nodes with data-drag-handle
-        if (moved) {
-          return false; // Let TipTap handle moved nodes
+        // Handle dropping a dragged node
+        if (dragStateRef.current) {
+          const { from, to } = dragStateRef.current;
+          
+          // Get drop position
+          const dropPos = view.posAtCoords({ left: event.clientX, top: event.clientY });
+          
+          if (dropPos && dropPos.pos !== null) {
+            try {
+              const $dropPos = view.state.doc.resolve(dropPos.pos);
+              
+              // Don't drop on itself
+              if (dropPos.pos >= from && dropPos.pos <= to) {
+                dragStateRef.current = null;
+                return true; // Prevent drop
+              }
+              
+              // Get the node being dragged
+              const draggedNode = view.state.doc.nodeAt(from);
+              if (!draggedNode) {
+                dragStateRef.current = null;
+                return false;
+              }
+              
+              // Calculate insert position
+              let insertPos = $dropPos.pos;
+              
+              // If dropping at the start of a node, insert before it
+              if ($dropPos.parentOffset === 0 && $dropPos.depth > 0) {
+                insertPos = $dropPos.before($dropPos.depth);
+              }
+              
+              // Adjust position if dropping after the dragged content
+              if (insertPos > to) {
+                insertPos -= (to - from);
+              }
+              
+              // Create transaction to move the node
+              const tr = view.state.tr;
+              
+              // Delete from original position
+              tr.delete(from, to);
+              
+              // Adjust insert position after deletion
+              const adjustedInsertPos = insertPos > from ? insertPos - (to - from) : insertPos;
+              
+              // Ensure we're inserting at a valid position
+              if (adjustedInsertPos >= 0 && adjustedInsertPos <= tr.doc.content.size) {
+                // Insert the node at the new position
+                tr.insert(adjustedInsertPos, draggedNode);
+                
+                // Set cursor after the moved node
+                const cursorPos = adjustedInsertPos + draggedNode.nodeSize;
+                if (cursorPos <= tr.doc.content.size) {
+                  tr.setSelection(TextSelection.create(tr.doc, cursorPos));
+                }
+                
+                view.dispatch(tr);
+                dragStateRef.current = null;
+                return true; // Handled
+              }
+            } catch (error) {
+              console.warn('Error handling drop:', error);
+            }
+          }
+          dragStateRef.current = null;
         }
-        return false; // Let TipTap handle regular drops
+        
+        // For other drops, let TipTap handle it
+        return false;
+      },
+      clipboardTextSerializer: (slice) => {
+        // Serialize nodes to their template string format for clipboard
+        try {
+          // Safety check - ensure slice is valid
+          if (!slice) {
+            return '';
+          }
+          if (!slice.content) {
+            return '';
+          }
+          return serializeSliceToTemplate(slice);
+        } catch (error) {
+          console.warn('Error in clipboardTextSerializer:', error);
+          return '';
+        }
       },
     },
     onUpdate: ({ editor }) => {
       // Skip onChange if we're manually updating wrap (to prevent state overwrite)
       if (isUpdatingWrap.current) {
+        return;
+      }
+      // Safety check
+      if (!editor || !editor.state) {
         return;
       }
       const doc = editor.getJSON();
@@ -257,10 +479,114 @@ export function TipTapTemplateEditor({
       onFocus?.();
     },
   });
+  
+  // Store editor reference for use in handlers
+  useEffect(() => {
+    if (editor) {
+      editorRef.current = editor;
+    }
+  }, [editor]);
+
+  // Add DOM-level drop handler to ensure we catch drops
+  useEffect(() => {
+    if (!editor) return;
+    
+    const editorElement = editor.view.dom;
+    
+    const handleDrop = (event: DragEvent) => {
+      // Only handle if we have drag state (dragging a custom node)
+      if (!dragStateRef.current) {
+        return;
+      }
+      
+      event.preventDefault();
+      event.stopPropagation();
+      
+      const { from, to } = dragStateRef.current;
+      
+      // Get drop position using editor's view
+      const dropPos = editor.view.posAtCoords({ left: event.clientX, top: event.clientY });
+      
+      if (dropPos && dropPos.pos !== null) {
+        try {
+          const $dropPos = editor.state.doc.resolve(dropPos.pos);
+          
+          // Don't drop on itself
+          if (dropPos.pos >= from && dropPos.pos <= to) {
+            dragStateRef.current = null;
+            return;
+          }
+          
+          // Get the node being dragged
+          const draggedNode = editor.state.doc.nodeAt(from);
+          if (!draggedNode) {
+            dragStateRef.current = null;
+            return;
+          }
+          
+          // Calculate insert position
+          let insertPos = $dropPos.pos;
+          
+          // If dropping at the start of a node, insert before it
+          if ($dropPos.parentOffset === 0 && $dropPos.depth > 0) {
+            insertPos = $dropPos.before($dropPos.depth);
+          }
+          
+          // Adjust position if dropping after the dragged content
+          if (insertPos > to) {
+            insertPos -= (to - from);
+          }
+          
+          // Create transaction to move the node
+          const tr = editor.state.tr;
+          
+          // Delete from original position
+          tr.delete(from, to);
+          
+          // Adjust insert position after deletion
+          const adjustedInsertPos = insertPos > from ? insertPos - (to - from) : insertPos;
+          
+          // Ensure we're inserting at a valid position
+          if (adjustedInsertPos >= 0 && adjustedInsertPos <= tr.doc.content.size) {
+            // Insert the node at the new position
+            tr.insert(adjustedInsertPos, draggedNode);
+            
+            // Set cursor after the moved node
+            const cursorPos = adjustedInsertPos + draggedNode.nodeSize;
+            if (cursorPos <= tr.doc.content.size) {
+              tr.setSelection(TextSelection.create(tr.doc, cursorPos));
+            }
+            
+            editor.view.dispatch(tr);
+            dragStateRef.current = null;
+          }
+        } catch (error) {
+          console.warn('Error handling DOM drop:', error);
+          dragStateRef.current = null;
+        }
+      }
+    };
+    
+    const handleDragOver = (event: DragEvent) => {
+      // Allow drop by preventing default
+      if (dragStateRef.current) {
+        event.preventDefault();
+        event.dataTransfer!.dropEffect = 'move';
+      }
+    };
+    
+    editorElement.addEventListener('drop', handleDrop);
+    editorElement.addEventListener('dragover', handleDragOver);
+    
+    return () => {
+      editorElement.removeEventListener('drop', handleDrop);
+      editorElement.removeEventListener('dragover', handleDragOver);
+    };
+  }, [editor]);
 
   // Update editor content when value changes externally
   useEffect(() => {
-    if (editor) {
+    if (editor && editor.state) {
       const currentSerialized = serializeTemplateSimple(editor.getJSON());
       if (value !== currentSerialized) {
         // Preserve history to allow undo/redo after external updates
@@ -279,20 +605,28 @@ export function TipTapTemplateEditor({
 
   // Get current line index from cursor position (counting hardBreaks)
   const getCurrentLineIndex = useCallback((): number | null => {
-    if (!editor) return null;
-    const { state } = editor;
-    const { selection } = state;
-    const { $from } = selection;
+    try {
+      if (!editor || !editor.state || !editor.state.selection) return null;
+      const { state } = editor;
+      const { selection } = state;
+      if (!selection || !selection.$from) return null;
+      const { $from } = selection;
     
-    // Count hard breaks before cursor to determine line index
-    let lineIndex = 0;
-    state.doc.nodesBetween(0, $from.pos, (node) => {
-      if (node.type.name === 'hardBreak') {
-        lineIndex++;
+      // Count hard breaks before cursor to determine line index
+      let lineIndex = 0;
+      if (state.doc) {
+        state.doc.nodesBetween(0, $from.pos, (node) => {
+          if (node && node.type && node.type.name === 'hardBreak') {
+            lineIndex++;
+          }
+        });
       }
-    });
-    
-    return lineIndex;
+      
+      return lineIndex;
+    } catch (error) {
+      console.warn('Error in getCurrentLineIndex:', error);
+      return null;
+    }
   }, [editor]);
 
   // Handle alignment button clicks
@@ -329,6 +663,48 @@ export function TipTapTemplateEditor({
     }
   }, [editor, getCurrentLineIndex, onLineWrapChange, lineWrapEnabled]);
 
+  // Safely get current line index - use useMemo to prevent calculation during problematic renders
+  // MUST be called before any early returns to maintain hook order
+  const currentLineIndex = useMemo(() => {
+    try {
+      // Only try to get line index if editor is fully initialized
+      if (!editor) {
+        return null;
+      }
+      if (!editor.state) {
+        return null;
+      }
+      if (!editor.state.selection) {
+        return null;
+      }
+      const { state } = editor;
+      const { selection } = state;
+      if (!selection || !selection.$from) {
+        return null;
+      }
+      const { $from } = selection;
+      
+      if (!state.doc) {
+        return null;
+      }
+      
+      let lineIndex = 0;
+      state.doc.nodesBetween(0, $from.pos, (node) => {
+        if (node && node.type && node.type.name === 'hardBreak') {
+          lineIndex++;
+        }
+      });
+      return lineIndex;
+    } catch (error) {
+      console.warn('Error getting current line index:', error);
+      return null;
+    }
+  }, [editor, editor?.state?.selection?.$from?.pos]);
+  
+  const currentAlignment = currentLineIndex !== null && currentLineIndex >= 0 && currentLineIndex < BOARD_LINES
+    ? lineAlignments[currentLineIndex] || 'left'
+    : 'left';
+
   if (!editor) {
     return (
       <div className={cn('min-h-[9rem] border rounded-md p-2 bg-muted/30', className)}>
@@ -340,11 +716,6 @@ export function TipTapTemplateEditor({
       </div>
     );
   }
-
-  const currentLineIndex = getCurrentLineIndex();
-  const currentAlignment = currentLineIndex !== null && currentLineIndex >= 0 && currentLineIndex < BOARD_LINES
-    ? lineAlignments[currentLineIndex] || 'left'
-    : 'left';
   const currentWrapEnabled = currentLineIndex !== null && currentLineIndex >= 0 && currentLineIndex < BOARD_LINES
     ? lineWrapEnabled[currentLineIndex] || false
     : false;

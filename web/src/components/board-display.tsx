@@ -636,7 +636,11 @@ interface FiestaboardDisplayProps extends BoardDisplayProps {}
 export const BoardDisplay = memo(function BoardDisplay({ message, isLoading = false, size = "md", className = "", boardType = "black" }: BoardDisplayProps) {
   // Memoize grid calculation to avoid recalculating on every render
   const grid = useMemo(() => {
-    return message ? messageToGrid(message) : null;
+    console.log('[BoardDisplay] message:', message, 'type:', typeof message, 'isLoading:', isLoading);
+    // Handle null (loading state) vs empty string (blank grid)
+    const result = message !== null ? messageToGrid(message) : null;
+    console.log('[BoardDisplay] grid created:', result !== null, 'grid rows:', result?.length);
+    return result;
   }, [message]);
   
   // Increased padding for more pronounced bezel - more vertical space to match real board
