@@ -319,7 +319,13 @@ export const requestStore: {
 export const handlers = [
   // Core status endpoints
   http.get(`${API_BASE}/status`, () => {
-    return HttpResponse.json(mockStatus);
+    return HttpResponse.json({
+      ...mockStatus,
+      config_summary: {
+        ...mockStatus.config_summary,
+        board_configured: true,
+      },
+    });
   }),
 
   http.get(`${API_BASE}/preview`, () => {
@@ -817,6 +823,20 @@ export const handlers = [
     return HttpResponse.json({
       status: "success",
       settings: { board_type: body.board_type }
+    });
+  }),
+
+  // Schedule endpoints
+  http.get(`${API_BASE}/schedules/enabled`, () => {
+    return HttpResponse.json({
+      enabled: false,
+    });
+  }),
+
+  // Active page endpoint
+  http.get(`${API_BASE}/settings/active-page`, () => {
+    return HttpResponse.json({
+      page_id: "test-active-page",
     });
   }),
 ];

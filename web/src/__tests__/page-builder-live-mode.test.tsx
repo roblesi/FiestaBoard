@@ -345,7 +345,7 @@ describe("PageBuilder Live Mode", () => {
       await waitFor(() => {
         expect(screen.queryByText(/live/i)).not.toBeInTheDocument();
       });
-    }, { timeout: 10000 });
+    }, 10000);
 
     it("resets timeout when user makes changes", async () => {
       const user = userEvent.setup({ delay: null });
@@ -380,7 +380,7 @@ describe("PageBuilder Live Mode", () => {
       await waitFor(() => {
         expect(screen.getByText(/live/i)).toBeInTheDocument();
       });
-    }, { timeout: 10000 });
+    }, 10000);
   });
 
   describe("Board Restoration", () => {
@@ -415,7 +415,7 @@ describe("PageBuilder Live Mode", () => {
       await waitFor(() => {
         expect(api.sendPage).toHaveBeenCalledWith("test-active-page", "board");
       }, { timeout: 3000 });
-    }, { timeout: 10000 });
+    }, 10000);
 
     it("does not restore when live mode disabled in schedule mode", async () => {
       const user = userEvent.setup({ delay: null });
@@ -453,7 +453,7 @@ describe("PageBuilder Live Mode", () => {
       
       // Verify sendPage was not called
       expect(api.sendPage).not.toHaveBeenCalled();
-    }, { timeout: 10000 });
+    }, 10000);
 
     it("handles restoration errors gracefully", async () => {
       const user = userEvent.setup({ delay: null });
@@ -487,7 +487,7 @@ describe("PageBuilder Live Mode", () => {
       await waitFor(() => {
         expect(screen.getByLabelText(/live mode/i)).toBeInTheDocument();
       });
-    }, { timeout: 10000 });
+    }, 10000);
   });
 
   describe("Live Mode State Management", () => {
@@ -510,7 +510,7 @@ describe("PageBuilder Live Mode", () => {
       await waitFor(() => {
         expect(api.getActivePage).toHaveBeenCalled();
       });
-    }, { timeout: 10000 });
+    }, 10000);
 
     it("updates last activity time on template changes", async () => {
       const user = userEvent.setup({ delay: null });
@@ -540,6 +540,6 @@ describe("PageBuilder Live Mode", () => {
       await waitFor(() => {
         expect(screen.getByText(/live/i)).toBeInTheDocument();
       });
-    }, { timeout: 10000 });
+    }, 10000);
   });
 });
