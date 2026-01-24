@@ -159,6 +159,9 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
   
   // Track if we're manually updating wrap to prevent onChange from overwriting state
   const isUpdatingWrap = useRef(false);
+  
+  // Track if content was cleared while a mutation is in flight (to ignore stale responses)
+  const shouldIgnoreNextResponse = useRef(false);
 
   // Fetch existing page if editing
   const { data: existingPage, isLoading: loadingPage } = useQuery({
@@ -442,25 +445,96 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
 
   // Preview mutation
   const previewMutation = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const template = getDebouncedTemplateWithAlignments();
-      console.log('Sending template to API:', template);
-      console.log('Wrap states:', debouncedLineWrapEnabled);
+      console.log('[Preview] mutationFn called');
+      console.log('[Preview] Template lines (raw):', debouncedTemplateLines);
+      console.log('[Preview] Template with alignments:', template);
+      console.log('[Preview] Wrap states:', debouncedLineWrapEnabled);
+      
+      // Validate template has content before sending to API
+      // Check if all lines are empty (after removing alignment prefixes and trimming)
+      const hasContent = template.some(line => {
+        // Remove alignment/wrap prefixes to check actual content
+        let content = line;
+        // Remove wrap prefix first
+        if (content.startsWith("{wrap}")) {
+          content = content.slice(6);
+        }
+        // Remove alignment prefix
+        if (content.startsWith("{center}")) {
+          content = content.slice(8);
+        } else if (content.startsWith("{right}")) {
+          content = content.slice(7);
+        } else if (content.startsWith("{left}")) {
+          content = content.slice(6);
+        }
+        // Now check if there's actual content (not just whitespace)
+        const hasLineContent = content.trim().length > 0;
+        console.log(`[Preview] Line "${line}" -> content "${content}" -> hasContent: ${hasLineContent}`);
+        return hasLineContent;
+      });
+      
+      console.log('[Preview] Has content check result:', hasContent);
+      
+      if (!hasContent) {
+        // Return empty response immediately without API call
+        console.log('[Preview] Template is empty, returning empty response immediately');
+        return { 
+          rendered: "\n".repeat(5), // 6 empty lines (5 newlines)
+          lines: ["", "", "", "", "", ""], 
+          line_count: 6 
+        };
+      }
+      
+      console.log('[Preview] Calling API with template');
       return api.renderTemplate(template);
     },
     onSuccess: (data) => {
-      console.log('Preview response:', data);
-      console.log('Rendered string:', data.rendered);
-      console.log('Rendered lines:', data.lines);
+      console.log('[Preview] onSuccess called');
+      console.log('[Preview] Response data:', data);
+      console.log('[Preview] shouldIgnoreNextResponse:', shouldIgnoreNextResponse.current);
+      console.log('[Preview] Current preview state:', preview);
+      console.log('[Preview] Current debouncedTemplateLines:', debouncedTemplateLines);
+      
+      // Ignore response if content was cleared while request was in flight
+      if (shouldIgnoreNextResponse.current) {
+        console.log('[Preview] Ignoring response (content was cleared)');
+        shouldIgnoreNextResponse.current = false;
+        return;
+      }
+      
+      // Double-check that we still have content before setting preview
+      const hasContent = debouncedTemplateLines.some(line => line.trim().length > 0);
+      console.log('[Preview] Has content check in onSuccess:', hasContent);
+      if (!hasContent) {
+        console.log('[Preview] No content, setting preview to null');
+        setPreview(null);
+        return;
+      }
+      
+      // Also check if the API returned empty content (all blank lines)
+      // This handles the case where API correctly identifies 6 blank lines as empty
+      const renderedHasContent = data.rendered && data.rendered.trim().length > 0;
+      console.log('[Preview] Rendered has content:', renderedHasContent, 'rendered length:', data.rendered?.length);
+      if (!renderedHasContent) {
+        console.log('[Preview] Rendered content is empty, setting preview to null');
+        setPreview(null);
+        return;
+      }
+      
+      console.log('[Preview] Setting preview to:', data.rendered);
       setPreview(data.rendered);
       
       // If changes occurred while this preview was rendering, trigger another preview
       if (needsRePreview.current) {
+        console.log('[Preview] Needs re-preview, triggering another mutation');
         needsRePreview.current = false;
         previewMutation.mutate();
       }
     },
-    onError: () => {
+    onError: (error) => {
+      console.log('[Preview] onError called:', error);
       setPreview(null);
       
       // Reset the flag on error too
@@ -470,26 +544,67 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
 
   // Auto-preview when debounced template lines or alignments change (debounced)
   useEffect(() => {
+    console.log('[Preview] useEffect triggered');
+    console.log('[Preview] debouncedTemplateLines:', debouncedTemplateLines);
+    console.log('[Preview] previewMutation.isPending:', previewMutation.isPending);
+    console.log('[Preview] Current preview:', preview);
+    
     // Only preview if at least one line has content
     const hasContent = debouncedTemplateLines.some(line => line.trim().length > 0);
+    console.log('[Preview] Has content:', hasContent);
+    
     if (!hasContent) {
+      console.log('[Preview] No content detected, clearing preview');
       setPreview(null);
+      // Reset re-preview flag when content becomes empty
+      needsRePreview.current = false;
+      // Mark that we should ignore any pending mutation responses
+      if (previewMutation.isPending) {
+        console.log('[Preview] Mutation is pending, setting ignore flag and resetting');
+        shouldIgnoreNextResponse.current = true;
+        previewMutation.reset();
+      }
       return;
     }
+    
+    // Clear the ignore flag when we have content again
+    shouldIgnoreNextResponse.current = false;
 
     // Debounce the preview (500ms after debounced state stabilizes)
     const timeoutId = setTimeout(() => {
+      console.log('[Preview] Debounce timeout fired');
+      // Double-check content again after debounce (in case it was cleared during debounce)
+      const stillHasContent = debouncedTemplateLines.some(line => line.trim().length > 0);
+      console.log('[Preview] Still has content after debounce:', stillHasContent);
+      
+      if (!stillHasContent) {
+        console.log('[Preview] Content cleared during debounce, clearing preview');
+        setPreview(null);
+        shouldIgnoreNextResponse.current = false;
+        if (previewMutation.isPending) {
+          console.log('[Preview] Mutation still pending, setting ignore flag');
+          shouldIgnoreNextResponse.current = true;
+          previewMutation.reset();
+        }
+        return;
+      }
+      
       // Only start a new preview if there isn't one already pending
       // If one is pending, set a flag so it re-runs after completion
       if (!previewMutation.isPending) {
+        console.log('[Preview] Starting new mutation');
         previewMutation.mutate();
       } else {
+        console.log('[Preview] Mutation already pending, setting needsRePreview flag');
         // Mark that we need to re-preview after the current mutation completes
         needsRePreview.current = true;
       }
     }, 500); // 500ms debounce
 
-    return () => clearTimeout(timeoutId);
+    return () => {
+      console.log('[Preview] useEffect cleanup (timeout cleared)');
+      clearTimeout(timeoutId);
+    };
   }, [debouncedTemplateLines, debouncedLineAlignments, debouncedLineWrapEnabled]);
 
 
@@ -680,8 +795,66 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
                 <label className="text-xs sm:text-sm font-medium mb-2 block">Preview</label>
                 <div className="flex justify-center">
                   <BoardDisplay 
-                    message={preview} 
-                    isLoading={previewMutation.isPending && debouncedTemplateLines.some(line => line.trim().length > 0)}
+                    message={(() => {
+                      // If we have a preview, use it
+                      if (preview !== null) {
+                        console.log('[Preview] Message: using preview value:', preview);
+                        return preview;
+                      }
+                      // If no content and not loading, show blank grid (empty string creates blank grid)
+                      const hasContent = debouncedTemplateLines.some(line => line.trim().length > 0);
+                      const isPending = previewMutation.isPending;
+                      const shouldIgnore = shouldIgnoreNextResponse.current;
+                      
+                      console.log('[Preview] Message calculation:');
+                      console.log('  - hasContent:', hasContent);
+                      console.log('  - isPending:', isPending);
+                      console.log('  - shouldIgnore:', shouldIgnore);
+                      
+                      // If no content and not loading, return empty string to show blank grid
+                      if (!hasContent && !isPending && !shouldIgnore) {
+                        console.log('[Preview] Message: returning empty string for blank grid');
+                        return "";
+                      }
+                      // Otherwise return null (shows loading animation)
+                      console.log('[Preview] Message: returning null (will show loading)');
+                      return null;
+                    })()}
+                    isLoading={(() => {
+                      const hasContent = debouncedTemplateLines.some(line => line.trim().length > 0);
+                      const isPending = previewMutation.isPending;
+                      const shouldIgnore = shouldIgnoreNextResponse.current;
+                      
+                      console.log('[Preview] Loading state calculation:');
+                      console.log('  - hasContent:', hasContent);
+                      console.log('  - preview:', preview);
+                      console.log('  - isPending:', isPending);
+                      console.log('  - shouldIgnore:', shouldIgnore);
+                      console.log('  - debouncedTemplateLines:', debouncedTemplateLines);
+                      
+                      // If we have a preview value, never show loading (mutation completed)
+                      if (preview !== null) {
+                        console.log('[Preview] Has preview, isLoading = false');
+                        return false;
+                      }
+                      
+                      // If no content, show blank (not loading)
+                      if (!hasContent) {
+                        console.log('[Preview] No content, isLoading = false');
+                        return false;
+                      }
+                      
+                      // Don't show loading if we're ignoring the next response (content was cleared)
+                      if (shouldIgnore) {
+                        console.log('[Preview] Ignoring response, isLoading = false');
+                        return false;
+                      }
+                      
+                      // Only show loading if we're actually fetching and don't have a preview yet
+                      const result = isPending;
+                      console.log('[Preview] Final isLoading:', result);
+                      return result;
+                    })()}
                     size="md"
                     boardType={boardSettings?.board_type ?? "black"}
                   />

@@ -3351,6 +3351,21 @@ async def render_template(request: dict):
     
     template = request["template"]
     
+    # Early return for empty templates to avoid unnecessary processing
+    if isinstance(template, list):
+        if not template or all(not line.strip() for line in template):
+            return {
+                "rendered": "\n".join([""] * 6),
+                "lines": [""] * 6,
+                "line_count": 6
+            }
+    elif isinstance(template, str) and not template.strip():
+        return {
+            "rendered": "\n".join([""] * 6),
+            "lines": [""] * 6,
+            "line_count": 6
+        }
+    
     template_engine = get_template_engine()
     
     try:

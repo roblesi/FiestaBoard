@@ -10,6 +10,7 @@ import { BOARD_COLORS, SYMBOL_CHARS, FILL_SPACE_VAR, FILL_SPACE_REPEAT_VAR } fro
  * Simplified parser - treats template as single block with line breaks
  */
 export function parseTemplateSimple(template: string): JSONContent {
+  // Enforce 6 line limit during parsing (validation-based, "chill" UX)
   const lines = template.split('\n').slice(0, 6); // Max 6 lines
   
   // Build a single paragraph with content and hardBreaks between lines
@@ -84,11 +85,12 @@ export function serializeTemplateSimple(doc: JSONContent): string {
     lines.push(currentLine);
   }
   
-  // Ensure exactly 6 lines
+  // Ensure exactly 6 lines (validation-based enforcement)
   while (lines.length < 6) {
     lines.push('');
   }
   
+  // Enforce 6 line limit during serialization (validation-based, "chill" UX)
   return lines.slice(0, 6).join('\n');
 }
 
@@ -98,7 +100,8 @@ export function serializeTemplateSimple(doc: JSONContent): string {
 function serializeNodeContent(node: JSONContent): string {
   switch (node.type) {
     case 'text':
-      return node.text || '';
+      // Convert to uppercase during serialization (validation-based, "chill" UX)
+      return (node.text || '').toUpperCase();
     
     case 'variable':
       const filters = node.attrs?.filters || [];
