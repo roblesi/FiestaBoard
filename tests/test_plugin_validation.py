@@ -327,7 +327,7 @@ class TestPluginIconsAndCategories:
         if not plugins:
             pytest.skip("No plugins found")
         
-        valid_categories = {"data", "transit", "weather", "entertainment", "utility", "home"}
+        valid_categories = {"art", "data", "transit", "weather", "entertainment", "utility", "home"}
         invalid: List[str] = []
         
         for plugin_dir in plugins:
