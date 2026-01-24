@@ -4,6 +4,8 @@ Display what's currently playing on your Vestaboard via Last.fm scrobbling.
 
 ![Last.fm Now Playing Display](./docs/last-fm-display.png)
 
+**→ [Setup Guide](./docs/SETUP.md)** - API key registration and configuration
+
 ## Overview
 
 This plugin fetches the currently playing or most recently played track from a user's Last.fm profile. It works with any music source that scrobbles to Last.fm, including:

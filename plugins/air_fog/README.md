@@ -2,6 +2,8 @@
 
 Display air quality index (AQI) and fog/visibility conditions.
 
+**→ [Setup Guide](./docs/SETUP.md)** - API key registration and configuration
+
 ## Overview
 
 The Air Quality & Fog plugin combines data from PurpleAir (air quality) and OpenWeatherMap (visibility) to give you a complete picture of outdoor conditions.
@@ -45,19 +47,9 @@ FOG: {{air_fog.fog_status}}
 {{air_fog.fog_color}} FOG: {{air_fog.fog_status}}
 ```
 
-## Setup
+## Quick Setup
 
-### PurpleAir API Key
-
-1. Go to [PurpleAir](https://www.purpleair.com/)
-2. Create an account and request API access
-3. Get your API key from the dashboard
-
-### OpenWeatherMap API Key
-
-1. Go to [OpenWeatherMap](https://openweathermap.org/)
-2. Sign up for a free account
-3. Get your API key
+For detailed setup instructions including API key registration, see the **[Setup Guide](./docs/SETUP.md)**.
 
 ## Configuration
 

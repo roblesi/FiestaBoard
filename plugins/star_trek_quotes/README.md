@@ -2,6 +2,8 @@
 
 Display random Star Trek quotes from TNG, Voyager, and DS9.
 
+**→ [Setup Guide](./docs/SETUP.md)** - Configuration instructions
+
 ## Overview
 
 The Star Trek Quotes plugin displays inspirational and memorable quotes from Star Trek: The Next Generation, Voyager, and Deep Space Nine.

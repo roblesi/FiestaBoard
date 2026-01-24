@@ -2,6 +2,8 @@
 
 Display San Francisco Muni transit arrival times with multi-stop and multi-line support.
 
+**→ [Setup Guide](./docs/SETUP.md)** - API key registration and stop configuration
+
 ## Overview
 
 The SF Muni plugin fetches real-time arrival predictions from 511.org and displays them for your selected stops. It supports multiple stops and shows arrivals for all lines at each stop.
@@ -14,13 +16,9 @@ The SF Muni plugin fetches real-time arrival predictions from 511.org and displa
 - Delay indicators
 - Color-coded status
 
-## Setup
+## Quick Setup
 
-### Get 511.org API Key
-
-1. Go to [511.org/developers](https://511.org/developers)
-2. Create a free account
-3. Get your API key
+For detailed setup instructions including API key registration, see the **[Setup Guide](./docs/SETUP.md)**.
 
 ## Template Variables
 

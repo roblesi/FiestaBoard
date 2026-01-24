@@ -4,6 +4,8 @@ Display a full-screen 6x22 bit image pattern that changes based on the sun's pos
 
 ![Sun Art Display](./docs/sun-art-noon.png)
 
+**→ [Setup Guide](./docs/SETUP.md)** - Location configuration
+
 ## Overview
 
 The Sun Art plugin generates visual patterns representing the sun's position using latitude/longitude coordinates. It calculates accurate sun positions using the `astral` library and creates 12 distinct patterns showing the sun's progression throughout the day.

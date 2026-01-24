@@ -2,6 +2,8 @@
 
 Display current weather conditions with temperature, humidity, and wind speed.
 
+**→ [Setup Guide](./docs/SETUP.md)** - API key registration and configuration
+
 ## Overview
 
 The Weather plugin fetches real-time weather data from WeatherAPI.com or OpenWeatherMap and makes it available as template variables for your board.
@@ -19,27 +21,9 @@ The Weather plugin fetches real-time weather data from WeatherAPI.com or OpenWea
 - Support for multiple locations
 - Choice of weather providers
 
-## Setup
+## Quick Setup
 
-### 1. Get an API Key
-
-**WeatherAPI.com (Recommended)**
-- Free tier: 1 million calls/month
-- Sign up at [weatherapi.com](https://www.weatherapi.com/)
-
-**OpenWeatherMap**
-- Free tier: 1,000 calls/day
-- Sign up at [openweathermap.org](https://openweathermap.org/)
-
-### 2. Configure the Plugin
-
-Via the Integrations page:
-1. Go to **Integrations** → **Weather**
-2. Enable the plugin
-3. Select your provider
-4. Enter your API key
-5. Add one or more locations
-6. Save
+For detailed setup instructions, see the **[Setup Guide](./docs/SETUP.md)**.
 
 ## Template Variables
 

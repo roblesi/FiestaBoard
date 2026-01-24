@@ -2,6 +2,8 @@
 
 Display recent sports match scores from NFL, Soccer, NHL, and NBA using TheSportsDB API.
 
+**→ [Setup Guide](./docs/SETUP.md)** - Configuration and optional API key setup
+
 ## Overview
 
 The Sports Scores plugin fetches recent sports match scores from TheSportsDB API and exposes them as template variables for use in FiestaBoard displays. The plugin supports multiple sports simultaneously and can work with the free tier API or an optional premium API key.

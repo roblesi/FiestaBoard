@@ -62,22 +62,22 @@ docker-compose down
 FiestaBoard uses a **plugin architecture** - each feature is a self-contained plugin with its own documentation. Browse the `plugins/` directory or use the web UI's **Integrations** page to discover and enable plugins.
 
 ### Available Plugins
-- 💨 **[Air Quality & Fog](./plugins/air_fog/docs/SETUP.md)**: Monitor AQI and fog conditions
-- 🚴 **[Bay Wheels](./plugins/baywheels/docs/SETUP.md)**: Track bike availability at multiple stations
+- 💨 **[Air Quality & Fog](./plugins/air_fog/README.md)**: Monitor AQI and fog conditions
+- 🚴 **[Bay Wheels](./plugins/baywheels/README.md)**: Track bike availability at multiple stations
 - 📅 **[Date & Time](./plugins/date_time/README.md)**: Current date and time with multiple formats (12h/24h, US dates) and timezone autocomplete
-- 📶 **[Guest WiFi](./plugins/guest_wifi/docs/SETUP.md)**: Display WiFi credentials for guests
-- 🏠 **[Home Assistant](./plugins/home_assistant/docs/SETUP.md)**: House status display (doors, garage, locks, etc.)
-- 🎵 **[Last.fm Now Playing](./plugins/last_fm/docs/SETUP.md)**: Display currently playing music via Last.fm scrobbling
-- 🚇 **[Muni Transit](./plugins/muni/docs/SETUP.md)**: Real-time SF Muni arrival predictions
-- 🛩️ **[Nearby Aircraft](./plugins/nearby_aircraft/docs/SETUP.md)**: Real-time nearby aircraft information from OpenSky Network API
-- 🏆 **[Sports Scores](./plugins/sports_scores/docs/SETUP.md)**: Display recent match scores from NFL, Soccer, NHL, and NBA
-- ☀️ **[Sun Art](./plugins/sun_art/docs/SETUP.md)**: Full-screen sun art pattern that changes based on sun position throughout the day
-- 🖖 **[Star Trek Quotes](./plugins/star_trek_quotes/docs/SETUP.md)**: Random quotes from TNG, Voyager, and DS9
-- 📈 **[Stocks](./plugins/stocks/docs/SETUP.md)**: Monitor stock prices with color-coded indicators
-- 🌊 **[Surf Conditions](./plugins/surf/docs/SETUP.md)**: Live surf reports with wave height and quality ratings
-- 🚗 **[Traffic](./plugins/traffic/docs/SETUP.md)**: Travel time to destinations with live traffic
-- 🕐 **[Visual Clock](./plugins/visual_clock/docs/SETUP.md)**: Full-screen clock with large pixel-art style digits
-- 🌤️ **[Weather](./plugins/weather/docs/SETUP.md)**: Current conditions with temperature (F/C), UV index, precipitation chance, daily high/low, and sunset time
+- 📶 **[Guest WiFi](./plugins/guest_wifi/README.md)**: Display WiFi credentials for guests
+- 🏠 **[Home Assistant](./plugins/home_assistant/README.md)**: House status display (doors, garage, locks, etc.)
+- 🎵 **[Last.fm Now Playing](./plugins/last_fm/README.md)**: Display currently playing music via Last.fm scrobbling
+- 🚇 **[Muni Transit](./plugins/muni/README.md)**: Real-time SF Muni arrival predictions
+- 🛩️ **[Nearby Aircraft](./plugins/nearby_aircraft/README.md)**: Real-time nearby aircraft information from OpenSky Network API
+- 🏆 **[Sports Scores](./plugins/sports_scores/README.md)**: Display recent match scores from NFL, Soccer, NHL, and NBA
+- ☀️ **[Sun Art](./plugins/sun_art/README.md)**: Full-screen sun art pattern that changes based on sun position throughout the day
+- 🖖 **[Star Trek Quotes](./plugins/star_trek_quotes/README.md)**: Random quotes from TNG, Voyager, and DS9
+- 📈 **[Stocks](./plugins/stocks/README.md)**: Monitor stock prices with color-coded indicators
+- 🌊 **[Surf Conditions](./plugins/surf/README.md)**: Live surf reports with wave height and quality ratings
+- 🚗 **[Traffic](./plugins/traffic/README.md)**: Travel time to destinations with live traffic
+- 🕐 **[Visual Clock](./plugins/visual_clock/README.md)**: Full-screen clock with large pixel-art style digits
+- 🌤️ **[Weather](./plugins/weather/README.md)**: Current conditions with temperature (F/C), UV index, precipitation chance, daily high/low, and sunset time
 
 **→ [Plugin Development Guide](./docs/development/PLUGIN_DEVELOPMENT.md)** - Create your own plugins!
 
@@ -156,12 +156,12 @@ FiestaBoard uses a **plugin architecture** - each feature is a self-contained pl
 
 ### Advanced Setup
 
-For detailed setup instructions for specific plugins, see each plugin's `docs/SETUP.md`:
-- **Home Assistant**: [plugins/home_assistant/docs/SETUP.md](./plugins/home_assistant/docs/SETUP.md)
-- **Weather**: [plugins/weather/docs/SETUP.md](./plugins/weather/docs/SETUP.md)
-- **Stocks**: [plugins/stocks/docs/SETUP.md](./plugins/stocks/docs/SETUP.md)
+For detailed setup instructions for specific plugins, see each plugin's README:
+- **Home Assistant**: [plugins/home_assistant/README.md](./plugins/home_assistant/README.md)
+- **Weather**: [plugins/weather/README.md](./plugins/weather/README.md)
+- **Stocks**: [plugins/stocks/README.md](./plugins/stocks/README.md)
 
-Browse `plugins/*/docs/SETUP.md` for all plugin setup guides.
+Browse `plugins/*/README.md` for all plugin documentation. Each plugin's README includes a link to its setup guide.
 
 ## Configuration
 
@@ -183,21 +183,21 @@ All configuration is done via environment variables in `.env`:
 
 All plugins can be configured via the web UI (**Integrations** page) or environment variables. Each plugin has its own setup documentation in `plugins/<plugin_name>/docs/SETUP.md`.
 
-| Plugin | API Key Required | Setup Guide |
+| Plugin | API Key Required | Documentation |
 |--------|-----------------|-------------|
-| Air/Fog | Yes (PurpleAir/OWM) | [plugins/air_fog/docs/SETUP.md](./plugins/air_fog/docs/SETUP.md) |
-| Bay Wheels | No | [plugins/baywheels/docs/SETUP.md](./plugins/baywheels/docs/SETUP.md) |
-| Date & Time | No | [plugins/date_time/docs/SETUP.md](./plugins/date_time/docs/SETUP.md) |
-| Guest WiFi | No | [plugins/guest_wifi/docs/SETUP.md](./plugins/guest_wifi/docs/SETUP.md) |
-| Home Assistant | Yes (HA token) | [plugins/home_assistant/docs/SETUP.md](./plugins/home_assistant/docs/SETUP.md) |
-| Muni Transit | Yes (free 511.org) | [plugins/muni/docs/SETUP.md](./plugins/muni/docs/SETUP.md) |
-| Nearby Aircraft | No (optional OpenSky) | [plugins/nearby_aircraft/docs/SETUP.md](./plugins/nearby_aircraft/docs/SETUP.md) |
-| Sports Scores | No (optional TheSportsDB) | [plugins/sports_scores/docs/SETUP.md](./plugins/sports_scores/docs/SETUP.md) |
-| Star Trek Quotes | No | [plugins/star_trek_quotes/docs/SETUP.md](./plugins/star_trek_quotes/docs/SETUP.md) |
-| Stocks | No (optional Finnhub) | [plugins/stocks/docs/SETUP.md](./plugins/stocks/docs/SETUP.md) |
-| Surf | No | [plugins/surf/docs/SETUP.md](./plugins/surf/docs/SETUP.md) |
-| Traffic | Yes (Google Routes) | [plugins/traffic/docs/SETUP.md](./plugins/traffic/docs/SETUP.md) |
-| Weather | Yes (OpenWeatherMap) | [plugins/weather/docs/SETUP.md](./plugins/weather/docs/SETUP.md) |
+| Air/Fog | Yes (PurpleAir/OWM) | [plugins/air_fog/README.md](./plugins/air_fog/README.md) |
+| Bay Wheels | No | [plugins/baywheels/README.md](./plugins/baywheels/README.md) |
+| Date & Time | No | [plugins/date_time/README.md](./plugins/date_time/README.md) |
+| Guest WiFi | No | [plugins/guest_wifi/README.md](./plugins/guest_wifi/README.md) |
+| Home Assistant | Yes (HA token) | [plugins/home_assistant/README.md](./plugins/home_assistant/README.md) |
+| Muni Transit | Yes (free 511.org) | [plugins/muni/README.md](./plugins/muni/README.md) |
+| Nearby Aircraft | No (optional OpenSky) | [plugins/nearby_aircraft/README.md](./plugins/nearby_aircraft/README.md) |
+| Sports Scores | No (optional TheSportsDB) | [plugins/sports_scores/README.md](./plugins/sports_scores/README.md) |
+| Star Trek Quotes | No | [plugins/star_trek_quotes/README.md](./plugins/star_trek_quotes/README.md) |
+| Stocks | No (optional Finnhub) | [plugins/stocks/README.md](./plugins/stocks/README.md) |
+| Surf | No | [plugins/surf/README.md](./plugins/surf/README.md) |
+| Traffic | Yes (Google Routes) | [plugins/traffic/README.md](./plugins/traffic/README.md) |
+| Weather | Yes (OpenWeatherMap) | [plugins/weather/README.md](./plugins/weather/README.md) |
 
 See `env.example` for all available environment variables.
 
