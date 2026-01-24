@@ -67,6 +67,7 @@ FiestaBoard uses a **plugin architecture** - each feature is a self-contained pl
 - 📅 **[Date & Time](./plugins/date_time/README.md)**: Current date and time with multiple formats (12h/24h, US dates) and timezone autocomplete
 - 📶 **[Guest WiFi](./plugins/guest_wifi/docs/SETUP.md)**: Display WiFi credentials for guests
 - 🏠 **[Home Assistant](./plugins/home_assistant/docs/SETUP.md)**: House status display (doors, garage, locks, etc.)
+- 🎵 **[Last.fm Now Playing](./plugins/last_fm/docs/SETUP.md)**: Display currently playing music via Last.fm scrobbling
 - 🚇 **[Muni Transit](./plugins/muni/docs/SETUP.md)**: Real-time SF Muni arrival predictions
 - 🛩️ **[Nearby Aircraft](./plugins/nearby_aircraft/docs/SETUP.md)**: Real-time nearby aircraft information from OpenSky Network API
 - 🏆 **[Sports Scores](./plugins/sports_scores/docs/SETUP.md)**: Display recent match scores from NFL, Soccer, NHL, and NBA

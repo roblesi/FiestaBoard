@@ -42,7 +42,6 @@ This project uses Docker containers for ALL development, testing, and debugging 
 ### Exceptions
 
 The only code that may run locally:
-- The `macos_helper/` service (macOS-specific Apple Music integration)
 - Utility scripts explicitly marked for local execution
 
 ### Available Cursor Commands
@@ -95,7 +94,8 @@ This project uses a **plugin-based architecture** for data source integrations. 
 ### Plugin Documentation
 
 When creating or modifying a plugin:
-- **DO NOT update the main README.md** for individual plugins
+- **NEW plugins MUST be added** to the main `README.md` "Available Plugins" list (alphabetically)
+- **Modifying existing plugins** does NOT require updating main README.md
 - Plugin documentation goes in the plugin's own directory:
   - `plugins/PLUGIN_NAME/README.md` - Developer documentation (how plugin works)
   - `plugins/PLUGIN_NAME/docs/SETUP.md` - User-facing setup guide (API keys, etc.)
@@ -172,15 +172,25 @@ When creating a new plugin:
 3. Implement `PluginBase` class in `__init__.py`
 4. Create tests in `tests/` directory with >80% coverage
 5. Write user-facing setup guide in `docs/SETUP.md`
+6. **Add screenshot placeholder** to plugin's `README.md`: `![Plugin Name Display](./docs/plugin-name-display.png)`
+7. **Add plugin to project README.md** under "Available Plugins" section (alphabetically ordered)
 
 ### Required Plugin Files
 
 Every plugin MUST have:
 - `__init__.py` - Plugin implementation (PluginBase subclass)
 - `manifest.json` - Plugin metadata, settings schema, variables
-- `README.md` - Plugin documentation (developer-focused)
+- `README.md` - Plugin documentation (developer-focused, **must include screenshot placeholder**)
 - `tests/` - Test directory with test files
 - `docs/SETUP.md` - User-facing setup guide
+
+### Plugin Documentation Checklist
+
+When a new plugin is complete, verify:
+- [ ] Plugin's `README.md` has screenshot placeholder: `![Name Display](./docs/name-display.png)`
+- [ ] Plugin is added to main `README.md` "Available Plugins" list (alphabetically)
+- [ ] Setup guide exists at `docs/SETUP.md`
+- [ ] Tests pass with >80% coverage
 
 ### Plugin Manifest Requirements
 
