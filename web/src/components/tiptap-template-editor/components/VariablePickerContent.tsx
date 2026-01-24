@@ -5,14 +5,15 @@
 "use client";
 
 import { useQuery, useQueries } from "@tanstack/react-query";
-import { useMemo, useDeferredValue } from "react";
+import { useMemo, useDeferredValue, useState, useRef, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { api, PluginManifest } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { Code2, Home, Bike, TrainFront, Car, TrendingUp, Trophy, Plane, Cloud } from "lucide-react";
+import { Code2, Home, Bike, TrainFront, Car, TrendingUp, Trophy, Plane, Cloud, Search } from "lucide-react";
 
 interface VariablePickerContentProps {
   onInsert: (variable: string) => void;
@@ -67,6 +68,33 @@ function getArrayName(manifest: PluginManifest | undefined): string | null {
   return arrayKeys.length > 0 ? arrayKeys[0] : null;
 }
 
+// Helper function to check if a string matches search query (case-insensitive, more permissive)
+function matchesSearch(text: string, searchQuery: string): boolean {
+  if (!searchQuery.trim()) return true;
+  const normalizedText = text.toLowerCase();
+  const normalizedQuery = searchQuery.toLowerCase();
+  return normalizedText.includes(normalizedQuery);
+}
+
+// Helper function to check if a variable path matches search query (matches category, variable name, or any part)
+function matchesVariablePath(category: string, variable: string, searchQuery: string): boolean {
+  if (!searchQuery.trim()) return true;
+  const normalizedQuery = searchQuery.toLowerCase();
+  const categoryLower = category.toLowerCase();
+  const variableLower = variable.toLowerCase();
+  const fullPath = `${category}.${variable}`.toLowerCase();
+  
+  // Match if query appears in category, variable, or full path
+  return (
+    categoryLower.includes(normalizedQuery) ||
+    variableLower.includes(normalizedQuery) ||
+    fullPath.includes(normalizedQuery) ||
+    // Also match individual words in the path
+    categoryLower.split(/[._-]/).some(word => word.includes(normalizedQuery)) ||
+    variableLower.split(/[._-]/).some(word => word.includes(normalizedQuery))
+  );
+}
+
 // Render sub-array section (e.g., lines within stops)
 function renderSubArraySection(
   pluginId: string,
@@ -76,6 +104,8 @@ function renderSubArraySection(
   subArrayData: Record<string, any> | undefined,
   manifest: PluginManifest,
   onInsert: (variable: string) => void,
+  searchQuery: string,
+  showAll: boolean = false,
   icon?: React.ReactNode
 ) {
   if (!subArrayData || Object.keys(subArrayData).length === 0) return null;
@@ -87,15 +117,41 @@ function renderSubArraySection(
   const keyType = subArraySchema.key_type || "index";
   const keyField = subArraySchema.key_field;
 
+  // Filter entries based on search query (if showAll, show all entries)
+  const filteredEntries = showAll 
+    ? Object.entries(subArrayData)
+    : Object.entries(subArrayData).filter(([key, itemData]: [string, any]) => {
+        if (!searchQuery.trim()) return true;
+    const displayKey = keyType === "dynamic" && keyField ? (itemData[keyField] || key) : key;
+    const displayValue = itemData[keyField] || itemData[itemFields[0]] || displayKey;
+    // Check if search matches subArrayName, key, display value, or any field name
+    return (
+      matchesSearch(subArrayName, searchQuery) ||
+      matchesSearch(displayKey, searchQuery) ||
+      matchesSearch(String(displayValue), searchQuery) ||
+      itemFields.some(field => matchesSearch(field, searchQuery))
+    );
+  });
+
+  if (filteredEntries.length === 0) return null;
+
   return (
     <div>
       <p className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
         {icon}
-        {subArrayName.charAt(0).toUpperCase() + subArrayName.slice(1)} ({Object.keys(subArrayData).length})
+        {subArrayName.charAt(0).toUpperCase() + subArrayName.slice(1)} ({filteredEntries.length})
       </p>
       <Accordion type="single" collapsible className="w-full">
-        {Object.entries(subArrayData).map(([key, itemData]: [string, any]) => {
+        {filteredEntries.map(([key, itemData]: [string, any]) => {
           const displayKey = keyType === "dynamic" && keyField ? (itemData[keyField] || key) : key;
+          const filteredFields = showAll
+            ? itemFields
+            : itemFields.filter(field => 
+                !searchQuery.trim() || matchesSearch(field, searchQuery)
+              );
+          
+          if (filteredFields.length === 0) return null;
+
           return (
             <AccordionItem key={key} value={`${parentArrayName}-${parentIndex}-${subArrayName}-${key}`} className="border-b-0">
               <AccordionTrigger className="py-1.5 hover:no-underline text-xs">
@@ -118,7 +174,7 @@ function renderSubArraySection(
               <AccordionContent>
                 <div className="space-y-2 pt-2 pl-2">
                   <div className="flex flex-wrap gap-1.5">
-                    {itemFields.map((field) => {
+                    {filteredFields.map((field) => {
                       const varValue = `{{${pluginId}.${parentArrayName}.${parentIndex}.${subArrayName}.${key}.${field}}}`;
                       return (
                         <VariablePill
@@ -150,6 +206,8 @@ function renderArraySection(
   arrayData: any[] | undefined,
   manifest: PluginManifest,
   onInsert: (variable: string) => void,
+  searchQuery: string,
+  showAll: boolean = false,
   icon?: React.ReactNode
 ) {
   if (!arrayData || arrayData.length === 0) {
@@ -170,12 +228,74 @@ function renderArraySection(
   const itemFields = arraySchema.item_fields || [];
   const subArrays = arraySchema.sub_arrays || {};
 
+  // Filter array items based on search query, preserving original index
+  // If showAll is true (category matched), show all items
+  const filteredArrayData = showAll ? arrayData.map((item: any, index: number) => ({ item, index })) :
+    arrayData
+      .map((item: any, index: number) => ({ item, index }))
+      .filter(({ item, index }) => {
+        if (!searchQuery.trim()) return true;
+      const itemLabel = item[labelField] || item.name || `Item ${index}`;
+      const secondaryLabel = item.line || item.destination_name || item.station_name || "";
+      // Check if search matches array name, item label, secondary label, or any field name
+      return (
+        matchesSearch(arrayName, searchQuery) ||
+        matchesSearch(itemLabel, searchQuery) ||
+        matchesSearch(secondaryLabel, searchQuery) ||
+        itemFields.some(field => matchesSearch(field, searchQuery)) ||
+        Object.keys(subArrays).some(subArrayName => {
+          const subArrayData = item[subArrayName];
+          if (!subArrayData) return false;
+          return matchesSearch(subArrayName, searchQuery) || 
+                 Object.keys(subArrayData).some(key => matchesSearch(key, searchQuery));
+        })
+      );
+    });
+
+  if (filteredArrayData.length === 0) {
+    return (
+      <div className="p-3 bg-muted/30 rounded-lg text-xs text-muted-foreground">
+        <p>No matching variables found.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="max-h-[400px] overflow-y-auto pr-1">
       <Accordion type="single" collapsible className="w-full">
-        {arrayData.map((item: any, index: number) => {
+        {filteredArrayData.map(({ item, index }) => {
           const itemLabel = item[labelField] || item.name || `Item ${index}`;
           const itemKey = item.stop_code || item.station_id || item.destination_name || index;
+          
+          // Filter item fields based on search (if showAll, show all fields)
+          const filteredItemFields = showAll 
+            ? itemFields.filter(field => !field.includes('.')) // Exclude nested fields like "all_lines.formatted"
+            : itemFields
+                .filter(field => !field.includes('.')) // Exclude nested fields like "all_lines.formatted"
+                .filter(field => !searchQuery.trim() || matchesSearch(field, searchQuery));
+          
+          // Check if all_lines section should be shown
+          const showAllLines = item.all_lines && typeof item.all_lines === 'object' && 
+            (showAll || !searchQuery.trim() || matchesSearch("all_lines", searchQuery) || 
+             ["formatted", "next_arrival"].some(field => matchesSearch(field, searchQuery)));
+          
+          // Filter sub-arrays (if showAll, show all sub-arrays)
+          const filteredSubArrays = showAll
+            ? Object.entries(subArrays).filter(([subArrayName]) => {
+                const subArrayData = item[subArrayName];
+                return !!subArrayData;
+              })
+            : Object.entries(subArrays).filter(([subArrayName]) => {
+                const subArrayData = item[subArrayName];
+                if (!subArrayData) return false;
+                if (!searchQuery.trim()) return true;
+                return matchesSearch(subArrayName, searchQuery) || 
+                       Object.keys(subArrayData).some(key => matchesSearch(key, searchQuery));
+              });
+
+          // Only show item if it has matching content
+          const hasMatchingContent = filteredItemFields.length > 0 || showAllLines || filteredSubArrays.length > 0;
+          if (!hasMatchingContent) return null;
           
           return (
             <AccordionItem key={itemKey} value={`${arrayName}-${index}`} className="border-b-0">
@@ -193,32 +313,12 @@ function renderArraySection(
               <AccordionContent>
                 <div className="space-y-3 pt-2 pl-2">
                   {/* Item-level variables */}
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1.5">Item Info</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {itemFields
-                        .filter(field => !field.includes('.')) // Exclude nested fields like "all_lines.formatted"
-                        .map((field) => {
-                          const varValue = `{{${pluginId}.${arrayName}.${index}.${field}}}`;
-                          return (
-                            <VariablePill
-                              key={field}
-                              label={field}
-                              value={varValue}
-                              onInsert={() => onInsert(varValue)}
-                            />
-                          );
-                        })}
-                    </div>
-                  </div>
-
-                  {/* Handle special fields like "all_lines" for MUNI */}
-                  {item.all_lines && typeof item.all_lines === 'object' && (
+                  {filteredItemFields.length > 0 && (
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1.5">All Lines (Combined)</p>
+                      <p className="text-xs text-muted-foreground mb-1.5">Item Info</p>
                       <div className="flex flex-wrap gap-1.5">
-                        {["formatted", "next_arrival"].map((field) => {
-                          const varValue = `{{${pluginId}.${arrayName}.${index}.all_lines.${field}}}`;
+                        {filteredItemFields.map((field) => {
+                          const varValue = `{{${pluginId}.${arrayName}.${index}.${field}}}`;
                           return (
                             <VariablePill
                               key={field}
@@ -232,8 +332,30 @@ function renderArraySection(
                     </div>
                   )}
 
+                  {/* Handle special fields like "all_lines" for MUNI */}
+                  {showAllLines && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1.5">All Lines (Combined)</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {["formatted", "next_arrival"]
+                          .filter(field => showAll || !searchQuery.trim() || matchesSearch(field, searchQuery))
+                          .map((field) => {
+                            const varValue = `{{${pluginId}.${arrayName}.${index}.all_lines.${field}}}`;
+                            return (
+                              <VariablePill
+                                key={field}
+                                label={field}
+                                value={varValue}
+                                onInsert={() => onInsert(varValue)}
+                              />
+                            );
+                          })}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Render sub-arrays (e.g., lines within stops) */}
-                  {Object.entries(subArrays).map(([subArrayName, subArraySchema]) => {
+                  {filteredSubArrays.map(([subArrayName, subArraySchema]) => {
                     const subArrayData = item[subArrayName];
                     if (!subArrayData) return null;
 
@@ -247,6 +369,8 @@ function renderArraySection(
                           subArrayData,
                           manifest,
                           onInsert,
+                          searchQuery,
+                          showAll,
                           icon
                         )}
                       </div>
@@ -263,6 +387,18 @@ function renderArraySection(
 }
 
 export function VariablePickerContent({ onInsert }: VariablePickerContentProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-focus search input when component mounts
+  useEffect(() => {
+    // Small delay to ensure the dropdown is fully rendered
+    const timer = setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
   const { data: templateVars, isLoading: isLoadingVars } = useQuery({
     queryKey: ["template-variables"],
     queryFn: api.getTemplateVariables,
@@ -348,90 +484,215 @@ export function VariablePickerContent({ onInsert }: VariablePickerContentProps) 
   // Group variables by category
   const categories = Object.entries(templateVars.variables);
 
-  return (
-    <ScrollArea className="h-[400px] w-[350px]">
-      <div className="p-2 space-y-3">
-        {categories.map(([category, vars]) => {
-          const manifest = manifests[category];
-          const hasArrays = hasNestedArrays(manifest);
-          const arrayName = hasArrays ? getArrayName(manifest) : null;
-          const icon = CATEGORY_ICONS[category];
-          
-          // Get array data for this plugin
-          const arrayData = arrayName && deferredPluginData[category]?.[arrayName];
+  // Filter categories based on search query (more permissive - if category matches, show all)
+  const filteredCategories = categories.filter(([category, vars]) => {
+    if (!searchQuery.trim()) return true;
+    
+    const normalizedQuery = searchQuery.toLowerCase();
+    const categoryLower = category.toLowerCase();
+    const categoryWords = categoryLower.replace(/_/g, ' ').split(/\s+/);
+    
+    // If search query matches category name (or any word in it), show ALL variables in that category
+    if (matchesSearch(category, searchQuery) || 
+        categoryWords.some(word => word.includes(normalizedQuery)) ||
+        normalizedQuery.includes(categoryLower) ||
+        categoryLower.includes(normalizedQuery)) {
+      return true;
+    }
+    
+    const manifest = manifests[category];
+    const hasArrays = hasNestedArrays(manifest);
+    const arrayName = hasArrays ? getArrayName(manifest) : null;
+    const arrayData = arrayName && deferredPluginData[category]?.[arrayName];
 
-          // Filter out nested variables (those with dots, like "stations.0.field")
-          // Keep only top-level variables for the category
-          const simpleVars = vars.filter(v => {
-            // If variable doesn't have a dot, it's top-level
-            if (!v.includes('.')) return true;
-            // If it starts with category., check if it's nested (has more dots after)
-            if (v.startsWith(category + '.')) {
-              const afterCategory = v.slice(category.length + 1);
-              // If there's no dot after the category prefix, it's a simple field
-              return !afterCategory.includes('.');
-            }
-            return false;
-          });
+    // Filter out nested variables (those with dots, like "stations.0.field")
+    // Keep only top-level variables for the category
+    const simpleVars = vars.filter(v => {
+      // If variable doesn't have a dot, it's top-level
+      if (!v.includes('.')) return true;
+      // If it starts with category., check if it's nested (has more dots after)
+      if (v.startsWith(category + '.')) {
+        const afterCategory = v.slice(category.length + 1);
+        // If there's no dot after the category prefix, it's a simple field
+        return !afterCategory.includes('.');
+      }
+      return false;
+    });
 
-          // Filter out array variables from simple vars
-          const generalVars = arrayName 
-            ? simpleVars.filter(v => !v.startsWith(arrayName + '.'))
-            : simpleVars;
+    // Filter out array variables from simple vars
+    const generalVars = arrayName 
+      ? simpleVars.filter(v => !v.startsWith(arrayName + '.'))
+      : simpleVars;
 
+    // Check if any general variable matches (using permissive matching)
+    if (generalVars.some(v => matchesVariablePath(category, v, searchQuery))) return true;
+
+    // Check if array name matches
+    if (arrayName && matchesSearch(arrayName, searchQuery)) return true;
+
+    // Check if any array items match (if we have array data)
+    if (arrayData && arrayData.length > 0) {
+      const arraySchema = manifest?.variables?.arrays?.[arrayName];
+      if (arraySchema) {
+        const itemFields = arraySchema.item_fields || [];
+        const hasMatchingArrayItem = arrayData.some((item: any) => {
+          const itemLabel = item[arraySchema.label_field || "name"] || item.name || "";
+          const secondaryLabel = item.line || item.destination_name || item.station_name || "";
           return (
-            <div key={category} className="space-y-1.5">
-              <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                {icon}
-                <span>{category.replace(/_/g, ' ')}</span>
-              </div>
-              
-              {/* General/Simple Variables */}
-              {generalVars.length > 0 && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1.5">General</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {generalVars.slice(0, 10).map((variable) => {
-                      const varValue = `{{${category}.${variable}}}`;
-                      return (
-                        <VariablePill
-                          key={variable}
-                          label={variable}
-                          value={varValue}
-                          onInsert={() => onInsert(varValue)}
-                        />
-                      );
-                    })}
-                    {generalVars.length > 10 && (
-                      <span className="text-xs text-muted-foreground self-center">
-                        +{generalVars.length - 10} more
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
+            matchesSearch(itemLabel, searchQuery) ||
+            matchesSearch(secondaryLabel, searchQuery) ||
+            itemFields.some(field => matchesSearch(field, searchQuery) || matchesVariablePath(category, field, searchQuery))
+          );
+        });
+        if (hasMatchingArrayItem) return true;
+      }
+    }
 
-              {/* Array Section (if plugin has arrays) */}
-              {hasArrays && arrayName && (
-                <div className="space-y-1.5">
-                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+    return false;
+  });
+
+  return (
+    <div className="w-[350px] flex flex-col">
+      {/* Search Input */}
+      <div className="p-2 border-b">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            ref={searchInputRef}
+            type="text"
+            placeholder="Search variables..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8 h-9"
+          />
+        </div>
+      </div>
+
+      <ScrollArea className="h-[400px] flex-1">
+        <div className="p-2 space-y-3">
+          {filteredCategories.length === 0 ? (
+            <div className="p-3 text-sm text-muted-foreground text-center">
+              No variables found matching "{searchQuery}"
+            </div>
+          ) : (
+            filteredCategories.map(([category, vars]) => {
+              const manifest = manifests[category];
+              const hasArrays = hasNestedArrays(manifest);
+              const arrayName = hasArrays ? getArrayName(manifest) : null;
+              const icon = CATEGORY_ICONS[category];
+              
+              // Get array data for this plugin
+              const arrayData = arrayName && deferredPluginData[category]?.[arrayName];
+
+              // Filter out nested variables (those with dots, like "stations.0.field")
+              // Keep only top-level variables for the category
+              const simpleVars = vars.filter(v => {
+                // If variable doesn't have a dot, it's top-level
+                if (!v.includes('.')) return true;
+                // If it starts with category., check if it's nested (has more dots after)
+                if (v.startsWith(category + '.')) {
+                  const afterCategory = v.slice(category.length + 1);
+                  // If there's no dot after the category prefix, it's a simple field
+                  return !afterCategory.includes('.');
+                }
+                return false;
+              });
+
+              // Filter out array variables from simple vars
+              const generalVars = arrayName 
+                ? simpleVars.filter(v => !v.startsWith(arrayName + '.'))
+                : simpleVars;
+
+              // Check if category name matches search - if so, show ALL variables
+              const categoryMatches = searchQuery.trim() && (
+                matchesSearch(category, searchQuery) ||
+                category.toLowerCase().replace(/_/g, ' ').split(/\s+/).some(word => 
+                  word.includes(searchQuery.toLowerCase())
+                )
+              );
+
+              // Filter general variables based on search (if category matches, show all)
+              const filteredGeneralVars = categoryMatches 
+                ? generalVars 
+                : generalVars.filter(v => 
+                    !searchQuery.trim() || matchesVariablePath(category, v, searchQuery)
+                  );
+
+              // Check if array section has matches (more permissive - if category matches, show all)
+              const hasArrayMatches = hasArrays && arrayName && (
+                !searchQuery.trim() || 
+                categoryMatches ||
+                matchesSearch(arrayName, searchQuery) ||
+                (arrayData && arrayData.length > 0 && arrayData.some((item: any) => {
+                  const arraySchema = manifest?.variables?.arrays?.[arrayName];
+                  if (!arraySchema) return false;
+                  const itemLabel = item[arraySchema.label_field || "name"] || item.name || "";
+                  const secondaryLabel = item.line || item.destination_name || item.station_name || "";
+                  const itemFields = arraySchema.item_fields || [];
+                  return (
+                    matchesSearch(itemLabel, searchQuery) ||
+                    matchesSearch(secondaryLabel, searchQuery) ||
+                    itemFields.some(field => matchesSearch(field, searchQuery) || matchesVariablePath(category, field, searchQuery))
+                  );
+                }))
+              );
+
+              // Only show category if it has matching content
+              const hasMatchingContent = filteredGeneralVars.length > 0 || hasArrayMatches;
+              if (!hasMatchingContent) return null;
+
+              return (
+                <div key={category} className="space-y-1.5">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                     {icon}
-                    {arrayName.charAt(0).toUpperCase() + arrayName.slice(1)} {arrayData ? `(${arrayData.length})` : "(None configured)"}
-                  </p>
-                  {renderArraySection(
-                    category,
-                    arrayName,
-                    arrayData,
-                    manifest!,
-                    onInsert,
-                    icon
+                    <span>{category.replace(/_/g, ' ')}</span>
+                  </div>
+                  
+                  {/* General/Simple Variables */}
+                  {filteredGeneralVars.length > 0 && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1.5">General</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {filteredGeneralVars.map((variable) => {
+                          const varValue = `{{${category}.${variable}}}`;
+                          return (
+                            <VariablePill
+                              key={variable}
+                              label={variable}
+                              value={varValue}
+                              onInsert={() => onInsert(varValue)}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Array Section (if plugin has arrays) */}
+                  {hasArrays && arrayName && (
+                    <div className="space-y-1.5">
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        {icon}
+                        {arrayName.charAt(0).toUpperCase() + arrayName.slice(1)} {arrayData ? `(${arrayData.length})` : "(None configured)"}
+                      </p>
+                      {renderArraySection(
+                        category,
+                        arrayName,
+                        arrayData,
+                        manifest!,
+                        onInsert,
+                        searchQuery,
+                        !!categoryMatches,
+                        icon
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </ScrollArea>
+              );
+            })
+          )}
+        </div>
+      </ScrollArea>
+    </div>
   );
 }
