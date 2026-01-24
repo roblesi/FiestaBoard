@@ -146,6 +146,9 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
   const [lineAlignments, setLineAlignments] = useState<LineAlignment[]>(["left", "left", "left", "left", "left", "left"]);
   const [lineWrapEnabled, setLineWrapEnabled] = useState<boolean[]>([false, false, false, false, false, false]);
   const [preview, setPreview] = useState<string | null>(null);
+  const [lastPreview, setLastPreview] = useState<string | null>(null); // Track last preview for smooth transitions
+  const [isTransitioning, setIsTransitioning] = useState(false); // Track if we're transitioning between previews
+  const [pendingPreview, setPendingPreview] = useState<string | null>(null); // Preview waiting to be shown after transition
   const [draftRestored, setDraftRestored] = useState(false);
   const [editorMode, setEditorMode] = useState<"rich" | "plain">("rich");
 
@@ -162,6 +165,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
   
   // Track if content was cleared while a mutation is in flight (to ignore stale responses)
   const shouldIgnoreNextResponse = useRef(false);
+  const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch existing page if editing
   const { data: existingPage, isLoading: loadingPage } = useQuery({
@@ -524,7 +528,31 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
       }
       
       console.log('[Preview] Setting preview to:', data.rendered);
-      setPreview(data.rendered);
+      
+      // If we have a current preview, trigger transition: show loading, then new preview
+      if (preview !== null && preview !== data.rendered) {
+        console.log('[Preview] Preview changed, triggering transition');
+        // Keep current preview visible, set loading state
+        setLastPreview(preview);
+        setIsTransitioning(true);
+        setPendingPreview(data.rendered);
+        
+        // After a brief moment, show new preview (triggers transition)
+        setTimeout(() => {
+          setPreview(data.rendered);
+          setIsTransitioning(false);
+          setPendingPreview(null);
+          if (data.rendered) {
+            setLastPreview(data.rendered);
+          }
+        }, 100); // Brief delay to ensure loading state is visible
+      } else {
+        // No previous preview or same preview - set directly
+        setPreview(data.rendered);
+        if (data.rendered) {
+          setLastPreview(data.rendered);
+        }
+      }
       
       // If changes occurred while this preview was rendering, trigger another preview
       if (needsRePreview.current) {
@@ -604,6 +632,11 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
     return () => {
       console.log('[Preview] useEffect cleanup (timeout cleared)');
       clearTimeout(timeoutId);
+      // Also clear transition timeout on cleanup
+      if (transitionTimeoutRef.current) {
+        clearTimeout(transitionTimeoutRef.current);
+        transitionTimeoutRef.current = null;
+      }
     };
   }, [debouncedTemplateLines, debouncedLineAlignments, debouncedLineWrapEnabled]);
 
@@ -796,31 +829,54 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
                 <div className="flex justify-center">
                   <BoardDisplay 
                     message={(() => {
-                      // If we have a preview, use it
-                      if (preview !== null) {
-                        console.log('[Preview] Message: using preview value:', preview);
-                        return preview;
-                      }
-                      // If no content and not loading, show blank grid (empty string creates blank grid)
+                      // Use new loading pattern: keep previous message visible during loading/transition
+                      // This allows tiles to cycle through characters (like real FiestaBoard)
+                      // instead of showing legacy FlipTiles
+                      
                       const hasContent = debouncedTemplateLines.some(line => line.trim().length > 0);
                       const isPending = previewMutation.isPending;
                       const shouldIgnore = shouldIgnoreNextResponse.current;
                       
-                      console.log('[Preview] Message calculation:');
-                      console.log('  - hasContent:', hasContent);
-                      console.log('  - isPending:', isPending);
-                      console.log('  - shouldIgnore:', shouldIgnore);
+                      // If we're transitioning, show the last preview (old message) so tiles can transition to new one
+                      if (isTransitioning && lastPreview) {
+                        console.log('[Preview] Message: transitioning, showing last preview for smooth transition');
+                        return lastPreview;
+                      }
                       
-                      // If no content and not loading, return empty string to show blank grid
+                      // If we have a preview, use it (new message)
+                      if (preview !== null) {
+                        console.log('[Preview] Message: using preview value:', preview);
+                        return preview;
+                      }
+                      
+                      // If no content and not loading, show blank grid
                       if (!hasContent && !isPending && !shouldIgnore) {
                         console.log('[Preview] Message: returning empty string for blank grid');
                         return "";
                       }
-                      // Otherwise return null (shows loading animation)
-                      console.log('[Preview] Message: returning null (will show loading)');
+                      
+                      // If we're loading and have previous content, keep showing the last preview
+                      // This allows tiles to cycle during loading instead of showing FlipTiles
+                      // The isLoading prop will handle the cycling animation on actual CharTiles
+                      if (isPending && hasContent && !shouldIgnore && lastPreview) {
+                        console.log('[Preview] Message: loading with content, keeping last preview for tile cycling');
+                        return lastPreview;
+                      }
+                      
+                      // If we're loading but no last preview, show blank grid (tiles will cycle)
+                      if (isPending && hasContent && !shouldIgnore) {
+                        console.log('[Preview] Message: loading with content but no last preview, showing blank');
+                        return "";
+                      }
+                      
+                      // Default: return null (shows FlipTiles - only for initial state with no content)
+                      console.log('[Preview] Message: returning null (will show FlipTiles)');
                       return null;
                     })()}
                     isLoading={(() => {
+                      // Use new loading pattern: show loading when fetching new preview OR transitioning
+                      // This triggers tile cycling animation on actual CharTiles
+                      
                       const hasContent = debouncedTemplateLines.some(line => line.trim().length > 0);
                       const isPending = previewMutation.isPending;
                       const shouldIgnore = shouldIgnoreNextResponse.current;
@@ -829,11 +885,17 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
                       console.log('  - hasContent:', hasContent);
                       console.log('  - preview:', preview);
                       console.log('  - isPending:', isPending);
+                      console.log('  - isTransitioning:', isTransitioning);
                       console.log('  - shouldIgnore:', shouldIgnore);
-                      console.log('  - debouncedTemplateLines:', debouncedTemplateLines);
                       
-                      // If we have a preview value, never show loading (mutation completed)
-                      if (preview !== null) {
+                      // If we're transitioning between previews, show loading
+                      if (isTransitioning) {
+                        console.log('[Preview] Transitioning between previews, isLoading = true');
+                        return true;
+                      }
+                      
+                      // If we have a preview value and not transitioning, not loading (mutation completed)
+                      if (preview !== null && !isTransitioning) {
                         console.log('[Preview] Has preview, isLoading = false');
                         return false;
                       }
@@ -850,8 +912,9 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
                         return false;
                       }
                       
-                      // Only show loading if we're actually fetching and don't have a preview yet
-                      const result = isPending;
+                      // Show loading if we're fetching and have content
+                      // This will trigger tile cycling on the current/last message
+                      const result = isPending && hasContent;
                       console.log('[Preview] Final isLoading:', result);
                       return result;
                     })()}

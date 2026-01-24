@@ -206,36 +206,287 @@ const CharTile = memo(function CharTile({
   const targetCharIndex = getCharIndex(targetChar);
   
   // All tiles flip in sync - same duration, no random delay
-  // Slowed down significantly so flips are visible (800ms per flip)
-  const animationDuration = 800; // Uniform duration for all tiles
+  // Realistic split-flap speed: 71 characters in ~5 seconds = ~70ms per character
+  const animationDuration = Math.round(5000 / BOARD_CHARS.length); // ~70ms per character for realistic speed
   const delay = 0; // All tiles start at the same time
   
   // State for current character index during animation
-  // Always start from target character so all tiles begin together
-  const [currentCharIndex, setCurrentCharIndex] = useState(targetCharIndex);
+  // Always start from target character - tiles are set by the parent component
+  // Tiles should only rotate when: loading, or transitioning to a new character
+  const [currentCharIndex, setCurrentCharIndex] = useState(() => targetCharIndex);
   
-  // Animation effect - cycle through all 71 characters in order
-  // All tiles start from their target and cycle forward: 0, 1, 2, ... 70, 0, 1, ...
-  // Each tick advances one character in the sequence
+  // State to track if we're transitioning to a new target
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  
+  // Refs for interval and target tracking
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const prevTargetCharIndexRef = useRef(targetCharIndex);
+  const prevIsAnimatingRef = useRef(isAnimating);
+  const currentCharIndexRef = useRef(currentCharIndex);
+  const justStoppedLoadingRef = useRef(false);
+  
+  // Update currentCharIndexRef when currentCharIndex changes
   useEffect(() => {
-    if (!isAnimating) {
-      setCurrentCharIndex(targetCharIndex);
+    currentCharIndexRef.current = currentCharIndex;
+  }, [currentCharIndex]);
+  
+  // Effect 1: Handle loading animation (isAnimating prop)
+  useEffect(() => {
+    const wasAnimating = prevIsAnimatingRef.current;
+    prevIsAnimatingRef.current = isAnimating;
+    
+    if (isAnimating) {
+      // Loading state: cycle through all characters continuously
+      // Don't reset to target - just continue from current position
+      setIsTransitioning(false);
+      
+      // Clear any existing interval
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      
+      // If we just started animating, start from current position
+      // Otherwise continue from where we are
+      if (!wasAnimating) {
+        // Just started - reset to target to begin cycle
+        setCurrentCharIndex(targetCharIndex);
+      }
+      
+      // Cycle through all characters in order, one per tick
+      // Continue cycling indefinitely while isAnimating is true
+      intervalRef.current = setInterval(() => {
+        setCurrentCharIndex((prev) => (prev + 1) % BOARD_CHARS.length);
+      }, animationDuration);
+      
+      return () => {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      };
+    } else if (wasAnimating) {
+      // Just stopped loading - transition from current position to target
+      // Mark that we just stopped loading so Effect 2 doesn't interfere initially
+      justStoppedLoadingRef.current = true;
+      
+      // Clear any existing interval first
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      
+      // Check if target changed from what it was before loading
+      const prevTarget = prevTargetCharIndexRef.current;
+      const currentTarget = targetCharIndex;
+      const targetChanged = prevTarget !== currentTarget;
+      
+      // Update target ref
+      prevTargetCharIndexRef.current = currentTarget;
+      
+      // Check if we're already at the current target
+      const currentIndex = currentCharIndexRef.current;
+      if (currentIndex === currentTarget) {
+        // Already at target - no transition needed
+        // If target didn't change, tile stays static (correct - only changed tiles transition)
+        // Update ref first to ensure consistency
+        currentCharIndexRef.current = currentTarget;
+        // Ensure state is consistent to avoid flashing
+        setIsTransitioning(false);
+        // Use functional update to ensure we don't trigger unnecessary re-renders
+        setCurrentCharIndex((prev) => prev === currentTarget ? prev : currentTarget);
+        justStoppedLoadingRef.current = false;
+        return;
+      }
+      
+      // Only transition if target actually changed
+      // If target didn't change, we should already be at target (from loading)
+      // So if we're not at target and target didn't change, something went wrong - just set it
+      if (!targetChanged) {
+        // Target didn't change but we're not at target - set it directly (no transition)
+        // Update ref first to ensure consistency
+        currentCharIndexRef.current = currentTarget;
+        // Then update state - use functional update to avoid unnecessary re-renders
+        setCurrentCharIndex((prev) => {
+          if (prev === currentTarget) {
+            return prev; // Already correct, no change needed
+          }
+          return currentTarget; // Update to target
+        });
+        // Ensure transition state is false before state updates complete
+        setIsTransitioning(false);
+        justStoppedLoadingRef.current = false;
+        return;
+      }
+      
+      // Target changed - transition from current position to new target
+      // This is the only case where we transition: when the target character actually changed
+      setIsTransitioning(true);
+      
+      // Helper function to advance character and check for target
+      // Use ref to avoid stale closures
+      const advanceToTarget = () => {
+        setCurrentCharIndex((current) => {
+          const target = prevTargetCharIndexRef.current;
+          
+          // If already at target, stop transitioning
+          if (current === target) {
+            setIsTransitioning(false);
+            justStoppedLoadingRef.current = false; // Clear the flag
+            if (intervalRef.current) {
+              clearInterval(intervalRef.current);
+              intervalRef.current = null;
+            }
+            return current;
+          }
+          
+          // Continue cycling forward
+          const next = (current + 1) % BOARD_CHARS.length;
+          // If we've reached the target, stop transitioning
+          if (next === target) {
+            setIsTransitioning(false);
+            justStoppedLoadingRef.current = false; // Clear the flag when we reach target
+            if (intervalRef.current) {
+              clearInterval(intervalRef.current);
+              intervalRef.current = null;
+            }
+            return next;
+          }
+          return next;
+        });
+      };
+      
+      // Immediately advance once to start the transition
+      advanceToTarget();
+      
+      // Then start interval for subsequent ticks
+      intervalRef.current = setInterval(advanceToTarget, animationDuration);
+      
+      return () => {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+        justStoppedLoadingRef.current = false; // Clear flag on cleanup
+      };
+    } else {
+      // Not animating and wasn't animating - ensure we're at target
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      setIsTransitioning(false);
+      // Use functional update to avoid unnecessary re-renders if already at target
+      setCurrentCharIndex((prev) => prev === targetCharIndex ? prev : targetCharIndex);
+    }
+  }, [isAnimating, targetCharIndex, animationDuration]); // Include targetCharIndex so we can transition to it when loading stops
+  
+  // Effect 2: Handle target character changes - independent transition
+  useEffect(() => {
+    // If we're transitioning from loading, update the target ref so Effect 1 uses the new target
+    if (justStoppedLoadingRef.current) {
+      // Update the target ref so Effect 1's transition uses the new target
+      prevTargetCharIndexRef.current = targetCharIndex;
       return;
     }
     
-    // Reset to target when animation starts
-    setCurrentCharIndex(targetCharIndex);
+    // CRITICAL: Don't do anything if we're in loading state OR transitioning
+    // The loading animation (Effect 1) handles everything during/after loading
+    if (isAnimating || isTransitioning) {
+      // Just update the ref but don't interfere
+      prevTargetCharIndexRef.current = targetCharIndex;
+      return;
+    }
     
-    // Cycle through all characters in order, one per tick
-    // Each tick advances: (current + 1) % 71
-    const interval = setInterval(() => {
-      setCurrentCharIndex((prev) => (prev + 1) % BOARD_CHARS.length);
-    }, animationDuration);
+    const prevTarget = prevTargetCharIndexRef.current;
+    const currentTarget = targetCharIndex;
     
-    return () => {
-      clearInterval(interval);
-    };
-  }, [isAnimating, targetCharIndex, animationDuration]);
+    // If target changed, start transitioning to new target
+    if (prevTarget !== currentTarget) {
+      // Update ref
+      prevTargetCharIndexRef.current = currentTarget;
+      
+      // Check if we're already at the new target
+      const currentIndex = currentCharIndexRef.current;
+      if (currentIndex === currentTarget) {
+        // Already at target, no transition needed
+        setIsTransitioning(false);
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+        // Make sure currentCharIndex state matches
+        setCurrentCharIndex(currentTarget);
+        return;
+      }
+      
+      // Start transitioning to new target
+      setIsTransitioning(true);
+      
+      // Clear any existing interval
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      
+      // Helper function to advance character and check for target
+      // Uses refs to avoid stale closures
+      const advanceToTarget = () => {
+        setCurrentCharIndex((current) => {
+          const target = prevTargetCharIndexRef.current;
+          
+          // If already at target, stop transitioning
+          if (current === target) {
+            setIsTransitioning(false);
+            if (intervalRef.current) {
+              clearInterval(intervalRef.current);
+              intervalRef.current = null;
+            }
+            return current;
+          }
+          
+          // Continue cycling forward
+          const next = (current + 1) % BOARD_CHARS.length;
+          // If we've reached the target, stop transitioning
+          if (next === target) {
+            setIsTransitioning(false);
+            if (intervalRef.current) {
+              clearInterval(intervalRef.current);
+              intervalRef.current = null;
+            }
+            return next;
+          }
+          return next;
+        });
+      };
+      
+      // Immediately advance once to start the transition
+      advanceToTarget();
+      
+      // Then start interval for subsequent ticks
+      intervalRef.current = setInterval(advanceToTarget, animationDuration);
+      
+      return () => {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      };
+    } else {
+      // Target hasn't changed - ensure we're at target and not transitioning
+      // Tiles should only transition when target changes or coming out of loading
+      if (currentCharIndexRef.current !== currentTarget) {
+        // Not at target but target hasn't changed - just set it directly
+        // This shouldn't happen normally, but handle it gracefully
+        setCurrentCharIndex(currentTarget);
+      }
+      setIsTransitioning(false);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+  }, [targetCharIndex, isAnimating, isTransitioning, animationDuration]);
   
   // Enhanced 3D shadows for flip tile effect
   const boxShadow = isWhiteBoard
@@ -254,42 +505,8 @@ const CharTile = memo(function CharTile({
       inset -1px 0 1px rgba(255,255,255,0.05)
     `;
   
-  // Handle color tiles - they don't need pre-rendering since they're simple
-  if (token.type === "color") {
-    const bgColor = ALL_COLOR_CODES[token.code] || BOARD_COLORS.black;
-    
-    const marginClasses = size === "sm"
-      ? "[--color-margin-top:3px] [--color-margin-bottom:4px] [--color-margin-h:1px]"
-      : size === "md"
-      ? "[--color-margin-top:3px] sm:[--color-margin-top:4px] md:[--color-margin-top:5px] lg:[--color-margin-top:6px] [--color-margin-bottom:4px] sm:[--color-margin-bottom:6px] md:[--color-margin-bottom:7px] lg:[--color-margin-bottom:8px] [--color-margin-h:1px] sm:[--color-margin-h:2px]"
-      : "[--color-margin-top:4px] sm:[--color-margin-top:5px] md:[--color-margin-top:6px] lg:[--color-margin-top:8px] [--color-margin-bottom:5px] sm:[--color-margin-bottom:7px] md:[--color-margin-bottom:8px] lg:[--color-margin-bottom:10px] [--color-margin-h:2px] md:[--color-margin-h:3px]";
-    
-    return (
-      <div className={`${sizeClasses[size]} ${marginClasses} flex items-center justify-center`}>
-        <div 
-          className={`relative rounded-[3px] overflow-hidden`}
-          style={{ 
-            marginTop: "var(--color-margin-top)",
-            marginBottom: "var(--color-margin-bottom)",
-            marginLeft: "var(--color-margin-h)",
-            marginRight: "var(--color-margin-h)",
-            width: "calc(100% - (var(--color-margin-h) * 2))",
-            height: "calc(100% - (var(--color-margin-top) + var(--color-margin-bottom)))",
-            backgroundColor: bgColor,
-            boxShadow: `
-              0 2px 4px rgba(0,0,0,0.3),
-              inset 0 1px 1px rgba(255,255,255,0.15),
-              inset 0 -1px 1px rgba(0,0,0,0.25),
-              inset 1px 0 1px rgba(255,255,255,0.1),
-              inset -1px 0 1px rgba(0,0,0,0.2)
-            `
-          }}
-        >
-          <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-black/10" />
-        </div>
-      </div>
-    );
-  }
+  // Color tiles also animate - they cycle through all characters during loading
+  // No special handling needed - they go through the same animation logic below
   
   // Character tiles - pre-render all 71 characters
   const currentChar = BOARD_CHARS[currentCharIndex];
@@ -358,6 +575,11 @@ const CharTile = memo(function CharTile({
       `}</style>
       <div 
         className={`relative ${sizeClasses[size]} rounded-[3px] overflow-hidden`}
+        data-testid={`char-tile-${rowIdx}-${colIdx}`}
+        data-current-char={currentChar}
+        data-target-char={targetChar}
+        data-is-animating={isAnimating}
+        data-is-transitioning={isTransitioning}
         style={{ 
           backgroundColor: tileBg,
           boxShadow,
@@ -365,70 +587,87 @@ const CharTile = memo(function CharTile({
           ...(isAnimating ? { perspective: '800px', isolation: 'isolate' } : {})
         }}
       >
-        {/* Pre-render all 71 characters, stacked absolutely - use CSS to show/hide */}
-        {BOARD_CHARS.map((char, charIdx) => {
-          const isActive = !isAnimating && charIdx === targetCharIndex;
+        {/* Static display - show target character when not animating and not transitioning */}
+        {!isAnimating && !isTransitioning && (() => {
+          // If token is a color tile, always render as color tile (not character)
+          if (token.type === "color") {
+            const bgColor = ALL_COLOR_CODES[token.code] || BOARD_COLORS.black;
+            const marginClasses = size === "sm"
+              ? "[--color-margin-top:3px] [--color-margin-bottom:4px] [--color-margin-h:1px]"
+              : size === "md"
+              ? "[--color-margin-top:3px] sm:[--color-margin-top:4px] md:[--color-margin-top:5px] lg:[--color-margin-top:6px] [--color-margin-bottom:4px] sm:[--color-margin-bottom:6px] md:[--color-margin-bottom:7px] lg:[--color-margin-bottom:8px] [--color-margin-h:1px] sm:[--color-margin-h:2px]"
+              : "[--color-margin-top:4px] sm:[--color-margin-top:5px] md:[--color-margin-top:6px] lg:[--color-margin-top:8px] [--color-margin-bottom:5px] sm:[--color-margin-bottom:7px] md:[--color-margin-bottom:8px] lg:[--color-margin-bottom:10px] [--color-margin-h:2px] md:[--color-margin-h:3px]";
+            
+            return (
+              <div 
+                key={`static-color-${token.code}`}
+                className={`absolute inset-0 ${marginClasses} flex items-center justify-center`}
+                style={{ zIndex: 2 }}
+              >
+                <div 
+                  className="relative rounded-[3px] overflow-hidden"
+                  style={{ 
+                    marginTop: "var(--color-margin-top)",
+                    marginBottom: "var(--color-margin-bottom)",
+                    marginLeft: "var(--color-margin-h)",
+                    marginRight: "var(--color-margin-h)",
+                    width: "calc(100% - (var(--color-margin-h) * 2))",
+                    height: "calc(100% - (var(--color-margin-top) + var(--color-margin-bottom)))",
+                    backgroundColor: bgColor,
+                    boxShadow: `
+                      0 2px 4px rgba(0,0,0,0.3),
+                      inset 0 1px 1px rgba(255,255,255,0.15),
+                      inset 0 -1px 1px rgba(0,0,0,0.25),
+                      inset 1px 0 1px rgba(255,255,255,0.1),
+                      inset -1px 0 1px rgba(0,0,0,0.2)
+                    `
+                  }}
+                >
+                  <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-black/10" />
+                </div>
+              </div>
+            );
+          }
           
-          const isColor = isColorTile(char);
-          const charBg = isColor ? (ALL_COLOR_CODES[char] || tileBg) : tileBg;
+          // Regular character tile
+          const targetChar = BOARD_CHARS[targetCharIndex];
+          const isColor = isColorTile(targetChar);
+          const charBg = isColor ? (ALL_COLOR_CODES[targetChar] || tileBg) : tileBg;
           
           return (
             <div
-              key={charIdx}
-              className="absolute inset-0 flex items-center justify-center"
+              key={`static-char-${targetCharIndex}`}
+              className="absolute inset-0 flex items-center justify-center overflow-hidden"
               style={{
-                opacity: isActive ? 1 : 0,
-                zIndex: isActive ? 2 : 0,
-                pointerEvents: isActive ? 'auto' : 'none',
-                visibility: isActive ? 'visible' : 'hidden',
-                contentVisibility: isActive ? 'visible' : 'hidden',
+                zIndex: 2,
                 backgroundColor: charBg,
+                marginLeft: isColor ? '-4px' : 0,
+                marginRight: isColor ? '-4px' : 0
               }}
             >
-              {!isColor && (
+              {!isColor && targetChar !== ' ' && (
                 <span 
                   className={`${textSizeClasses[size]} font-mono font-semibold select-none leading-none relative z-10`}
                   style={{ color: textColor }}
                 >
-                  {char}
+                  {targetChar}
+                </span>
+              )}
+              {/* Blank/space character - render as empty but maintain layout */}
+              {!isColor && targetChar === ' ' && (
+                <span 
+                  className={`${textSizeClasses[size]} font-mono font-semibold select-none leading-none relative z-10`}
+                  style={{ color: textColor, visibility: 'hidden' }}
+                  aria-hidden="true"
+                >
+                  {' '}
                 </span>
               )}
               {isColor && (
                 <div 
                   className="absolute inset-0 rounded-[3px]"
-                  style={{ backgroundColor: charBg }}
-                />
-              )}
-            </div>
-          );
-        })}
-        
-        {/* Simple character transition - no flip animation, just direct character changes */}
-        {isAnimating && (
-          <>
-            {/* Show current character directly - no flip animation */}
-            <div 
-              className="absolute inset-0 flex items-center justify-center overflow-hidden"
-              style={{ 
-                zIndex: 2,
-                backgroundColor: isColorTile(currentChar) ? ALL_COLOR_CODES[currentChar] || tileBg : tileBg,
-                marginLeft: isColorTile(currentChar) ? '-4px' : 0,
-                marginRight: isColorTile(currentChar) ? '-4px' : 0
-              }}
-            >
-              {!isColorTile(currentChar) && (
-                <span 
-                  className={`${textSizeClasses[size]} font-mono font-semibold select-none leading-none relative z-10`}
-                  style={{ color: textColor }}
-                >
-                  {currentChar}
-                </span>
-              )}
-              {isColorTile(currentChar) && (
-                <div 
-                  className="absolute inset-0 rounded-[3px]"
                   style={{ 
-                    backgroundColor: ALL_COLOR_CODES[currentChar] || tileBg,
+                    backgroundColor: charBg,
                     boxShadow: `
                       0 2px 4px rgba(0,0,0,0.3),
                       inset 0 1px 1px rgba(255,255,255,0.15),
@@ -440,29 +679,127 @@ const CharTile = memo(function CharTile({
                 />
               )}
             </div>
-            
-            {/* Subtle split flip effect - horizontal line in middle */}
-            <div className={`absolute top-1/2 left-0 right-0 h-[1px] ${isWhiteBoard ? 'bg-black/10' : 'bg-black/30'}`} />
-            
-            {/* Subtle gradient for curvature */}
-            <div 
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                background: isWhiteBoard 
-                  ? 'linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 50%, rgba(0,0,0,0.05) 100%)'
-                  : 'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 50%, rgba(0,0,0,0.2) 100%)'
-              }}
-            />
-          </>
-        )}
+          );
+        })()}
         
-        {/* Static display - when not animating */}
-        {!isAnimating && (
+        {/* Simple character transition - no flip animation, just direct character changes */}
+        {/* Show animation during loading OR during transition to new target */}
+        {(isAnimating || isTransitioning) && (() => {
+          // Check if current character is a color tile
+          const isCurrentColor = isColorTile(currentChar);
+          
+          // If it's a color tile, use the same rendering as static display
+          if (isCurrentColor) {
+            const bgColor = ALL_COLOR_CODES[currentChar] || BOARD_COLORS.black;
+            const marginClasses = size === "sm"
+              ? "[--color-margin-top:3px] [--color-margin-bottom:4px] [--color-margin-h:1px]"
+              : size === "md"
+              ? "[--color-margin-top:3px] sm:[--color-margin-top:4px] md:[--color-margin-top:5px] lg:[--color-margin-top:6px] [--color-margin-bottom:4px] sm:[--color-margin-bottom:6px] md:[--color-margin-bottom:7px] lg:[--color-margin-bottom:8px] [--color-margin-h:1px] sm:[--color-margin-h:2px]"
+              : "[--color-margin-top:4px] sm:[--color-margin-top:5px] md:[--color-margin-top:6px] lg:[--color-margin-top:8px] [--color-margin-bottom:5px] sm:[--color-margin-bottom:7px] md:[--color-margin-bottom:8px] lg:[--color-margin-bottom:10px] [--color-margin-h:2px] md:[--color-margin-h:3px]";
+            
+            return (
+              <>
+                <div 
+                  key={`transition-color-${currentChar}`}
+                  className={`absolute inset-0 ${marginClasses} flex items-center justify-center`}
+                  style={{ zIndex: 2 }}
+                >
+                  <div 
+                    className="relative rounded-[3px] overflow-hidden"
+                    style={{ 
+                      marginTop: "var(--color-margin-top)",
+                      marginBottom: "var(--color-margin-bottom)",
+                      marginLeft: "var(--color-margin-h)",
+                      marginRight: "var(--color-margin-h)",
+                      width: "calc(100% - (var(--color-margin-h) * 2))",
+                      height: "calc(100% - (var(--color-margin-top) + var(--color-margin-bottom)))",
+                      backgroundColor: bgColor,
+                      boxShadow: `
+                        0 2px 4px rgba(0,0,0,0.3),
+                        inset 0 1px 1px rgba(255,255,255,0.15),
+                        inset 0 -1px 1px rgba(0,0,0,0.25),
+                        inset 1px 0 1px rgba(255,255,255,0.1),
+                        inset -1px 0 1px rgba(0,0,0,0.2)
+                      `
+                    }}
+                  >
+                    <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-black/10" />
+                  </div>
+                </div>
+                
+                {/* Subtle split flip effect - horizontal line in middle */}
+                <div className={`absolute top-1/2 left-0 right-0 h-[1px] ${isWhiteBoard ? 'bg-black/10' : 'bg-black/30'}`} />
+                
+                {/* Subtle gradient for curvature */}
+                <div 
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    background: isWhiteBoard 
+                      ? 'linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 50%, rgba(0,0,0,0.05) 100%)'
+                      : 'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 50%, rgba(0,0,0,0.2) 100%)'
+                  }}
+                />
+              </>
+            );
+          }
+          
+          // Regular character tile during transition
+          return (
+            <>
+              <div 
+                className="absolute inset-0 flex items-center justify-center overflow-hidden"
+                style={{ 
+                  zIndex: 2,
+                  backgroundColor: tileBg,
+                  marginLeft: 0,
+                  marginRight: 0
+                }}
+              >
+                {currentChar !== ' ' && (
+                  <span 
+                    className={`${textSizeClasses[size]} font-mono font-semibold select-none leading-none relative z-10`}
+                    style={{ color: textColor }}
+                  >
+                    {currentChar}
+                  </span>
+                )}
+                {/* Blank/space character - render as empty but maintain layout */}
+                {currentChar === ' ' && (
+                  <span 
+                    className={`${textSizeClasses[size]} font-mono font-semibold select-none leading-none relative z-10`}
+                    style={{ color: textColor, visibility: 'hidden' }}
+                    aria-hidden="true"
+                  >
+                    {' '}
+                  </span>
+                )}
+              </div>
+              
+              {/* Subtle split flip effect - horizontal line in middle */}
+              <div className={`absolute top-1/2 left-0 right-0 h-[1px] ${isWhiteBoard ? 'bg-black/10' : 'bg-black/30'}`} />
+              
+              {/* Subtle gradient for curvature */}
+              <div 
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background: isWhiteBoard 
+                    ? 'linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 50%, rgba(0,0,0,0.05) 100%)'
+                    : 'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 50%, rgba(0,0,0,0.2) 100%)'
+                }}
+              />
+            </>
+          );
+        })()}
+        
+        {/* Static display - when not animating and not transitioning AND we're at target */}
+        {/* Character is shown via pre-rendered layer above, just add styling */}
+        {!isAnimating && !isTransitioning && currentCharIndex === targetCharIndex && (
           <>
-            <div className={`absolute top-1/2 left-0 right-0 h-[1px] ${isWhiteBoard ? 'bg-black/10' : 'bg-black/30'}`} />
+            <div className={`absolute top-1/2 left-0 right-0 h-[1px] ${isWhiteBoard ? 'bg-black/10' : 'bg-black/30'}`} style={{ zIndex: 3 }} />
             <div 
               className="absolute inset-0 pointer-events-none"
               style={{
+                zIndex: 1,
                 background: isWhiteBoard 
                   ? 'linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 50%, rgba(0,0,0,0.05) 100%)'
                   : 'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 50%, rgba(0,0,0,0.2) 100%)'
@@ -951,7 +1288,7 @@ export const BoardDisplay = memo(function BoardDisplay({ message, isLoading = fa
                 </div>
               ))
             ) : (
-              // Grid exists - show actual tiles (with animation if loading)
+              // Grid exists - show actual tiles (with animation if loading or transitioning)
               grid.map((row, rowIdx) => (
                 <GridRow 
                   key={`row-${rowIdx}`} 
