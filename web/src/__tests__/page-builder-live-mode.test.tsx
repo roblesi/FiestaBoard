@@ -258,7 +258,7 @@ describe("PageBuilder Live Mode", () => {
       }, { timeout: 2000 });
 
       // Advance timers to trigger debounced preview
-      vi.advanceTimersByTime(500);
+      await vi.advanceTimersByTimeAsync(500);
 
       await waitFor(() => {
         expect(api.sendTemplate).toHaveBeenCalled();
@@ -276,7 +276,7 @@ describe("PageBuilder Live Mode", () => {
       }, { timeout: 2000 });
 
       // Advance timers
-      vi.advanceTimersByTime(500);
+      await vi.advanceTimersByTimeAsync(500);
 
       // Should not call sendTemplate when live mode is off
       await waitFor(() => {
@@ -306,7 +306,7 @@ describe("PageBuilder Live Mode", () => {
         expect(api.renderTemplate).toHaveBeenCalled();
       }, { timeout: 2000 });
 
-      vi.advanceTimersByTime(500);
+      await vi.advanceTimersByTimeAsync(500);
 
       await waitFor(() => {
         expect(api.sendTemplate).toHaveBeenCalled();
@@ -339,12 +339,12 @@ describe("PageBuilder Live Mode", () => {
       });
 
       // Advance time by 5 minutes
-      vi.advanceTimersByTime(5 * 60 * 1000);
+      await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
       
       // Wait for the timeout to trigger
       await waitFor(() => {
         expect(screen.queryByText(/live/i)).not.toBeInTheDocument();
-      }, { timeout: 1000 });
+      });
     }, { timeout: 10000 });
 
     it("resets timeout when user makes changes", async () => {
@@ -367,14 +367,14 @@ describe("PageBuilder Live Mode", () => {
       });
 
       // Advance 4 minutes
-      vi.advanceTimersByTime(4 * 60 * 1000);
+      await vi.advanceTimersByTimeAsync(4 * 60 * 1000);
 
       // Make a change (type in page name)
       const nameInput = screen.getByPlaceholderText("My Custom Page");
       await user.type(nameInput, "Test");
 
       // Advance another 4 minutes (total 8 minutes, but should not timeout due to reset)
-      vi.advanceTimersByTime(4 * 60 * 1000);
+      await vi.advanceTimersByTimeAsync(4 * 60 * 1000);
 
       // Live mode should still be enabled
       await waitFor(() => {
