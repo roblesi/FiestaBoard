@@ -80,8 +80,8 @@ PURPLEAIR_SENSOR_ID=  # Optional: specific sensor ID
 OPENWEATHERMAP_API_KEY=your_openweathermap_api_key_here
 
 # Location (default: San Francisco)
-AIR_FOG_LATITUDE=37.7749
-AIR_FOG_LONGITUDE=-122.4194
+AIR_FOG_LATITUDE=40.7128
+AIR_FOG_LONGITUDE=-74.0060
 
 # Refresh interval (default: 5 minutes)
 AIR_FOG_REFRESH_SECONDS=300
@@ -89,7 +89,7 @@ AIR_FOG_REFRESH_SECONDS=300
 
 ### 3. Configure Location (Optional)
 
-**Default Location:** San Francisco (37.7749, -122.4194)
+**Default Location:** Example coordinates (40.7128, -74.0060)
 
 To monitor a different location:
 
@@ -307,8 +307,8 @@ PURPLEAIR_SENSOR_ID=  # Optional: specific sensor
 OPENWEATHERMAP_API_KEY=your_openweathermap_api_key_here
 
 # Location (default: San Francisco)
-AIR_FOG_LATITUDE=37.7749
-AIR_FOG_LONGITUDE=-122.4194
+AIR_FOG_LATITUDE=40.7128
+AIR_FOG_LONGITUDE=-74.0060
 
 # Refresh interval (seconds, default: 300 = 5 minutes)
 AIR_FOG_REFRESH_SECONDS=300
@@ -324,8 +324,8 @@ AIR_FOG_REFRESH_SECONDS=300
       "purpleair_api_key": "your_key",
       "purpleair_sensor_id": null,
       "openweathermap_api_key": "your_key",
-      "latitude": 37.7749,
-      "longitude": -122.4194,
+      "latitude": 40.7128,
+      "longitude": -74.0060,
       "refresh_seconds": 300
     }
   }
@@ -398,7 +398,7 @@ San Francisco's famous fog is most common:
    curl -H "X-API-Key: YOUR_KEY" "https://api.purpleair.com/v1/sensors/12345"
    
    # OpenWeatherMap
-   curl "https://api.openweathermap.org/data/2.5/weather?lat=37.7749&lon=-122.4194&appid=YOUR_KEY"
+   curl "https://api.openweathermap.org/data/2.5/weather?lat=40.7128&lon=-74.0060&appid=YOUR_KEY"
    ```
 3. **Check logs**: Look for API errors
 4. **Verify location**: Ensure coordinates are valid

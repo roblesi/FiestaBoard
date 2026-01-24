@@ -170,7 +170,7 @@ Supported location formats:
 - City, State: `San Francisco, CA`
 - City, Country: `London, UK`
 - Zip Code: `94103`
-- Coordinates: `37.7749,-122.4194`
+- Coordinates: `40.7128,-74.0060`
 
 ## Troubleshooting
 

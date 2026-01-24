@@ -61,8 +61,8 @@ GOOGLE_ROUTES_API_KEY=your_api_key_here
 1. In the web UI, go to Settings → Features → Traffic
 2. Click "Add Route"
 3. Enter:
-   - **Origin**: Your home address or `37.7749,-122.4194` (coordinates work too)
-   - **Destination**: Your work address or `37.7899,-122.4001`
+   - **Origin**: Your home address or `40.7128,-74.0060` (coordinates work too)
+   - **Destination**: Your work address or `40.7580,-73.9855`
    - **Display Name**: `WORK`
    - **Travel Mode**: Choose Drive, Bicycle, Transit, or Walk
 4. Click "Validate Route"
@@ -86,7 +86,7 @@ If it works, you'll see: ✅ "Route is valid! Estimated travel time: ~X minutes"
 
 **Fix**:
 1. Try using the full address with city and state: `123 Main St, San Francisco, CA 94102`
-2. Or use coordinates: `37.7749,-122.4194`
+2. Or use coordinates: `40.7128,-74.0060`
 3. Avoid ambiguous addresses like "Main Street"
 
 ### Error: "Failed to validate route"
@@ -107,28 +107,28 @@ If addresses aren't working, you can use latitude,longitude coordinates:
 
 1. Go to [Google Maps](https://maps.google.com)
 2. Right-click on your location
-3. Click the coordinates at the top (e.g., "37.7749, -122.4194")
-4. Use this format in the Traffic settings: `37.7749,-122.4194` (no spaces)
+3. Click the coordinates at the top (e.g., "40.7128, -74.0060")
+4. Use this format in the Traffic settings: `40.7128,-74.0060` (no spaces)
 
 **Example**:
-- Origin: `37.7749,-122.4194` (San Francisco)
-- Destination: `37.7899,-122.4001` (Downtown SF)
+- Origin: `40.7128,-74.0060` (New York City)
+- Destination: `40.7580,-73.9855` (Central Park)
 
 ## Address Format Tips
 
 ### ✅ Good Address Formats
 
-- `1735 35th Ave, San Francisco, CA 94122`
-- `525 20th St, San Francisco, CA 94107`
+- `123 Main St, New York, NY 10001`
+- `456 Park Ave, New York, NY 10022`
 - `San Francisco International Airport, CA`
-- `37.7749,-122.4194` (coordinates)
+- `40.7128,-74.0060` (coordinates)
 
 ### ❌ Bad Address Formats
 
 - `Main Street` (too vague)
 - `Downtown` (ambiguous)
 - `123` (incomplete)
-- `37.7749, -122.4194` (space after comma - remove it)
+- `40.7128, -74.0060` (space after comma - remove it)
 
 ## Travel Modes
 

@@ -78,8 +78,8 @@ Click "Use My Location"
 
 **Method C: Enter Coordinates**
 ```
-Latitude: 37.7749
-Longitude: -122.4194
+Latitude: 40.7128
+Longitude: -74.0060
 → Shows nearby stops
 ```
 
@@ -425,7 +425,7 @@ Outbound: {{muni.stops.1.formatted}}
 GET /muni/stops
 
 # Find stops near location
-GET /muni/stops/nearby?lat=37.7749&lng=-122.4194&radius=0.5
+GET /muni/stops/nearby?lat=40.7128&lng=-74.0060&radius=0.5
 
 # Search stops by address
 GET /muni/stops/search?address=Market+St+and+9th+St&radius=0.5

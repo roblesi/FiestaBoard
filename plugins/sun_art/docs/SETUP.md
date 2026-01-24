@@ -41,8 +41,8 @@ Via Environment Variables:
 ```bash
 # Add to .env
 SUN_ART_ENABLED=true
-SUN_ART_LATITUDE=37.7749
-SUN_ART_LONGITUDE=-122.4194
+SUN_ART_LATITUDE=40.7128
+SUN_ART_LONGITUDE=-74.0060
 SUN_ART_REFRESH_SECONDS=300
 ```
 
@@ -62,7 +62,7 @@ SUN_ART_REFRESH_SECONDS=300
 
 **Option 3: GPS Device**
 - Use your phone's GPS or a dedicated GPS device
-- Format: Decimal degrees (e.g., 37.7749, -122.4194)
+- Format: Decimal degrees (e.g., 40.7128, -74.0060)
 
 **Option 4: Online Tools**
 - [LatLong.net](https://www.latlong.net/)
@@ -249,7 +249,7 @@ Note: The plugin currently supports one location per instance. For multiple loca
 
 Common locations for testing:
 
-- **San Francisco, CA**: 37.7749, -122.4194
+- **New York, NY**: 40.7128, -74.0060
 - **New York, NY**: 40.7128, -74.0060
 - **London, UK**: 51.5074, -0.1278
 - **Tokyo, Japan**: 35.6762, 139.6503
