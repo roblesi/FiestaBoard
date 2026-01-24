@@ -1069,12 +1069,6 @@ export const api = {
   showDebugInfo: () =>
     fetchApi<ActionResponse>("/debug/info", { method: "POST" }),
   
-  testBoardConnection: (request: BoardTestRequest) =>
-    fetchApi<BoardTestResponse>("/config/board/test", {
-      method: "POST",
-      body: JSON.stringify(request),
-    }),
-  
   testDebugConnection: () =>
     fetchApi<DebugTestResponse>("/debug/test-connection", { method: "POST" }),
   

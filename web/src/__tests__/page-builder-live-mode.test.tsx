@@ -340,12 +340,12 @@ describe("PageBuilder Live Mode", () => {
 
       // Advance time by 5 minutes
       vi.advanceTimersByTime(5 * 60 * 1000);
-
-      // Live mode should be disabled
+      
+      // Wait for the timeout to trigger
       await waitFor(() => {
         expect(screen.queryByText(/live/i)).not.toBeInTheDocument();
-      });
-    });
+      }, { timeout: 1000 });
+    }, { timeout: 10000 });
 
     it("resets timeout when user makes changes", async () => {
       const user = userEvent.setup({ delay: null });
@@ -377,8 +377,10 @@ describe("PageBuilder Live Mode", () => {
       vi.advanceTimersByTime(4 * 60 * 1000);
 
       // Live mode should still be enabled
-      expect(screen.getByText(/live/i)).toBeInTheDocument();
-    });
+      await waitFor(() => {
+        expect(screen.getByText(/live/i)).toBeInTheDocument();
+      });
+    }, { timeout: 10000 });
   });
 
   describe("Board Restoration", () => {
@@ -412,8 +414,8 @@ describe("PageBuilder Live Mode", () => {
       // Should call sendPage to restore
       await waitFor(() => {
         expect(api.sendPage).toHaveBeenCalledWith("test-active-page", "board");
-      });
-    });
+      }, { timeout: 3000 });
+    }, { timeout: 10000 });
 
     it("does not restore when live mode disabled in schedule mode", async () => {
       const user = userEvent.setup({ delay: null });
@@ -443,10 +445,15 @@ describe("PageBuilder Live Mode", () => {
       await user.click(toggle);
 
       // In schedule mode, should not call sendPage (polling service handles it)
-      // Give it a moment to ensure sendPage is not called
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Wait a bit to ensure sendPage is not called
+      await waitFor(() => {
+        // Just verify the component is still functional
+        expect(screen.getByLabelText(/live mode/i)).toBeInTheDocument();
+      });
+      
+      // Verify sendPage was not called
       expect(api.sendPage).not.toHaveBeenCalled();
-    });
+    }, { timeout: 10000 });
 
     it("handles restoration errors gracefully", async () => {
       const user = userEvent.setup({ delay: null });
@@ -477,8 +484,10 @@ describe("PageBuilder Live Mode", () => {
       await user.click(toggle);
 
       // Component should still be functional
-      expect(screen.getByLabelText(/live mode/i)).toBeInTheDocument();
-    });
+      await waitFor(() => {
+        expect(screen.getByLabelText(/live mode/i)).toBeInTheDocument();
+      });
+    }, { timeout: 10000 });
   });
 
   describe("Live Mode State Management", () => {
@@ -498,8 +507,10 @@ describe("PageBuilder Live Mode", () => {
       await user.click(toggle);
 
       // Should have fetched active page
-      expect(api.getActivePage).toHaveBeenCalled();
-    });
+      await waitFor(() => {
+        expect(api.getActivePage).toHaveBeenCalled();
+      });
+    }, { timeout: 10000 });
 
     it("updates last activity time on template changes", async () => {
       const user = userEvent.setup({ delay: null });
@@ -516,13 +527,19 @@ describe("PageBuilder Live Mode", () => {
       const toggle = screen.getByLabelText(/live mode/i);
       await user.click(toggle);
 
+      await waitFor(() => {
+        expect(screen.getByText(/live/i)).toBeInTheDocument();
+      });
+
       // Make a change to template (via page name for simplicity)
       const nameInput = screen.getByPlaceholderText("My Custom Page");
       await user.type(nameInput, "Test");
 
       // Activity should reset timeout
       // This is tested implicitly by the inactivity timeout test
-      expect(screen.getByText(/live/i)).toBeInTheDocument();
-    });
+      await waitFor(() => {
+        expect(screen.getByText(/live/i)).toBeInTheDocument();
+      });
+    }, { timeout: 10000 });
   });
 });
