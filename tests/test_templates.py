@@ -776,3 +776,70 @@ class TestTemplateAPIEndpoints:
         assert response.status_code == 400
         assert "invalid target" in response.json()["detail"].lower()
 
+
+class TestColorWrapping:
+    """Tests for color marker wrapping behavior."""
+    
+    @pytest.fixture
+    def engine(self):
+        return TemplateEngine()
+    
+    def test_color_blocks_wrap_correctly(self, engine):
+        """Test that color blocks wrap correctly without splitting markers."""
+        # Create a string of 120 color blocks (enough to wrap to 5+ lines)
+        # Each {67} is 4 characters but 1 tile, so 120 tiles = 5.45 lines at 22 tiles/line
+        color_string = "{67}" * 120
+        
+        # Wrap it to 5 lines
+        wrapped = engine._word_wrap_tiles(color_string, first_width=22, subsequent_width=22, max_lines=5)
+        
+        # Verify we got 5 lines
+        assert len(wrapped) == 5
+        
+        # Verify each line contains only valid color markers
+        # No partial markers like {67 or }67} should exist
+        for line in wrapped:
+            # Count opening braces
+            open_braces = line.count("{")
+            # Count closing braces
+            close_braces = line.count("}")
+            # They should be equal (each marker has both)
+            assert open_braces == close_braces, f"Line has mismatched braces: {line}"
+            
+            # Verify no partial markers (opening brace without closing, or closing without opening)
+            # Check that every { is followed by a } before the next {
+            i = 0
+            while i < len(line):
+                if line[i] == "{":
+                    # Find the closing brace
+                    closing = line.find("}", i)
+                    assert closing != -1, f"Unclosed brace at position {i} in line: {line}"
+                    # Verify the content between is valid (digits 63-70 or color name)
+                    content = line[i + 1:closing]
+                    assert content.isdigit() or content.lower() in COLOR_CODES or content.startswith("/"), \
+                        f"Invalid color marker content: {content} in line: {line}"
+                    i = closing + 1
+                elif line[i] == "}":
+                    # Should not have a closing brace without an opening
+                    assert False, f"Closing brace without opening at position {i} in line: {line}"
+                else:
+                    i += 1
+    
+    def test_color_blocks_with_text_wrap(self, engine):
+        """Test wrapping color blocks mixed with text."""
+        # Mix of color blocks and text
+        text = "{67}" * 30 + "HELLO" + "{66}" * 30
+        
+        wrapped = engine._word_wrap_tiles(text, first_width=22, subsequent_width=22, max_lines=5)
+        
+        # Verify all color markers are intact
+        full_text = "".join(wrapped)
+        # Count braces should match
+        assert full_text.count("{") == full_text.count("}")
+        
+        # Verify no partial markers
+        for line in wrapped:
+            open_count = line.count("{")
+            close_count = line.count("}")
+            assert open_count == close_count, f"Line has mismatched braces: {line}"
+

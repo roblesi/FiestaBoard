@@ -182,7 +182,7 @@ def validate_manifest_schema(manifest: Dict, plugin_dir_name: str) -> List[str]:
         errors.append("icon must be a string")
     
     # Validate category if present
-    valid_categories = ["data", "transit", "weather", "entertainment", "utility", "home"]
+    valid_categories = ["art", "data", "transit", "weather", "entertainment", "utility", "home"]
     category = manifest.get("category", "")
     if category and category not in valid_categories:
         errors.append(f"category must be one of: {', '.join(valid_categories)}")

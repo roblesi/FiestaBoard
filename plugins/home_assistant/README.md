@@ -2,6 +2,8 @@
 
 Display entity states from your Home Assistant instance.
 
+**→ [Setup Guide](./docs/SETUP.md)** - Access token setup and configuration
+
 ## Overview
 
 The Home Assistant plugin connects to your Home Assistant instance and allows you to display any entity state on your board. It supports dynamic entity access, so you can reference any entity by its ID.
@@ -14,15 +16,9 @@ The Home Assistant plugin connects to your Home Assistant instance and allows yo
 - Support for sensors, binary sensors, switches, and more
 - Configurable entity list
 
-## Setup
+## Quick Setup
 
-### Get Long-Lived Access Token
-
-1. Open Home Assistant
-2. Click your profile (bottom left)
-3. Scroll to "Long-Lived Access Tokens"
-4. Create a new token
-5. Copy the token (you won't see it again)
+For detailed setup instructions including access token creation, see the **[Setup Guide](./docs/SETUP.md)**.
 
 ## Template Variables
 

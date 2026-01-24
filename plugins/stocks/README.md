@@ -2,6 +2,8 @@
 
 Display real-time stock prices and percentage changes.
 
+**→ [Setup Guide](./docs/SETUP.md)** - Configuration and optional API key setup
+
 ## Overview
 
 The Stock Prices plugin fetches live stock data from Yahoo Finance and displays prices with color-coded percentage changes.

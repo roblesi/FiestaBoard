@@ -4,6 +4,8 @@ Display real-time nearby aircraft information from the OpenSky Network API.
 
 ![Nearby Aircraft Display](./docs/nearby-aircraft-display.png)
 
+**→ [Setup Guide](./docs/SETUP.md)** - Configuration and optional OAuth setup
+
 ## Overview
 
 The Nearby Aircraft plugin fetches live aircraft state vectors from the OpenSky Network API and displays aircraft within a user-defined radius. It shows call sign, altitude (feet), ground speed (knots), and squawk code for each aircraft. The plugin includes column alignment formatting to ensure consistent display across all aircraft rows.

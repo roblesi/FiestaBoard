@@ -2,6 +2,8 @@
 
 Display commute times and traffic conditions using Google Routes API.
 
+**→ [Setup Guide](./docs/SETUP.md)** - API key registration and route configuration
+
 ## Overview
 
 The Traffic plugin fetches real-time commute times from Google Routes API, showing drive times with traffic delays for multiple routes.
@@ -13,15 +15,9 @@ The Traffic plugin fetches real-time commute times from Google Routes API, showi
 - Multiple route monitoring
 - Color-coded traffic status
 
-## Setup
+## Quick Setup
 
-### Get Google Routes API Key
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select existing
-3. Enable the Routes API
-4. Create an API key
-5. Restrict the key to Routes API
+For detailed setup instructions including API key registration, see the **[Setup Guide](./docs/SETUP.md)**.
 
 ## Template Variables
 
