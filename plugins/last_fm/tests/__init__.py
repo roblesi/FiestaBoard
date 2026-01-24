@@ -1,0 +1,1 @@
+"""Last.fm plugin tests."""
