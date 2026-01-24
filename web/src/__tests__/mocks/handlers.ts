@@ -6,6 +6,7 @@ import type {
   DisplaysResponse,
   DisplayResponse,
   DisplayRawResponse,
+  DisplayRawBatchResponse,
   TransitionSettings,
   OutputSettings,
   PagesResponse,
@@ -144,7 +145,7 @@ export const mockPages: PagesResponse = {
 
 export const mockTemplateVariables: TemplateVariables = {
   variables: {
-    weather: ["temperature", "condition", "location"],
+    weather: ["temperature", "condition", "location", "humidity", "wind_speed", "feels_like", "uv_index", "pressure", "visibility", "dew_point", "cloud_cover"],
     datetime: ["time", "date", "day"],
   },
   max_lengths: {
@@ -371,6 +372,23 @@ export const handlers = [
       available: true,
     };
     return HttpResponse.json(response);
+  }),
+
+  http.post(`${API_BASE}/displays/raw/batch`, async ({ request }) => {
+    const body = await request.json() as { display_types?: string[] };
+    const displayTypes = body.display_types || [];
+    const displays: Record<string, DisplayRawResponse> = {};
+    
+    displayTypes.forEach((type: string) => {
+      displays[type] = {
+        display_type: type,
+        data: {},
+        available: true,
+        error: null,
+      };
+    });
+    
+    return HttpResponse.json({ displays });
   }),
 
   http.get(`${API_BASE}/displays/:type/raw`, ({ params }) => {
@@ -722,6 +740,30 @@ export const handlers = [
       max_lengths: {},
       env_vars: [],
       documentation: "",
+    });
+  }),
+
+  http.get(`${API_BASE}/plugins/:pluginId/manifest`, ({ params }) => {
+    const { pluginId } = params;
+    // Return mock manifest for weather plugin
+    if (pluginId === "weather") {
+      return HttpResponse.json({
+        id: "weather",
+        name: "Weather",
+        version: "1.0.0",
+        variables: {
+          simple: ["temperature", "condition", "location", "humidity", "wind_speed", "feels_like", "uv_index", "pressure", "visibility", "dew_point", "cloud_cover"],
+        },
+      });
+    }
+    // Return generic manifest for other plugins
+    return HttpResponse.json({
+      id: String(pluginId),
+      name: String(pluginId),
+      version: "1.0.0",
+      variables: {
+        simple: [],
+      },
     });
   }),
 
