@@ -2,6 +2,8 @@
 
 Display guest WiFi credentials on your board.
 
+**→ [Setup Guide](./docs/SETUP.md)** - Configuration instructions
+
 ## Overview
 
 The Guest WiFi plugin displays your guest network name and password, making it easy for visitors to connect.

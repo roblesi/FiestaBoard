@@ -2,6 +2,8 @@
 
 Display surf conditions including wave height, swell period, and quality rating.
 
+**→ [Setup Guide](./docs/SETUP.md)** - Location configuration
+
 ## Overview
 
 The Surf plugin fetches real-time marine data from Open-Meteo (free, no API key required) to display surf conditions at your favorite spot.

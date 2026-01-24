@@ -4,6 +4,8 @@ Displays a full-screen clock with large pixel-art style digits that span the ent
 
 ![Visual Clock Display](./docs/visual-clock-display.png)
 
+**→ [Setup Guide](./docs/SETUP.md)** - Configuration and API key setup
+
 ## Features
 
 - Full-screen display using colored tiles

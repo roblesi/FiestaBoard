@@ -2,6 +2,8 @@
 
 Display Bay Wheels bike share availability with electric and classic bike counts.
 
+**→ [Setup Guide](./docs/SETUP.md)** - Configuration and station setup
+
 ## Overview
 
 The Bay Wheels plugin fetches real-time bike availability from the Bay Wheels GBFS feed, showing electric and classic bike counts at your selected stations.

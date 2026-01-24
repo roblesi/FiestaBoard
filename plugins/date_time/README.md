@@ -4,6 +4,8 @@ Display current date and time on your board with comprehensive formatting option
 
 ![Date & Time Display](./docs/date-time-display.png)
 
+**→ [Setup Guide](./docs/SETUP.md)** - Configuration and setup instructions
+
 ## Overview
 
 The Date & Time plugin provides various date and time variables that update automatically based on your configured timezone. It supports multiple time formats (12-hour and 24-hour), US date formats, and flexible month representations.
