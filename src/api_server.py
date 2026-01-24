@@ -449,6 +449,14 @@ async def get_status():
     
     settings_service = get_settings_service()
     
+    # Check if board is configured
+    board_ip = Config.BOARD_HOST or ""
+    connection_mode = Config.BOARD_API_MODE
+    board_configured = bool(board_ip and (
+        (connection_mode == "local" and Config.BOARD_LOCAL_API_KEY) or
+        (connection_mode == "cloud" and Config.BOARD_READ_WRITE_KEY)
+    ))
+    
     status = StatusResponse(
         running=_service_running,
         initialized=service is not None,
@@ -458,6 +466,8 @@ async def get_status():
     status.config_summary["dev_mode"] = _dev_mode
     # Add active page ID to config summary
     status.config_summary["active_page_id"] = settings_service.get_active_page_id()
+    # Add board_configured to config summary for UI
+    status.config_summary["board_configured"] = board_configured
     return status
 
 
@@ -3385,6 +3395,83 @@ async def render_template(request: dict):
     except Exception as e:
         logger.error(f"Template rendering error: {e}", exc_info=True)
         raise HTTPException(status_code=400, detail=f"Template rendering failed: {str(e)}")
+
+
+@app.post("/templates/send")
+async def send_template(request: dict):
+    """
+    Render a template and send it directly to the board.
+    
+    Body should include:
+    - template: Template string or list of lines to render and send
+    - target: Optional target (board, ui, both). Defaults to board.
+    
+    Useful for live editor mode where templates are sent without saving as a page.
+    """
+    global _dev_mode
+    
+    if "template" not in request:
+        raise HTTPException(status_code=400, detail="template parameter required")
+    
+    template = request["template"]
+    target = request.get("target", "board")
+    
+    if target not in VALID_OUTPUT_TARGETS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid target: {target}. Valid targets: {VALID_OUTPUT_TARGETS}"
+        )
+    
+    service = get_service()
+    if not service or not service.vb_client:
+        raise HTTPException(status_code=503, detail="Service not initialized")
+    
+    # Render the template
+    template_engine = get_template_engine()
+    
+    try:
+        if isinstance(template, list):
+            rendered = template_engine.render_lines(template)
+        else:
+            rendered = template_engine.render(template)
+    except Exception as e:
+        logger.error(f"Template rendering error: {e}", exc_info=True)
+        raise HTTPException(status_code=400, detail=f"Template rendering failed: {str(e)}")
+    
+    # Determine if we should send to board
+    settings_service = get_settings_service()
+    send_to_board = target in ["board", "both"]
+    
+    # Send to board if appropriate
+    sent_to_board = False
+    if send_to_board and not _dev_mode:
+        # CRITICAL: Block ALL manual sends during silence mode to prevent wake-ups
+        if Config.is_silence_mode_active():
+            logger.info("Silence mode is active - blocking template send to prevent wake-up")
+            sent_to_board = False
+        else:
+            # Use system default transition settings
+            transition = settings_service.get_transition_settings()
+            
+            # Convert to board array for proper character/color support
+            board_array = text_to_board_array(rendered)
+            success, was_sent = service.vb_client.send_characters(
+                board_array,
+                strategy=transition.strategy,
+                step_interval_ms=transition.step_interval_ms,
+                step_size=transition.step_size
+            )
+            sent_to_board = was_sent
+            if not success:
+                raise HTTPException(status_code=500, detail="Failed to send to board")
+    
+    return {
+        "status": "success",
+        "message": rendered,
+        "sent_to_board": sent_to_board,
+        "target": target,
+        "dev_mode": _dev_mode
+    }
 
 
 @app.get("/dev-mode")

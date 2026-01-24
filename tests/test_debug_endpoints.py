@@ -199,6 +199,148 @@ class TestDebugCacheStatus:
             assert response.status_code == 400
 
 
+class TestStatusEndpoint:
+    """Tests for /status endpoint."""
+    
+    @patch('src.api_server.get_service')
+    @patch('src.api_server.get_settings_service')
+    @patch('src.api_server.Config.get_summary')
+    @patch('src.api_server.Config.BOARD_HOST')
+    @patch('src.api_server.Config.BOARD_API_MODE')
+    @patch('src.api_server.Config.BOARD_LOCAL_API_KEY')
+    @patch('src.api_server.Config.BOARD_READ_WRITE_KEY')
+    @patch('src.api_server._service_running', False)
+    @patch('src.api_server._dev_mode', False)
+    def test_get_status_with_board_configured_cloud(self, mock_cloud_key, mock_local_key, mock_mode, mock_host, mock_summary, mock_settings, mock_service, client):
+        """Test GET /status with board configured (cloud mode)."""
+        # Setup mocks
+        mock_service_instance = Mock()
+        mock_service.return_value = mock_service_instance
+        
+        mock_settings_instance = Mock()
+        mock_settings_instance.get_active_page_id.return_value = "page-1"
+        mock_settings.return_value = mock_settings_instance
+        
+        mock_summary.return_value = {
+            "weather_enabled": True,
+            "datetime_enabled": True,
+        }
+        
+        mock_host.return_value = "192.168.1.100"
+        mock_mode.return_value = "cloud"
+        mock_cloud_key.return_value = "test-cloud-key"
+        mock_local_key.return_value = None
+        
+        response = client.get("/status")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "running" in data
+        assert "initialized" in data
+        assert "config_summary" in data
+        assert "board_configured" in data["config_summary"]
+        assert data["config_summary"]["board_configured"] is True
+
+    @patch('src.api_server.get_service')
+    @patch('src.api_server.get_settings_service')
+    @patch('src.api_server.Config.get_summary')
+    @patch('src.api_server.Config.BOARD_HOST')
+    @patch('src.api_server.Config.BOARD_API_MODE')
+    @patch('src.api_server.Config.BOARD_LOCAL_API_KEY')
+    @patch('src.api_server.Config.BOARD_READ_WRITE_KEY')
+    @patch('src.api_server._service_running', False)
+    @patch('src.api_server._dev_mode', False)
+    def test_get_status_with_board_configured_local(self, mock_cloud_key, mock_local_key, mock_mode, mock_host, mock_summary, mock_settings, mock_service, client):
+        """Test GET /status with board configured (local mode)."""
+        # Setup mocks
+        mock_service_instance = Mock()
+        mock_service.return_value = mock_service_instance
+        
+        mock_settings_instance = Mock()
+        mock_settings_instance.get_active_page_id.return_value = None
+        mock_settings.return_value = mock_settings_instance
+        
+        mock_summary.return_value = {
+            "weather_enabled": False,
+        }
+        
+        mock_host.return_value = "192.168.1.100"
+        mock_mode.return_value = "local"
+        mock_cloud_key.return_value = None
+        mock_local_key.return_value = "test-local-key"
+        
+        response = client.get("/status")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["config_summary"]["board_configured"] is True
+
+    @patch('src.api_server.get_service')
+    @patch('src.api_server.get_settings_service')
+    @patch('src.api_server.Config.get_summary')
+    @patch('src.api_server.Config.BOARD_HOST')
+    @patch('src.api_server.Config.BOARD_API_MODE')
+    @patch('src.api_server.Config.BOARD_LOCAL_API_KEY')
+    @patch('src.api_server.Config.BOARD_READ_WRITE_KEY')
+    @patch('src.api_server._service_running', False)
+    @patch('src.api_server._dev_mode', False)
+    def test_get_status_with_board_not_configured(self, mock_cloud_key, mock_local_key, mock_mode, mock_host, mock_summary, mock_settings, mock_service, client):
+        """Test GET /status with board not configured."""
+        # Setup mocks
+        mock_service_instance = Mock()
+        mock_service.return_value = mock_service_instance
+        
+        mock_settings_instance = Mock()
+        mock_settings_instance.get_active_page_id.return_value = None
+        mock_settings.return_value = mock_settings_instance
+        
+        mock_summary.return_value = {}
+        
+        mock_host.return_value = ""
+        mock_mode.return_value = "cloud"
+        mock_cloud_key.return_value = None
+        mock_local_key.return_value = None
+        
+        response = client.get("/status")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "board_configured" in data["config_summary"]
+        assert data["config_summary"]["board_configured"] is False
+
+    @patch('src.api_server.get_service')
+    @patch('src.api_server.get_settings_service')
+    @patch('src.api_server.Config.get_summary')
+    @patch('src.api_server.Config.BOARD_HOST')
+    @patch('src.api_server.Config.BOARD_API_MODE')
+    @patch('src.api_server.Config.BOARD_LOCAL_API_KEY')
+    @patch('src.api_server.Config.BOARD_READ_WRITE_KEY')
+    @patch('src.api_server._service_running', False)
+    @patch('src.api_server._dev_mode', False)
+    def test_get_status_includes_active_page_id(self, mock_cloud_key, mock_local_key, mock_mode, mock_host, mock_summary, mock_settings, mock_service, client):
+        """Test GET /status includes active_page_id in config_summary."""
+        # Setup mocks
+        mock_service_instance = Mock()
+        mock_service.return_value = mock_service_instance
+        
+        mock_settings_instance = Mock()
+        mock_settings_instance.get_active_page_id.return_value = "test-page-123"
+        mock_settings.return_value = mock_settings_instance
+        
+        mock_summary.return_value = {}
+        mock_host.return_value = "192.168.1.100"
+        mock_mode.return_value = "cloud"
+        mock_cloud_key.return_value = "test-key"
+        mock_local_key.return_value = None
+        
+        response = client.get("/status")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "active_page_id" in data["config_summary"]
+        assert data["config_summary"]["active_page_id"] == "test-page-123"
+
+
 class TestDebugSystemInfo:
     """Tests for /debug/system-info endpoint."""
     

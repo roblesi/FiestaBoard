@@ -25,6 +25,9 @@ const TipTapTemplateEditor = dynamic(
   }
 );
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { queryKeys } from "@/hooks/use-board";
 import {
@@ -32,6 +35,7 @@ import {
   X,
   Save,
   Trash2,
+  Radio,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -140,6 +144,15 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
   // Fetch board settings for display type
   const { data: boardSettings } = useBoardSettings();
 
+  // Live mode state
+  const [liveMode, setLiveMode] = useState(false);
+  const [boardConfigured, setBoardConfigured] = useState(false);
+  const [lastBoardUpdate, setLastBoardUpdate] = useState<Date | null>(null);
+  const [lastActivityTime, setLastActivityTime] = useState<Date | null>(null);
+  const [activePageIdBeforeLiveMode, setActivePageIdBeforeLiveMode] = useState<string | null>(null);
+  const [scheduleModeEnabled, setScheduleModeEnabled] = useState(false);
+  const inactivityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // Form state (immediate - for UI responsiveness)
   const [name, setName] = useState("");
   const [templateLines, setTemplateLines] = useState<string[]>(["", "", "", "", "", ""]);
@@ -173,6 +186,39 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
     queryFn: () => api.getPage(pageId!),
     enabled: !!pageId,
   });
+
+  // Fetch board configuration status
+  const { data: statusData } = useQuery({
+    queryKey: ["status"],
+    queryFn: () => api.getStatus(),
+    refetchInterval: 30000, // Refetch every 30 seconds to check board status
+  });
+
+  // Fetch schedule enabled status
+  const { data: scheduleEnabledData } = useQuery({
+    queryKey: ["schedule-enabled"],
+    queryFn: () => api.getScheduleEnabled(),
+  });
+
+  // Fetch active page ID
+  const { data: activePageData } = useQuery({
+    queryKey: queryKeys.activePage,
+    queryFn: () => api.getActivePage(),
+  });
+
+  // Update board configured state
+  useEffect(() => {
+    if (statusData?.config_summary?.board_configured !== undefined) {
+      setBoardConfigured(statusData.config_summary.board_configured as boolean);
+    }
+  }, [statusData]);
+
+  // Update schedule mode enabled state
+  useEffect(() => {
+    if (scheduleEnabledData?.enabled !== undefined) {
+      setScheduleModeEnabled(scheduleEnabledData.enabled);
+    }
+  }, [scheduleEnabledData]);
 
 
   // Load draft or existing page data
@@ -259,6 +305,84 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
     }, 300);
     return () => clearTimeout(timeoutId);
   }, [lineWrapEnabled]);
+
+  // Track activity for live mode timeout
+  useEffect(() => {
+    if (liveMode) {
+      setLastActivityTime(new Date());
+    }
+  }, [templateLines, lineAlignments, lineWrapEnabled, liveMode]);
+
+  // Inactivity timeout for live mode (5 minutes)
+  useEffect(() => {
+    if (!liveMode || !lastActivityTime) {
+      // Clear timeout if live mode is off or no activity tracked
+      if (inactivityTimeoutRef.current) {
+        clearTimeout(inactivityTimeoutRef.current);
+        inactivityTimeoutRef.current = null;
+      }
+      return;
+    }
+
+    // Set up 5-minute timeout
+    inactivityTimeoutRef.current = setTimeout(() => {
+      // Check if there's been activity since timeout was set
+      const timeSinceActivity = Date.now() - lastActivityTime.getTime();
+      if (timeSinceActivity >= 5 * 60 * 1000) {
+        // 5 minutes of inactivity - disable live mode
+        console.log('[Live Mode] Inactivity timeout - disabling live mode');
+        setLiveMode(false);
+        toast.info("Live mode disabled due to inactivity");
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => {
+      if (inactivityTimeoutRef.current) {
+        clearTimeout(inactivityTimeoutRef.current);
+        inactivityTimeoutRef.current = null;
+      }
+    };
+  }, [liveMode, lastActivityTime]);
+
+  // Board restoration when live mode is disabled
+  useEffect(() => {
+    // Only run when live mode changes from true to false
+    if (liveMode) {
+      // Store active page ID when enabling live mode
+      if (activePageData?.page_id) {
+        setActivePageIdBeforeLiveMode(activePageData.page_id);
+      }
+      return;
+    }
+
+    // Live mode was just disabled - restore board
+    const restoreBoard = async () => {
+      try {
+        if (scheduleModeEnabled) {
+          // Schedule mode: Let polling service handle restoration
+          // The background service will automatically restore the correct page
+          console.log('[Live Mode] Schedule mode - letting polling service restore board');
+        } else {
+          // Manual mode: Restore to active page
+          const pageIdToRestore = activePageIdBeforeLiveMode || activePageData?.page_id;
+          if (pageIdToRestore) {
+            console.log('[Live Mode] Manual mode - restoring to page:', pageIdToRestore);
+            await api.sendPage(pageIdToRestore, "board");
+          } else {
+            console.log('[Live Mode] No active page to restore');
+          }
+        }
+      } catch (error) {
+        console.error('[Live Mode] Failed to restore board:', error);
+        toast.error("Failed to restore board to normal operation");
+      }
+    };
+
+    // Only restore if we had live mode enabled before (check if we have stored state)
+    if (activePageIdBeforeLiveMode !== null || activePageData?.page_id) {
+      restoreBoard();
+    }
+  }, [liveMode, scheduleModeEnabled, activePageIdBeforeLiveMode, activePageData]);
 
   // Auto-save draft to localStorage (debounced)
   useEffect(() => {
@@ -560,6 +684,13 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
         needsRePreview.current = false;
         previewMutation.mutate();
       }
+
+      // If live mode is enabled, send to board after successful preview
+      if (liveMode && boardConfigured && data.rendered) {
+        // Send the template (not rendered) so backend can render it with current data
+        const template = getDebouncedTemplateWithAlignments();
+        sendToBoardMutation.mutate(template);
+      }
     },
     onError: (error) => {
       console.log('[Preview] onError called:', error);
@@ -567,6 +698,27 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
       
       // Reset the flag on error too
       needsRePreview.current = false;
+    },
+  });
+
+  // Board update mutation (for live mode)
+  const sendToBoardMutation = useMutation({
+    mutationFn: async (template: string[]) => {
+      return api.sendTemplate(template, "board");
+    },
+    onSuccess: (data) => {
+      setLastBoardUpdate(new Date());
+      if (data.sent_to_board) {
+        // Successfully sent to board
+        console.log('[Live Mode] Successfully sent to board');
+      } else if (data.dev_mode) {
+        // Dev mode - not actually sent
+        console.log('[Live Mode] Dev mode - preview only');
+      }
+    },
+    onError: (error) => {
+      console.error('[Live Mode] Failed to send to board:', error);
+      toast.error("Failed to send update to board. Live mode continues.");
     },
   });
 
@@ -627,7 +779,7 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
         // Mark that we need to re-preview after the current mutation completes
         needsRePreview.current = true;
       }
-    }, 500); // 500ms debounce
+    }, liveMode ? 300 : 500); // Faster debounce (300ms) in live mode, normal (500ms) otherwise
 
     return () => {
       console.log('[Preview] useEffect cleanup (timeout cleared)');
@@ -822,6 +974,48 @@ export function PageBuilder({ pageId, onClose, onSave }: PageBuilderProps) {
                   />
                 </TabsContent>
               </Tabs>
+
+              {/* Live Mode Toggle */}
+              <div className="mt-4 flex items-center justify-between gap-4 p-3 border rounded-md bg-muted/30">
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="live-mode"
+                      checked={liveMode}
+                      onCheckedChange={(checked) => {
+                        setLiveMode(checked);
+                        if (checked) {
+                          // Store current active page when enabling
+                          if (activePageData?.page_id) {
+                            setActivePageIdBeforeLiveMode(activePageData.page_id);
+                          }
+                          setLastActivityTime(new Date());
+                        }
+                      }}
+                      disabled={!boardConfigured}
+                    />
+                    <Label htmlFor="live-mode" className="text-sm font-medium cursor-pointer">
+                      Live Mode
+                    </Label>
+                  </div>
+                  {liveMode && (
+                    <Badge variant="default" className="gap-1.5">
+                      <Radio className="h-3 w-3 animate-pulse" />
+                      Live
+                    </Badge>
+                  )}
+                  {!boardConfigured && (
+                    <span className="text-xs text-muted-foreground">
+                      Board not configured
+                    </span>
+                  )}
+                </div>
+                {lastBoardUpdate && liveMode && (
+                  <span className="text-xs text-muted-foreground">
+                    Last update: {lastBoardUpdate.toLocaleTimeString()}
+                  </span>
+                )}
+              </div>
 
               {/* Live preview */}
               <div className="mt-4">

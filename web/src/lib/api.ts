@@ -780,6 +780,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ template }),
     }),
+  sendTemplate: (template: string | string[], target?: "ui" | "board" | "both") =>
+    fetchApi<{ status: string; message: string; sent_to_board: boolean; target: string; dev_mode: boolean }>("/templates/send", {
+      method: "POST",
+      body: JSON.stringify({ template, target: target || "board" }),
+    }),
 
   // Schedule endpoints
   getSchedules: () => fetchApi<SchedulesResponse>("/schedules"),

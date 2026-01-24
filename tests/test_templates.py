@@ -10,6 +10,7 @@ from src.templates.engine import (
     TemplateError,
 )
 from src.displays.service import DisplayResult
+from src.settings.service import TransitionSettings
 
 
 class TestTemplateEngineBasics:
@@ -562,4 +563,216 @@ class TestTemplateAPIEndpoints:
         assert "rendered" in data
         # Should treat as empty and return 6 empty lines
         assert all(not line.strip() for line in data["lines"])
+
+    @patch('src.api_server.get_template_engine')
+    @patch('src.api_server.get_service')
+    @patch('src.api_server.get_settings_service')
+    @patch('src.api_server.Config.is_silence_mode_active')
+    @patch('src.api_server.text_to_board_array')
+    def test_send_template_success(self, mock_text_to_array, mock_silence, mock_settings, mock_service, mock_engine, client):
+        """Test POST /templates/send with valid template."""
+        # Setup mocks
+        mock_engine_instance = Mock()
+        mock_engine_instance.render_lines.return_value = "Rendered Template\nLine 2"
+        mock_engine.return_value = mock_engine_instance
+        
+        mock_settings_svc = Mock()
+        mock_transition = TransitionSettings(
+            strategy="column",
+            step_interval_ms=500,
+            step_size=2
+        )
+        mock_settings_svc.get_transition_settings.return_value = mock_transition
+        mock_settings.return_value = mock_settings_svc
+        
+        mock_main_svc = Mock()
+        mock_vb_client = Mock()
+        mock_vb_client.send_characters.return_value = (True, True)
+        mock_main_svc.vb_client = mock_vb_client
+        mock_service.return_value = mock_main_svc
+        
+        mock_silence.return_value = False
+        mock_text_to_array.return_value = [[0] * 22 for _ in range(6)]
+        
+        # Make request
+        response = client.post("/templates/send", json={
+            "template": ["{{weather.temp}}", "Line 2"],
+            "target": "board"
+        })
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert data["sent_to_board"] is True
+        assert "Rendered Template" in data["message"]
+        assert mock_vb_client.send_characters.called
+
+    @patch('src.api_server.get_template_engine')
+    @patch('src.api_server.get_service')
+    @patch('src.api_server.get_settings_service')
+    @patch('src.api_server._dev_mode', True)
+    @patch('src.api_server.Config.is_silence_mode_active')
+    def test_send_template_dev_mode(self, mock_silence, mock_settings, mock_service, mock_engine, client):
+        """Test POST /templates/send in dev mode (should not send to board)."""
+        # Setup mocks
+        mock_engine_instance = Mock()
+        mock_engine_instance.render_lines.return_value = "Rendered Template"
+        mock_engine.return_value = mock_engine_instance
+        
+        mock_settings_svc = Mock()
+        mock_settings.return_value = mock_settings_svc
+        
+        mock_main_svc = Mock()
+        mock_main_svc.vb_client = Mock()
+        mock_service.return_value = mock_main_svc
+        
+        mock_silence.return_value = False
+        
+        # Make request
+        response = client.post("/templates/send", json={
+            "template": ["{{weather.temp}}"],
+            "target": "board"
+        })
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert data["sent_to_board"] is False
+        assert data["dev_mode"] is True
+        # Should not call send_characters in dev mode
+        assert not mock_main_svc.vb_client.send_characters.called
+
+    @patch('src.api_server.get_template_engine')
+    @patch('src.api_server.get_service')
+    @patch('src.api_server.get_settings_service')
+    @patch('src.api_server.Config.is_silence_mode_active')
+    def test_send_template_silence_mode(self, mock_silence, mock_settings, mock_service, mock_engine, client):
+        """Test POST /templates/send blocked during silence mode."""
+        # Setup mocks
+        mock_engine_instance = Mock()
+        mock_engine_instance.render_lines.return_value = "Rendered Template"
+        mock_engine.return_value = mock_engine_instance
+        
+        mock_settings_svc = Mock()
+        mock_settings.return_value = mock_settings_svc
+        
+        mock_main_svc = Mock()
+        mock_main_svc.vb_client = Mock()
+        mock_service.return_value = mock_main_svc
+        
+        mock_silence.return_value = True  # Silence mode active
+        
+        # Make request
+        response = client.post("/templates/send", json={
+            "template": ["{{weather.temp}}"],
+            "target": "board"
+        })
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert data["sent_to_board"] is False
+        # Should not call send_characters during silence mode
+        assert not mock_main_svc.vb_client.send_characters.called
+
+    @patch('src.api_server.get_template_engine')
+    @patch('src.api_server.get_service')
+    def test_send_template_service_not_initialized(self, mock_service, mock_engine, client):
+        """Test POST /templates/send when service not initialized."""
+        mock_engine_instance = Mock()
+        mock_engine_instance.render_lines.return_value = "Rendered Template"
+        mock_engine.return_value = mock_engine_instance
+        
+        mock_service.return_value = None
+        
+        response = client.post("/templates/send", json={
+            "template": ["{{weather.temp}}"]
+        })
+        
+        assert response.status_code == 503
+        assert "not initialized" in response.json()["detail"].lower()
+
+    @patch('src.api_server.get_template_engine')
+    @patch('src.api_server.get_service')
+    @patch('src.api_server.get_settings_service')
+    @patch('src.api_server.Config.is_silence_mode_active')
+    @patch('src.api_server.text_to_board_array')
+    def test_send_template_rendering_error(self, mock_text_to_array, mock_silence, mock_settings, mock_service, mock_engine, client):
+        """Test POST /templates/send with template rendering error."""
+        # Setup mocks
+        mock_engine_instance = Mock()
+        mock_engine_instance.render_lines.side_effect = Exception("Template error")
+        mock_engine.return_value = mock_engine_instance
+        
+        mock_settings_svc = Mock()
+        mock_settings.return_value = mock_settings_svc
+        
+        mock_main_svc = Mock()
+        mock_main_svc.vb_client = Mock()
+        mock_service.return_value = mock_main_svc
+        
+        mock_silence.return_value = False
+        
+        # Make request
+        response = client.post("/templates/send", json={
+            "template": ["{{invalid.var}}"]
+        })
+        
+        assert response.status_code == 400
+        assert "rendering failed" in response.json()["detail"].lower()
+
+    @patch('src.api_server.get_template_engine')
+    @patch('src.api_server.get_service')
+    @patch('src.api_server.get_settings_service')
+    @patch('src.api_server.Config.is_silence_mode_active')
+    @patch('src.api_server.text_to_board_array')
+    def test_send_template_board_send_failure(self, mock_text_to_array, mock_silence, mock_settings, mock_service, mock_engine, client):
+        """Test POST /templates/send when board send fails."""
+        # Setup mocks
+        mock_engine_instance = Mock()
+        mock_engine_instance.render_lines.return_value = "Rendered Template"
+        mock_engine.return_value = mock_engine_instance
+        
+        mock_settings_svc = Mock()
+        mock_transition = TransitionSettings(
+            strategy="column",
+            step_interval_ms=500,
+            step_size=2
+        )
+        mock_settings_svc.get_transition_settings.return_value = mock_transition
+        mock_settings.return_value = mock_settings_svc
+        
+        mock_main_svc = Mock()
+        mock_vb_client = Mock()
+        mock_vb_client.send_characters.return_value = (False, False)  # Send failed
+        mock_main_svc.vb_client = mock_vb_client
+        mock_service.return_value = mock_main_svc
+        
+        mock_silence.return_value = False
+        mock_text_to_array.return_value = [[0] * 22 for _ in range(6)]
+        
+        # Make request
+        response = client.post("/templates/send", json={
+            "template": ["{{weather.temp}}"]
+        })
+        
+        assert response.status_code == 500
+        assert "failed to send" in response.json()["detail"].lower()
+
+    def test_send_template_missing_template(self, client):
+        """Test POST /templates/send without template parameter."""
+        response = client.post("/templates/send", json={})
+        
+        assert response.status_code == 400
+        assert "template" in response.json()["detail"].lower()
+
+    def test_send_template_invalid_target(self, client):
+        """Test POST /templates/send with invalid target."""
+        response = client.post("/templates/send", json={
+            "template": ["test"],
+            "target": "invalid"
+        })
+        
+        assert response.status_code == 400
+        assert "invalid target" in response.json()["detail"].lower()
 
