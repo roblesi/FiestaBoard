@@ -129,9 +129,11 @@ describe("PageBuilder Live Mode", () => {
         { wrapper: TestWrapper }
       );
 
-      // Wait for queries to resolve and component to render
+      // Wait for component to render and queries to resolve
       await waitFor(() => {
-        expect(screen.getByLabelText(/live mode/i)).toBeInTheDocument();
+        // The toggle should be in the document
+        const toggle = screen.queryByLabelText(/live mode/i);
+        expect(toggle).toBeInTheDocument();
       }, { timeout: 10000 });
     });
 
