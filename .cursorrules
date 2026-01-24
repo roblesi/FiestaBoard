@@ -237,9 +237,29 @@ The `manifest.json` MUST include:
 
 Optional but recommended:
 - `icon` - Lucide icon name for UI display
-- `category` - Category for grouping (weather, transit, home, etc.)
+- `category` - Category for grouping (MUST use an existing category - see below)
 - `description` - Brief description
 - `author` - Plugin author/maintainer
+
+### Plugin Categories
+
+**IMPORTANT: Always use an existing category. Do NOT create new categories.**
+
+Before assigning a category, check existing plugins to see what categories are in use:
+```bash
+grep -r '"category"' plugins/*/manifest.json | grep -v _template
+```
+
+**Current valid categories:**
+- `art` - Display art and visual displays (sun art, visual clock)
+- `data` - Data feeds (stocks, sports scores, aircraft tracking)
+- `entertainment` - Fun/media content (music, quotes)
+- `home` - Home automation (Home Assistant)
+- `transit` - Transportation (Muni, traffic, bike sharing)
+- `utility` - General utilities (date/time, WiFi credentials)
+- `weather` - Weather-related (weather, air quality, surf)
+
+When in doubt, use `utility` as the default category.
 
 ### Plugin Testing Requirements
 

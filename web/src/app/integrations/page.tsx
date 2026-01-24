@@ -873,13 +873,14 @@ function ColorRulesEditor({
 
 // Category labels
 const CATEGORY_LABELS: Record<string, string> = {
-  weather: "Weather & Environment",
-  transit: "Transportation",
-  home: "Smart Home",
-  finance: "Finance",
-  entertainment: "Entertainment",
-  utility: "Utilities",
+  art: "Display Art",
   data: "Data & Information",
+  entertainment: "Entertainment",
+  finance: "Finance",
+  home: "Smart Home",
+  transit: "Transportation",
+  utility: "Utilities",
+  weather: "Weather & Environment",
 };
 
 interface PluginCardProps {
@@ -1375,7 +1376,9 @@ export default function IntegrationsPage() {
           </Card>
         ) : (
           <div className="space-y-8">
-            {Object.entries(groupedPlugins || {}).map(([category, plugins]) => (
+            {Object.entries(groupedPlugins || {})
+              .sort(([a], [b]) => (CATEGORY_LABELS[a] || a).localeCompare(CATEGORY_LABELS[b] || b))
+              .map(([category, plugins]) => (
               <section key={category}>
                 <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                   {CATEGORY_LABELS[category] || category}

@@ -105,6 +105,12 @@ function StringField({ name, property, value, onChange, required, disabled }: Fi
       // Ensure we have all enum options - remove duplicates
       const allOptions = [...new Set(enumArray)];
       
+      // Helper to capitalize first letter for display
+      const capitalizeDisplay = (str: string): string => {
+        if (!str) return str;
+        return str.charAt(0).toUpperCase() + str.slice(1);
+      };
+      
       // Render all enum options
       const selectItems = React.useMemo(() => {
         return allOptions.map((option, idx) => {
@@ -114,7 +120,7 @@ function StringField({ name, property, value, onChange, required, disabled }: Fi
               key={itemKey}
               value={option}
             >
-              {option}
+              {capitalizeDisplay(option)}
             </SelectItem>
           );
         });
@@ -641,6 +647,12 @@ export function SchemaForm({ schema, values, onChange, disabled, className }: Sc
         const isLocationField = hasLocationFields && (name === "latitude" || name === "longitude");
         const showLocationButton = isLocationField && !!navigator.geolocation;
         
+        // Disable digit_color when color_pattern is not "solid" (visual_clock plugin)
+        const isDigitColorField = name === "digit_color";
+        const colorPattern = values["color_pattern"] || schema.properties["color_pattern"]?.default || "solid";
+        const shouldDisableDigitColor = isDigitColorField && colorPattern !== "solid";
+        const fieldDisabled = disabled || shouldDisableDigitColor;
+        
         return (
           <div key={name} className="grid gap-1.5">
             <Label htmlFor={name} className="flex items-center gap-1">
@@ -653,7 +665,7 @@ export function SchemaForm({ schema, values, onChange, disabled, className }: Sc
               value={values[name] !== undefined ? values[name] : property.default}
               onChange={(val) => handleFieldChange(name, val)}
               required={isRequired}
-              disabled={disabled}
+              disabled={fieldDisabled}
               onLocationRequest={showLocationButton ? handleLocationRequest : undefined}
               showLocationButton={showLocationButton}
               isLocationLoading={false}
@@ -664,6 +676,11 @@ export function SchemaForm({ schema, values, onChange, disabled, className }: Sc
             {showLocationButton && (
               <p className="text-xs text-muted-foreground">
                 Click the location icon to use your current location
+              </p>
+            )}
+            {shouldDisableDigitColor && (
+              <p className="text-xs text-muted-foreground">
+                Digit color is not used when a color pattern is selected
               </p>
             )}
           </div>

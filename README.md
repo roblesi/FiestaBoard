@@ -76,6 +76,7 @@ FiestaBoard uses a **plugin architecture** - each feature is a self-contained pl
 - 📈 **[Stocks](./plugins/stocks/docs/SETUP.md)**: Monitor stock prices with color-coded indicators
 - 🌊 **[Surf Conditions](./plugins/surf/docs/SETUP.md)**: Live surf reports with wave height and quality ratings
 - 🚗 **[Traffic](./plugins/traffic/docs/SETUP.md)**: Travel time to destinations with live traffic
+- 🕐 **[Visual Clock](./plugins/visual_clock/docs/SETUP.md)**: Full-screen clock with large pixel-art style digits
 - 🌤️ **[Weather](./plugins/weather/docs/SETUP.md)**: Current conditions with temperature (F/C), UV index, precipitation chance, daily high/low, and sunset time
 
 **→ [Plugin Development Guide](./docs/development/PLUGIN_DEVELOPMENT.md)** - Create your own plugins!
