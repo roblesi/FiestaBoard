@@ -25,6 +25,7 @@ jobs:
         id: filter
         uses: dorny/paths-filter@v2
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           filters: |
             api:
               - 'src/**'
