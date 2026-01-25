@@ -574,6 +574,18 @@ export const handlers = [
     return HttpResponse.json(response);
   }),
 
+  http.post(`${API_BASE}/templates/send`, async ({ request }) => {
+    const body = await request.json() as { template: string | string[]; target?: string };
+    const template = Array.isArray(body.template) ? body.template.join("\n") : body.template;
+    return HttpResponse.json({
+      status: "success",
+      message: template || "Template sent",
+      sent_to_board: true,
+      target: body.target || "board",
+      dev_mode: false,
+    });
+  }),
+
   // Rotation endpoints
   http.get(`${API_BASE}/rotations`, () => {
     return HttpResponse.json(mockRotations);
