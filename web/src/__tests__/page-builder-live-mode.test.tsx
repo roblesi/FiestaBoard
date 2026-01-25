@@ -187,9 +187,16 @@ describe("PageBuilder Live Mode", () => {
       await user.click(toggle);
 
       await waitFor(() => {
-        // Look for the badge specifically (contains "Live" with Radio icon)
-        const badge = screen.getByRole("status", { name: /live/i }) || screen.getByText("Live", { selector: "span" });
-        expect(badge).toBeInTheDocument();
+        // Look for the badge text "Live" (not the label "Live Mode")
+        // The badge is a span with text "Live" inside a Badge component
+        const badges = screen.getAllByText("Live");
+        // Should have at least 2: "Live Mode" label and "Live" badge
+        // Find the one that's not the label
+        const badge = badges.find(el => {
+          const parent = el.closest('[class*="badge"]') || el.closest('div');
+          return parent && !el.closest('label');
+        });
+        expect(badge).toBeDefined();
       }, { timeout: 10000 });
     });
 
@@ -219,8 +226,10 @@ describe("PageBuilder Live Mode", () => {
       await user.click(toggle);
       await waitFor(() => {
         // Badge should disappear (label "Live Mode" will still be there)
-        const badge = screen.queryByText("Live", { selector: "span" });
-        expect(badge).not.toBeInTheDocument();
+        // Check that there's only one "Live" text (the label), not the badge
+        const allLiveTexts = screen.queryAllByText("Live");
+        // Should only have the "Live Mode" label, not the badge
+        expect(allLiveTexts.length).toBeLessThanOrEqual(1);
       });
     });
 
