@@ -55,7 +55,8 @@ describe("PageBuilder Live Mode", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
+    // Use real timers for React Query compatibility
+    vi.useRealTimers();
     
     // Default mock implementations
     vi.mocked(api.getStatus).mockResolvedValue({
@@ -119,7 +120,7 @@ describe("PageBuilder Live Mode", () => {
   });
 
   afterEach(() => {
-    vi.useRealTimers();
+    // Already using real timers
   });
 
   describe("Live Mode Toggle UI", () => {
@@ -260,8 +261,8 @@ describe("PageBuilder Live Mode", () => {
         expect(api.renderTemplate).toHaveBeenCalled();
       }, { timeout: 2000 });
 
-      // Advance timers to trigger debounced preview
-      await vi.advanceTimersByTimeAsync(500);
+      // Wait for debounced preview to complete (300ms in live mode)
+      await new Promise(resolve => setTimeout(resolve, 400));
 
       await waitFor(() => {
         expect(api.sendTemplate).toHaveBeenCalled();
@@ -278,12 +279,10 @@ describe("PageBuilder Live Mode", () => {
         expect(api.renderTemplate).toHaveBeenCalled();
       }, { timeout: 2000 });
 
-      // Advance timers
-      await vi.advanceTimersByTimeAsync(500);
+      // Wait for debounce period (500ms when not in live mode)
+      await new Promise(resolve => setTimeout(resolve, 600));
 
       // Should not call sendTemplate when live mode is off
-      // Wait a bit to ensure it's not called
-      await new Promise(resolve => setTimeout(resolve, 1000));
       expect(api.sendTemplate).not.toHaveBeenCalled();
     });
 
@@ -309,7 +308,8 @@ describe("PageBuilder Live Mode", () => {
         expect(api.renderTemplate).toHaveBeenCalled();
       }, { timeout: 2000 });
 
-      await vi.advanceTimersByTimeAsync(500);
+      // Wait for debounced preview to complete (300ms in live mode)
+      await new Promise(resolve => setTimeout(resolve, 400));
 
       await waitFor(() => {
         expect(api.sendTemplate).toHaveBeenCalled();
