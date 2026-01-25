@@ -20,6 +20,7 @@ import { WrappedTextNode } from './extensions/wrapped-text-node';
 import { UppercaseText } from './extensions/uppercase-text';
 import { LineConstraints } from './extensions/line-constraints';
 import { parseTemplateSimple, serializeTemplateSimple, parseLineContent } from './utils/serialization';
+import { insertTemplateContent } from './utils/insertion';
 import { BOARD_LINES, BOARD_WIDTH } from './utils/constants';
 import { calculateLineLength } from './utils/length-calculator';
 import { Slice } from '@tiptap/pm/model';
@@ -279,6 +280,32 @@ export function TipTapTemplateEditor({
         //   // Let clipboardTextSerializer handle it
         //   return false;
         // }
+        
+        // Handle color shortcuts: Ctrl/Cmd+Alt/Option+1-8
+        if ((event.ctrlKey || event.metaKey) && event.altKey) {
+          const keyNum = parseInt(event.key);
+          if (keyNum >= 1 && keyNum <= 8) {
+            const colorMap: Record<number, string> = {
+              1: 'red',
+              2: 'orange',
+              3: 'yellow',
+              4: 'green',
+              5: 'blue',
+              6: 'violet',
+              7: 'white',
+              8: 'black',
+            };
+            const colorName = colorMap[keyNum];
+            if (colorName) {
+              event.preventDefault();
+              const editorInstance = editorRef.current;
+              if (editorInstance) {
+                insertTemplateContent(editorInstance, `{{${colorName}}}`);
+              }
+              return true;
+            }
+          }
+        }
         
           // Let all other keys work naturally - no blocking or manual conversion
           // UppercaseText extension will handle lowercase conversion via validation

@@ -107,56 +107,6 @@ export function TemplateEditorToolbar({
           className
         )}
       >
-        {/* Undo/Redo Controls */}
-        <div className="flex items-center gap-0.5 rounded-md border border-border/50 overflow-hidden bg-background">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={handleUndo}
-                disabled={!canUndo}
-                className={cn(
-                  "px-2 py-1.5 transition-colors",
-                  canUndo
-                    ? "hover:bg-muted/50"
-                    : "opacity-40 cursor-not-allowed",
-                  "border-r border-border/50"
-                )}
-                aria-label="Undo"
-              >
-                <Undo2 className="w-4 h-4" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Undo (Ctrl+Z)</p>
-            </TooltipContent>
-          </Tooltip>
-          
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={handleRedo}
-                disabled={!canRedo}
-                className={cn(
-                  "px-2 py-1.5 transition-colors",
-                  canRedo
-                    ? "hover:bg-muted/50"
-                    : "opacity-40 cursor-not-allowed"
-                )}
-                aria-label="Redo"
-              >
-                <Redo2 className="w-4 h-4" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Redo (Ctrl+Shift+Z)</p>
-            </TooltipContent>
-          </Tooltip>
-        </div>
-
-        {/* Divider after undo/redo */}
-        <div className="h-6 w-px bg-border mx-1" />
         {/* Variables Dropdown */}
         {hasVariables ? (
           <ToolbarDropdown
@@ -298,6 +248,57 @@ export function TemplateEditorToolbar({
               </button>
             </TooltipTrigger>
             <TooltipContent>Align right</TooltipContent>
+          </Tooltip>
+        </div>
+
+        {/* Divider before undo/redo */}
+        <div className="h-6 w-px bg-border mx-1" />
+
+        {/* Undo/Redo Controls */}
+        <div className="flex items-center gap-0.5 rounded-md border border-border/50 overflow-hidden bg-background">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={handleUndo}
+                disabled={!canUndo}
+                className={cn(
+                  "px-2 py-1.5 transition-colors",
+                  canUndo
+                    ? "hover:bg-muted/50"
+                    : "opacity-40 cursor-not-allowed",
+                  "border-r border-border/50"
+                )}
+                aria-label="Undo"
+              >
+                <Undo2 className="w-4 h-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Undo (Ctrl+Z)</p>
+            </TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={handleRedo}
+                disabled={!canRedo}
+                className={cn(
+                  "px-2 py-1.5 transition-colors",
+                  canRedo
+                    ? "hover:bg-muted/50"
+                    : "opacity-40 cursor-not-allowed"
+                )}
+                aria-label="Redo"
+              >
+                <Redo2 className="w-4 h-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Redo (Ctrl+Shift+Z)</p>
+            </TooltipContent>
           </Tooltip>
         </div>
       </div>

@@ -37,6 +37,11 @@ export function FormattingPickerContent({ formatting, onInsert }: FormattingPick
   const [showRepeatColorPicker, setShowRepeatColorPicker] = React.useState(false);
   const [customChar, setCustomChar] = React.useState("");
 
+  // Detect platform for shortcut hint
+  const isMac = typeof navigator !== 'undefined' && (navigator.platform.toUpperCase().indexOf('MAC') >= 0 || navigator.userAgent.toUpperCase().indexOf('MAC') >= 0);
+  const modifierKey = isMac ? 'Cmd' : 'Ctrl';
+  const altKey = isMac ? 'Option' : 'Alt';
+
   const options: FormattingOption[] = Object.entries(formatting).map(([name, info]) => ({
     name: name.replace(/_/g, " "),
     syntax: info.syntax,
@@ -91,9 +96,11 @@ export function FormattingPickerContent({ formatting, onInsert }: FormattingPick
         </div>
         
         <div className="grid grid-cols-4 gap-2 mb-3">
-          {COLOR_ORDER.map((colorName) => {
+          {COLOR_ORDER.map((colorName, index) => {
             const colorInfo = COLOR_MAP[colorName];
             if (!colorInfo) return null;
+
+            const shortcutNumber = index + 1;
 
             return (
               <button
@@ -103,13 +110,23 @@ export function FormattingPickerContent({ formatting, onInsert }: FormattingPick
                 style={{ backgroundColor: colorInfo.bg }}
                 className={cn(
                   "h-10 rounded-md text-xs font-medium transition-all hover:scale-105 hover:shadow-md",
-                  "flex items-center justify-center",
+                  "flex items-center justify-center relative",
                   colorInfo.needsDarkText ? "text-black/80" : "text-white/90"
                 )}
                 aria-label={`${colorName} color`}
                 title={colorName}
               >
                 {colorName}
+                {/* Number indicator badge */}
+                <span
+                  className={cn(
+                    "absolute bottom-1 right-1 text-[10px] font-bold rounded px-1 min-w-[16px] text-center",
+                    "bg-black/30 text-white backdrop-blur-sm"
+                  )}
+                  aria-label={`Shortcut: ${modifierKey}+${altKey}+${shortcutNumber}`}
+                >
+                  {shortcutNumber}
+                </span>
               </button>
             );
           })}

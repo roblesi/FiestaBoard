@@ -29,6 +29,11 @@ export function ColorPickerContent({ onInsert }: ColorPickerContentProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
+  // Detect platform for shortcut hint
+  const isMac = typeof navigator !== 'undefined' && (navigator.platform.toUpperCase().indexOf('MAC') >= 0 || navigator.userAgent.toUpperCase().indexOf('MAC') >= 0);
+  const modifierKey = isMac ? 'Cmd' : 'Ctrl';
+  const altKey = isMac ? 'Option' : 'Alt';
+
   // Handle keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -157,6 +162,8 @@ export function ColorPickerContent({ onInsert }: ColorPickerContentProps) {
 
           const isHighlighted = highlightedIndex === index;
 
+          const shortcutNumber = index + 1;
+
           return (
             <button
               key={colorName}
@@ -169,7 +176,7 @@ export function ColorPickerContent({ onInsert }: ColorPickerContentProps) {
               style={{ backgroundColor: colorInfo.bg }}
               className={cn(
                 "h-10 rounded-md text-xs font-medium transition-all hover:scale-105 hover:shadow-md",
-                "flex items-center justify-center focus:outline-none",
+                "flex items-center justify-center focus:outline-none relative",
                 isHighlighted && "ring-2 ring-offset-2 ring-primary scale-105 shadow-md",
                 colorInfo.needsDarkText ? "text-black/80" : "text-white/90"
               )}
@@ -179,9 +186,23 @@ export function ColorPickerContent({ onInsert }: ColorPickerContentProps) {
               aria-selected={isHighlighted}
             >
               {colorName}
+              {/* Number indicator badge */}
+              <span
+                className={cn(
+                  "absolute bottom-1 right-1 text-[10px] font-bold rounded px-1 min-w-[16px] text-center",
+                  "bg-black/30 text-white backdrop-blur-sm"
+                )}
+                aria-label={`Shortcut: ${modifierKey}+${altKey}+${shortcutNumber}`}
+              >
+                {shortcutNumber}
+              </span>
             </button>
           );
         })}
+      </div>
+      {/* Shortcut hint */}
+      <div className="mt-2 pt-2 border-t border-border/50 text-xs text-muted-foreground text-center">
+        Tip: Use {modifierKey}+{altKey}+1-8 to insert colors
       </div>
     </div>
   );
