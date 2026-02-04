@@ -11,6 +11,25 @@ permissions:
   pull-requests: read
 
 jobs:
+  # Prevent loop: skip release when this run was triggered by our own version-bump push.
+  guard:
+    name: Skip if version-bump commit
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.check.outputs.skip }}
+    steps:
+      - name: Check if trigger was a version-bump commit
+        id: check
+        run: |
+          MSG="${{ github.event.head_commit.message }}"
+          ACTOR="${{ github.actor }}"
+          if echo "$MSG" | grep -qE '^chore: bump version to ' && [ "$ACTOR" = "github-actions[bot]" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "Skipping: trigger commit is our own version bump."
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
   detect-changes:
     name: Detect Changed Paths
     runs-on: ubuntu-latest
@@ -59,6 +78,8 @@ jobs:
   prep:
     name: Prepare Release
     runs-on: ubuntu-latest
+    needs: [guard]
+    if: needs.guard.outputs.skip != 'true'
     outputs:
       version: ${{ steps.version.outputs.version }}
       build_pi: ${{ steps.bump_type.outputs.build_pi }}
