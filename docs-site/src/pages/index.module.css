@@ -37,3 +37,8 @@
   gap: 1rem;
   margin-top: 1.5rem;
 }
+
+.githubButton {
+  color: #1a1a1a;
+  border-color: #1a1a1a;
+}

@@ -34,9 +34,8 @@ function HomepageHeader() {
             🚀 Get Started
           </Link>
           <Link
-            className="button button--outline button--lg"
-            href="https://github.com/roblesi/FiestaBoard"
-            style={{marginLeft: '1rem', color: '#1a1a1a', borderColor: '#1a1a1a'}}>
+            className={clsx('button button--outline button--lg', styles.githubButton)}
+            href="https://github.com/roblesi/FiestaBoard">
             ⭐ View on GitHub
           </Link>
         </div>
