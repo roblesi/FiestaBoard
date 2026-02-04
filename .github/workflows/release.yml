@@ -1,0 +1,427 @@
+name: Release and Publish
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  packages: write
+  pull-requests: read
+
+jobs:
+  detect-changes:
+    name: Detect Changed Paths
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      ui: ${{ steps.filter.outputs.ui }}
+      shared: ${{ steps.filter.outputs.shared }}
+      version: ${{ steps.filter.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed paths
+        id: filter
+        uses: dorny/paths-filter@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          filters: |
+            api:
+              - 'src/**'
+              - 'plugins/**'
+              - 'requirements.txt'
+              - 'requirements-dev.txt'
+              - 'Dockerfile.api'
+              - 'tests/**'
+              - '.pylintrc'
+            ui:
+              - 'web/**'
+              - 'Dockerfile.ui'
+              - 'Dockerfile.ui-dev'
+              - 'nginx.conf'
+              - 'nginx-dev.conf'
+              - 'start-dev-ui.sh'
+            shared:
+              - 'docker-compose*.yml'
+              - '.github/workflows/**'
+              - 'package.json'
+              - 'scripts/version-sync.js'
+            version:
+              - 'package.json'
+              - 'web/package.json'
+              - 'src/__init__.py'
+
+  prep:
+    name: Prepare Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      build_pi: ${{ steps.bump_type.outputs.build_pi }}
+      platforms: ${{ steps.bump_type.outputs.build_pi == 'true' && 'linux/amd64,linux/arm/v7,linux/arm64' || 'linux/amd64' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Determine version bump type and build platforms
+        id: bump_type
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Get the most recent merged PR
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'closed',
+              sort: 'updated',
+              direction: 'desc',
+              per_page: 10
+            });
+            
+            // Find the most recently merged PR
+            const mergedPR = prs.find(pr => 
+              pr.merged_at && 
+              new Date(pr.merged_at) > new Date(Date.now() - 60000) // Within last minute
+            );
+            
+            let bumpType = 'patch'; // default
+            let buildPi = false; // default
+            
+            if (mergedPR) {
+              console.log(`Found merged PR #${mergedPR.number}: ${mergedPR.title}`);
+              
+              const labels = mergedPR.labels.map(l => l.name);
+              console.log(`PR labels: ${labels.join(', ')}`);
+              
+              if (labels.includes('major')) {
+                bumpType = 'major';
+              } else if (labels.includes('minor')) {
+                bumpType = 'minor';
+              } else if (labels.includes('patch')) {
+                bumpType = 'patch';
+              }
+              
+              // Check if Pi builds are requested
+              if (labels.includes('pi') || labels.includes('raspberry-pi')) {
+                buildPi = true;
+                console.log('🍓 Raspberry Pi builds enabled via label');
+              }
+            } else {
+              console.log('No recently merged PR found, using default: patch');
+            }
+            
+            console.log(`Version bump type: ${bumpType}`);
+            console.log(`Build Pi images: ${buildPi}`);
+            
+            // Set outputs
+            core.setOutput('bump_type', bumpType);
+            core.setOutput('build_pi', buildPi);
+            
+            return bumpType;
+          result-encoding: string
+
+      - name: Bump version
+        id: version
+        run: |
+          echo "Bumping version with type: ${{ steps.bump_type.outputs.result }}"
+          node scripts/version-sync.js ${{ steps.bump_type.outputs.result }}
+          
+          # Read the new version from package.json
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
+          echo "New version: ${NEW_VERSION}"
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit version bump
+        run: |
+          git add package.json web/package.json src/__init__.py
+          git commit -m "chore: bump version to ${{ steps.version.outputs.version }}"
+          git push
+
+  build-api:
+    name: Build API Image
+    runs-on: ubuntu-latest
+    needs: [prep, detect-changes]
+    if: needs.prep.result == 'success' && (needs.detect-changes.outputs.api == 'true' || needs.detect-changes.outputs.shared == 'true' || needs.detect-changes.outputs.version == 'true')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push API image
+        id: build-api
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.api
+          push: true
+          platforms: ${{ needs.prep.outputs.platforms }}
+          build-args: |
+            VERSION=${{ needs.prep.outputs.version }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/fiestaboard-api:${{ needs.prep.outputs.version }}
+            ghcr.io/${{ github.repository_owner }}/fiestaboard-api:latest
+          cache-from: |
+            type=gha
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/fiestaboard-api:buildcache
+          cache-to: |
+            type=gha,mode=max
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/fiestaboard-api:buildcache,mode=max
+
+  build-ui:
+    name: Build UI Image
+    runs-on: ubuntu-latest
+    needs: [prep, detect-changes]
+    if: needs.prep.result == 'success' && (needs.detect-changes.outputs.ui == 'true' || needs.detect-changes.outputs.shared == 'true' || needs.detect-changes.outputs.version == 'true')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push UI image
+        id: build-ui
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.ui
+          push: true
+          platforms: ${{ needs.prep.outputs.platforms }}
+          build-args: |
+            VERSION=${{ needs.prep.outputs.version }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/fiestaboard-ui:${{ needs.prep.outputs.version }}
+            ghcr.io/${{ github.repository_owner }}/fiestaboard-ui:latest
+          cache-from: |
+            type=gha
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/fiestaboard-ui:buildcache
+          cache-to: |
+            type=gha,mode=max
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/fiestaboard-ui:buildcache,mode=max
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [prep, build-api, build-ui]
+    if: always() && needs.prep.result == 'success'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create GitHub Release
+        id: create-release
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const version = '${{ needs.prep.outputs.version }}';
+            const tagName = `v${version}`;
+            
+            // Create a tag
+            try {
+              await github.rest.git.createRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: `refs/tags/${tagName}`,
+                sha: context.sha
+              });
+              console.log(`Created tag: ${tagName}`);
+            } catch (error) {
+              console.log(`Tag ${tagName} may already exist: ${error.message}`);
+            }
+            
+            // Get commits since last release
+            let releaseNotes = `## What's Changed\n\n`;
+            
+            try {
+              const { data: releases } = await github.rest.repos.listReleases({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 1
+              });
+              
+              if (releases.length > 0) {
+                const lastRelease = releases[0];
+                const { data: comparison } = await github.rest.repos.compareCommits({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  base: lastRelease.tag_name,
+                  head: context.sha
+                });
+                
+                releaseNotes += comparison.commits
+                  .map(commit => `- ${commit.commit.message.split('\n')[0]} (${commit.sha.substring(0, 7)})`)
+                  .join('\n');
+              } else {
+                releaseNotes += 'Initial release';
+              }
+            } catch (error) {
+              console.log('Could not generate comparison, using default notes');
+              releaseNotes += 'See commit history for changes.';
+            }
+            
+            releaseNotes += `\n\n## Docker Images\n\n`;
+            
+            const buildPi = '${{ needs.prep.outputs.build_pi }}' === 'true';
+            const platforms = buildPi 
+              ? '`linux/amd64`, `linux/arm/v7`, `linux/arm64` 🍓' 
+              : '`linux/amd64`';
+            
+            releaseNotes += `**Platforms:** ${platforms}\n\n`;
+            releaseNotes += `\`\`\`bash\n`;
+            releaseNotes += `docker pull ghcr.io/${{ github.repository_owner }}/fiestaboard-api:${version}\n`;
+            releaseNotes += `docker pull ghcr.io/${{ github.repository_owner }}/fiestaboard-ui:${version}\n`;
+            releaseNotes += `\`\`\`\n`;
+            
+            if (buildPi) {
+              releaseNotes += `\n### 🍓 Raspberry Pi Support\n\n`;
+              releaseNotes += `This release includes multi-architecture images that work on Raspberry Pi (arm/v7 and arm64).\n`;
+              releaseNotes += `Simply use the same \`docker pull\` commands above on your Pi!\n`;
+            }
+            
+            // Create the release
+            const { data: release } = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tagName,
+              name: `Release ${version}`,
+              body: releaseNotes,
+              draft: false,
+              prerelease: false
+            });
+            
+            console.log(`Created release: ${release.html_url}`)
+
+  revert-on-failure:
+    name: Revert on Build Failure
+    runs-on: ubuntu-latest
+    needs: [prep, build-api, build-ui]
+    if: failure() && (needs.build-api.result == 'failure' || needs.build-ui.result == 'failure')
+    steps:
+      - name: Revert merge
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            console.log('🚨 Docker build failed! Reverting merge...');
+            
+            // Get the commit that triggered this workflow
+            const { data: commit } = await github.rest.repos.getCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.sha
+            });
+            
+            // Check if this is a merge commit
+            let prNumber = null;
+            let revertMessage = `Revert: ${commit.commit.message.split('\n')[0]}`;
+            
+            // Try to extract PR number from merge commit message
+            const prMatch = commit.commit.message.match(/Merge pull request #(\d+)/);
+            if (prMatch) {
+              prNumber = parseInt(prMatch[1]);
+              revertMessage = `Revert merge of PR #${prNumber} - Docker build failed`;
+            }
+            
+            // Create revert commit
+            try {
+              // Get the parent commit (the one before the merge)
+              const parentSha = commit.parents[0].sha;
+              
+              // Update the main branch to point to the parent
+              await github.rest.git.updateRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: 'heads/main',
+                sha: parentSha,
+                force: true
+              });
+              
+              console.log(`✅ Successfully reverted main to ${parentSha}`);
+              
+              // If we found a PR, comment on it
+              if (prNumber) {
+                try {
+                  // Get PR details
+                  const { data: pr } = await github.rest.pulls.get({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    pull_request_number: prNumber
+                  });
+                  
+                  // Re-open the PR if it was closed
+                  if (pr.state === 'closed') {
+                    await github.rest.pulls.update({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      pull_request_number: prNumber,
+                      state: 'open'
+                    });
+                    console.log(`✅ Re-opened PR #${prNumber}`);
+                  }
+                  
+                  // Add comment to PR
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: prNumber,
+                    body: `## 🚨 Docker Build Failed\n\nThe merge to \`main\` has been automatically reverted because the Docker build failed.\n\n**Build logs:** ${context.payload.repository.html_url}/actions/runs/${context.runId}\n\nPlease fix the Docker build issues and re-submit this PR.`
+                  });
+                  
+                  console.log(`✅ Posted comment to PR #${prNumber}`);
+                } catch (error) {
+                  console.log(`⚠️  Could not update PR #${prNumber}: ${error.message}`);
+                }
+              } else {
+                // Create an issue if we can't find the PR
+                await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: '🚨 Docker Build Failed - Merge Reverted',
+                  body: `The merge to \`main\` at commit ${context.sha} has been automatically reverted because the Docker build failed.\n\n**Build logs:** ${context.payload.repository.html_url}/actions/runs/${context.runId}\n\nPlease investigate and fix the Docker build issues.`,
+                  labels: ['bug', 'build-failure']
+                });
+                console.log('✅ Created issue for build failure');
+              }
+            } catch (error) {
+              console.error(`❌ Failed to revert: ${error.message}`);
+              core.setFailed(`Failed to revert merge: ${error.message}`);
+            }
+

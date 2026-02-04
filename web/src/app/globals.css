@@ -1,0 +1,608 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+
+  /* Board Official Colors - use these for all status/tile colors */
+  --color-board-red: #eb4034;
+  --color-board-orange: #f5a623;
+  --color-board-yellow: #f8e71c;
+  --color-board-green: #7ed321;
+  --color-board-blue: #4a90d9;
+  --color-board-violet: #9b59b6;
+  --color-board-white: #ffffff;
+  --color-board-black: #1a1a1a;
+  /* Backward compatibility aliases */
+  --color-fiesta-red: var(--color-board-red);
+  --color-fiesta-orange: var(--color-board-orange);
+  --color-fiesta-yellow: var(--color-board-yellow);
+  --color-fiesta-green: var(--color-board-green);
+  --color-fiesta-blue: var(--color-board-blue);
+  --color-fiesta-violet: var(--color-board-violet);
+  --color-fiesta-white: var(--color-board-white);
+  --color-fiesta-black: var(--color-board-black);
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    /* Reserve space for scrollbar to prevent layout shift */
+    scrollbar-gutter: stable;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  /* Prevent Radix UI Select from removing scrollbar when opened */
+  body[data-scroll-locked] {
+    overflow-y: scroll !important;
+    margin-right: 0 !important;
+  }
+}
+
+/* Accordion animations */
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+.animate-accordion-down {
+  animation: accordion-down 0.2s ease-out;
+}
+
+.animate-accordion-up {
+  animation: accordion-up 0.2s ease-out;
+}
+
+/* Tailwind animate utilities for Radix UI */
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes exit {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes slide-in-from-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-out-to-right {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes slide-in-from-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-out-to-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes slide-in-from-top {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-out-to-top {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-100%);
+  }
+}
+
+@keyframes slide-in-from-bottom {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-out-to-bottom {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+.animate-in {
+  animation: enter 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-out {
+  animation: exit 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fade-in-0 {
+  animation: fade-in 200ms ease-out;
+}
+
+.fade-out-0 {
+  animation: fade-out 200ms ease-out;
+}
+
+.slide-in-from-right {
+  animation: slide-in-from-right 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.slide-out-to-right {
+  animation: slide-out-to-right 250ms cubic-bezier(0.4, 0, 1, 1);
+}
+
+.slide-in-from-left {
+  animation: slide-in-from-left 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.slide-out-to-left {
+  animation: slide-out-to-left 250ms cubic-bezier(0.4, 0, 1, 1);
+}
+
+.slide-in-from-top {
+  animation: slide-in-from-top 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.slide-out-to-top {
+  animation: slide-out-to-top 250ms cubic-bezier(0.4, 0, 1, 1);
+}
+
+.slide-in-from-bottom {
+  animation: slide-in-from-bottom 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.slide-out-to-bottom {
+  animation: slide-out-to-bottom 250ms cubic-bezier(0.4, 0, 1, 1);
+}
+
+/* Page Transitions - CSS-based (works in all browsers) */
+@layer base {
+  /* Animate page content on route changes */
+  main {
+    animation: page-enter 300ms ease-out;
+  }
+
+  /* Slide-up animation for modal-like pages (edit/new) */
+  html[data-transition="slide-up"] main {
+    animation: slide-up-enter 350ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Slide-down animation for returning from modals */
+  html[data-transition="slide-down"] main {
+    animation: slide-down-enter 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Scale-fade for content areas */
+  html[data-transition="scale-fade"] main {
+    animation: scale-fade-enter 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Respect user's motion preferences */
+  @media (prefers-reduced-motion: reduce) {
+    main {
+      animation: none !important;
+    }
+  }
+}
+
+/* Page Transition Keyframes */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-up-enter {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes slide-down-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-fade-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+
+/* Performance optimizations for interactive elements */
+@layer utilities {
+  /* Optimize hover states for better performance */
+  .hover-optimized {
+    will-change: border-color, background-color;
+    transform: translateZ(0); /* Force GPU acceleration */
+    contain: layout style paint; /* CSS containment for better performance */
+  }
+  
+  /* Optimize transitions to use GPU-accelerated properties */
+  .transition-optimized {
+    transition-property: border-color, background-color, color;
+    transition-timing-function: ease-out;
+    will-change: border-color, background-color, color;
+  }
+  
+  /* Optimize page button container for better hover/click performance */
+  .page-button-container {
+    contain: layout style paint;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-font-smoothing: antialiased;
+    /* Remove all transitions for instant feedback - no sluggishness */
+    transition: none !important;
+  }
+  
+  /* Use compositor-only properties for hover effects - ultra fast for instant feel */
+  .hover-fast {
+    transition: border-color 75ms cubic-bezier(0.4, 0, 0.2, 1), 
+                background-color 75ms cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: border-color, background-color;
+  }
+  
+  /* Instant hover - no transition for maximum responsiveness */
+  .hover-instant {
+    /* No transition - instant color change */
+  }
+  
+  /* Prevent layout shifts on hover */
+  .hover-stable {
+    contain: layout;
+  }
+  
+  /* Use opacity/transform for smoother hover effects */
+  .hover-smooth {
+    transition: opacity 100ms cubic-bezier(0.4, 0, 0.2, 1),
+                transform 100ms cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: opacity, transform;
+  }
+}
+
+/* ===== 60FPS MOBILE MENU ANIMATIONS ===== */
+/* Use GPU-accelerated transforms for smooth performance */
+
+/* Mobile menu panel - slide down from top */
+@keyframes mobile-menu-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -100%, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes mobile-menu-exit {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(0, -100%, 0);
+  }
+}
+
+/* Mobile menu classes */
+.mobile-menu-enter {
+  animation: mobile-menu-enter 250ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  /* Pre-load transform to avoid jank */
+  transform: translate3d(0, 0, 0);
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.mobile-menu-exit {
+  animation: mobile-menu-exit 200ms cubic-bezier(0.4, 0, 1, 1) forwards;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+/* Backdrop fade animations */
+@keyframes backdrop-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes backdrop-exit {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.backdrop-enter {
+  animation: backdrop-enter 200ms ease-out forwards;
+  will-change: opacity;
+}
+
+.backdrop-exit {
+  animation: backdrop-exit 150ms ease-in forwards;
+  will-change: opacity;
+}
+
+/* ===== 60FPS SHEET/DRAWER ANIMATIONS ===== */
+/* Direct keyframe animations for smooth sheet transitions */
+
+@keyframes sheet-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sheet-slide-in-right {
+  from {
+    transform: translate3d(100%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes sheet-slide-in-left {
+  from {
+    transform: translate3d(-100%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes sheet-slide-in-top {
+  from {
+    transform: translate3d(0, -100%, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes sheet-slide-in-bottom {
+  from {
+    transform: translate3d(0, 100%, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Prevent iOS Safari from zooming on input focus */
+/* iOS Safari zooms when input font-size is < 16px */
+@supports (-webkit-touch-callout: none) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

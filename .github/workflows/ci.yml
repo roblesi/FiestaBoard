@@ -1,0 +1,276 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  detect-changes:
+    name: Detect Changed Paths
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      ui: ${{ steps.filter.outputs.ui }}
+      plugins: ${{ steps.filter.outputs.plugins }}
+      shared: ${{ steps.filter.outputs.shared }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed paths
+        id: filter
+        uses: dorny/paths-filter@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          filters: |
+            api:
+              - 'src/**'
+              - 'requirements.txt'
+              - 'requirements-dev.txt'
+              - 'Dockerfile.api'
+              - 'tests/**'
+              - '.pylintrc'
+            ui:
+              - 'web/**'
+              - 'Dockerfile.ui'
+              - 'Dockerfile.ui-dev'
+              - 'nginx.conf'
+              - 'nginx-dev.conf'
+              - 'start-dev-ui.sh'
+            plugins:
+              - 'plugins/**'
+            shared:
+              - 'docker-compose*.yml'
+              - '.github/workflows/**'
+              - 'package.json'
+              - 'scripts/version-sync.js'
+
+  test-platform:
+    name: Platform Tests
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.api == 'true' || needs.detect-changes.outputs.shared == 'true'
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+    
+    - name: Verify imports
+      run: |
+        python -c "import sys; sys.path.insert(0, '.'); from src import config, board_client, board_chars; print('✅ Core imports successful')"
+        python -c "import sys; sys.path.insert(0, '.'); from src.data_sources import weather, datetime, home_assistant, star_trek_quotes; print('✅ Data source imports successful')"
+        python -c "import sys; sys.path.insert(0, '.'); from src.formatters import message_formatter; print('✅ Formatter imports successful')"
+        python -c "import sys; sys.path.insert(0, '.'); from src.main import FiestaBoardDisplayService; print('✅ Main module imports successful')"
+    
+    - name: Run pylint
+      run: |
+        pylint --version
+        pylint src/ --rcfile=.pylintrc || true
+      continue-on-error: true
+    
+    - name: Check code formatting (basic syntax check)
+      run: |
+        find src -name "*.py" -exec python -m py_compile {} \;
+        echo "✅ All Python files compile successfully"
+    
+    - name: Run platform tests with coverage
+      run: |
+        # Run tests with coverage, explicitly omitting legacy code
+        coverage run --source=src --omit='src/data_sources/*,src/formatters/*,src/main.py,src/system/*,src/text_to_board.py,src/plugins/testing.py' -m pytest tests/ -v
+        coverage xml
+        coverage report -m
+      env:
+        BOARD_READ_WRITE_KEY: test_key
+        WEATHER_API_KEY: test_key
+    
+    - name: Upload platform coverage
+      uses: codecov/codecov-action@v4
+      with:
+        files: coverage.xml
+        flags: platform
+        name: platform-coverage
+        fail_ci_if_error: false
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    
+    - name: Test basic functionality
+      run: |
+        python -c "
+        import sys
+        sys.path.insert(0, '.')
+        from src.config import Config
+        from src.board_chars import BoardChars
+        print('✅ Config and BoardChars can be imported')
+        print(f'✅ Config class has required attributes: {hasattr(Config, \"BOARD_READ_WRITE_KEY\")}')
+        "
+      env:
+        BOARD_READ_WRITE_KEY: test_key
+        WEATHER_API_KEY: test_key
+
+  test-plugins:
+    name: Plugin Tests
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.plugins == 'true' || needs.detect-changes.outputs.api == 'true' || needs.detect-changes.outputs.shared == 'true'
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+    
+    - name: Validate plugin integrity
+      run: |
+        echo "Validating plugin manifests and uniqueness..."
+        python scripts/validate_plugins.py --verbose
+        echo "✅ All plugins validated successfully"
+    
+    - name: Discover plugins with tests
+      id: discover
+      run: |
+        echo "Discovering plugins with tests..."
+        plugins=$(find plugins -maxdepth 2 -type d -name "tests" | sed 's|/tests||' | sed 's|plugins/||' | grep -v "^_" || true)
+        if [ -z "$plugins" ]; then
+          echo "No plugins with tests found"
+          echo "has_plugins=false" >> $GITHUB_OUTPUT
+        else
+          echo "Found plugins with tests:"
+          echo "$plugins"
+          echo "has_plugins=true" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Run plugin tests with coverage
+      if: steps.discover.outputs.has_plugins == 'true'
+      run: |
+        python scripts/run_plugin_tests.py --verbose
+      env:
+        BOARD_READ_WRITE_KEY: test_key
+        WEATHER_API_KEY: test_key
+    
+    - name: Generate plugin coverage report
+      if: steps.discover.outputs.has_plugins == 'true'
+      run: |
+        # Run combined coverage for all plugins (no fail-under, just for reporting)
+        pytest plugins/*/tests/ -v --cov=plugins --cov-report=xml:coverage-plugins.xml --cov-report=term-missing || true
+      env:
+        BOARD_READ_WRITE_KEY: test_key
+        WEATHER_API_KEY: test_key
+    
+    - name: Upload plugin coverage
+      if: steps.discover.outputs.has_plugins == 'true'
+      uses: codecov/codecov-action@v4
+      with:
+        files: coverage-plugins.xml
+        flags: plugins
+        name: plugin-coverage
+        fail_ci_if_error: false
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  test-ui:
+    name: UI Tests
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.ui == 'true' || needs.detect-changes.outputs.shared == 'true'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: web/package-lock.json
+    
+    - name: Install UI dependencies
+      working-directory: web
+      run: |
+        # Fix npm bug with optional dependencies (https://github.com/npm/cli/issues/4828)
+        rm -rf node_modules package-lock.json
+        npm install
+        # Verify rollup Linux binary is installed
+        test -d node_modules/@rollup/rollup-linux-x64-gnu || (echo "❌ Rollup Linux binary not installed" && exit 1)
+    
+    - name: Run UI tests
+      working-directory: web
+      run: npm run test:run
+
+  build:
+    name: Build Verification
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.api == 'true' || needs.detect-changes.outputs.ui == 'true' || needs.detect-changes.outputs.shared == 'true'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Verify package structure
+      run: |
+        echo "Checking package structure..."
+        test -d src || (echo "❌ src directory missing" && exit 1)
+        test -f src/__init__.py || (echo "❌ src/__init__.py missing" && exit 1)
+        test -f src/main.py || (echo "❌ src/main.py missing" && exit 1)
+        test -f src/config.py || (echo "❌ src/config.py missing" && exit 1)
+        echo "✅ Package structure is valid"
+    
+    - name: Verify plugin structure
+      run: |
+        echo "Checking plugin structure..."
+        test -d plugins || (echo "❌ plugins directory missing" && exit 1)
+        # Verify each plugin has required files
+        for plugin in plugins/*/; do
+          plugin_name=$(basename "$plugin")
+          if [ "$plugin_name" != "_template" ] && [ -d "$plugin" ]; then
+            echo "Checking plugin: $plugin_name"
+            test -f "$plugin/__init__.py" || (echo "❌ $plugin_name/__init__.py missing" && exit 1)
+            test -f "$plugin/manifest.json" || (echo "❌ $plugin_name/manifest.json missing" && exit 1)
+            echo "  ✅ $plugin_name structure valid"
+          fi
+        done
+        echo "✅ All plugin structures valid"

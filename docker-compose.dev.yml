@@ -1,0 +1,78 @@
+services:
+  # API Service (same as production)
+  fiestaboard-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: fiestaboard-api-dev
+    env_file:
+      - .env
+    ports:
+      - "6969:8000"
+    environment:
+      - PRODUCTION=false
+      # Don't set FIESTA_API_URL - let frontend determine dynamically based on request hostname
+    volumes:
+      # Persist data (including config and logs) to local filesystem
+      - ./data:/app/data
+      # Mount source code for development (hot reload)
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./scripts:/app/scripts
+      # Mount plugins directory
+      - ./plugins:/app/plugins
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Web UI - Development mode with HMR and HTTP/2
+  fiestaboard-ui-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui-dev
+    image: fiestaboard-ui-dev:latest
+    container_name: fiestaboard-ui-dev
+    working_dir: /app
+    volumes:
+      - ./web:/app
+      - ./nginx-dev.conf:/etc/nginx/nginx.conf:ro
+      - ./start-dev-ui.sh:/start-dev-ui.sh:ro
+      - fiestaboard-ui-node-modules:/app/node_modules  # Named volume to persist node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:6969
+      - WATCHPACK_POLLING=true  # Enable polling for file changes in Docker
+    command: sh /start-dev-ui.sh
+    depends_on:
+      - fiestaboard-api
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Storybook - Component development and testing
+  fiestaboard-storybook:
+    image: node:20-alpine
+    container_name: fiestaboard-storybook
+    working_dir: /app
+    volumes:
+      - ./web:/app
+      - fiestaboard-storybook-node-modules:/app/node_modules
+    ports:
+      - "6006:6006"
+    environment:
+      - WATCHPACK_POLLING=true  # Enable polling for file changes in Docker
+    command: sh -c "rm -f package-lock.json && npm install --force && npm run storybook -- --host 0.0.0.0"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  fiestaboard-ui-node-modules:
+  fiestaboard-storybook-node-modules:

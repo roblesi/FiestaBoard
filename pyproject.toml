@@ -1,0 +1,149 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fiestaboard"
+dynamic = ["version"]
+description = "FiestaBoard Display Service - Home hub for your split-flap display"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "FiestaBoard Contributors"}
+]
+keywords = ["fiestaboard", "display", "home-automation", "api", "split-flap"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+# Dependencies from requirements.txt
+dependencies = [
+    "requests>=2.31.0",
+    "python-dateutil>=2.8.2",
+    "pytz>=2024.1",
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "pydantic>=2.6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "black>=24.0.0",
+    "ruff>=0.2.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/roblesi/fiestaboard"
+Repository = "https://github.com/roblesi/fiestaboard"
+Issues = "https://github.com/roblesi/fiestaboard/issues"
+
+[tool.setuptools.dynamic]
+version = {attr = "src.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*", "plugins*"]
+namespaces = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "plugins"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--verbose",
+    "--strict-markers",
+    "--tb=short",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]
+
+[tool.coverage.run]
+source = ["src", "plugins"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/_template/*",
+    "*/conftest.py",
+    # Legacy code (documented in GitHub issues #58-61)
+    "src/data_sources/*",
+    "src/formatters/*",
+    "src/system/*",
+    "src/main.py",
+    "src/text_to_board.py",
+    "src/plugins/testing.py",  # Test infrastructure
+]
+branch = true
+
+[tool.coverage.report]
+fail_under = 49
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "pass",
+]
+# Note: Coverage threshold is set to 49% (current coverage is 49%)
+# Target is 80%. See GitHub issue #63 for improvement plan.
+# Low coverage areas: api_server (32%), config_manager (50%), templates/engine (52%), plugins/registry (57%)
+# Related issues: #58 (legacy data sources), #59 (env vars), #60 (naming), #61 (API redundancy)
+
+[tool.coverage.html]
+directory = "coverage/html"
+
+[tool.coverage.xml]
+output = "coverage/coverage.xml"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "B008",  # do not perform function calls in argument defaults
+]
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]  # Allow unused imports in __init__.py
+"tests/**" = ["B008"]  # Allow function calls in argument defaults in tests
+"plugins/**/tests/**" = ["B008"]  # Allow function calls in argument defaults in plugin tests
+
+[tool.black]
+line-length = 120
+target-version = ["py311"]
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | node_modules
+)/
+'''

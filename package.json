@@ -1,0 +1,16 @@
+{
+  "name": "fiestaboard",
+  "version": "1.27.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm-run-all --parallel dev:api dev:web",
+    "dev:api": "uvicorn src.api_server:app --reload --host 0.0.0.0 --port 8000",
+    "dev:web": "cd web && npm run dev",
+    "dev:docker": "docker-compose -f docker-compose.dev.yml up",
+    "dev:docker:build": "docker-compose -f docker-compose.dev.yml up --build",
+    "build:web": "cd web && npm run build",
+    "start:web": "cd web && npm run start",
+    "test:web": "cd web && npm run test:run",
+    "lint:web": "cd web && npm run lint"
+  }
+}

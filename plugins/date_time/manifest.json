@@ -1,0 +1,83 @@
+{
+  "id": "date_time",
+  "name": "Date & Time",
+  "version": "1.0.0",
+  "description": "Display current date and time in configurable formats",
+  "author": "FiestaBoard Team",
+  "repository": "https://github.com/FiestaBoard/FiestaBoard",
+  "documentation": "README.md",
+  "icon": "clock",
+  "category": "utility",
+
+  "settings_schema": {
+    "type": "object",
+    "properties": {
+      "enabled": {
+        "type": "boolean",
+        "title": "Enable Date & Time",
+        "default": true
+      },
+      "timezone": {
+        "type": "string",
+        "title": "Timezone",
+        "description": "IANA timezone name (e.g., America/Los_Angeles)",
+        "default": "America/Los_Angeles",
+        "ui:widget": "timezone"
+      }
+    }
+  },
+
+  "env_vars": [
+    {
+      "name": "TIMEZONE",
+      "required": false,
+      "description": "IANA timezone (e.g., America/Los_Angeles)",
+      "default": "America/Los_Angeles"
+    }
+  ],
+
+  "variables": {
+    "simple": [
+      "time",
+      "date",
+      "datetime",
+      "day",
+      "day_of_week",
+      "month",
+      "year",
+      "hour",
+      "minute",
+      "timezone_abbr",
+      "time_12h",
+      "time_24h",
+      "date_us",
+      "date_us_short",
+      "month_number",
+      "month_number_padded",
+      "month_abbr",
+      "timezone"
+    ]
+  },
+
+  "max_lengths": {
+    "time": 5,
+    "date": 10,
+    "datetime": 16,
+    "day": 2,
+    "day_of_week": 9,
+    "month": 9,
+    "year": 4,
+    "hour": 2,
+    "minute": 2,
+    "timezone_abbr": 5,
+    "time_12h": 8,
+    "time_24h": 5,
+    "date_us": 10,
+    "date_us_short": 8,
+    "month_number": 2,
+    "month_number_padded": 2,
+    "month_abbr": 3,
+    "timezone": 30
+  }
+}
+

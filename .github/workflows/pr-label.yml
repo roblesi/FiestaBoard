@@ -1,0 +1,77 @@
+name: PR Auto-Label
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Auto-label PR based on conventional commits
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const title = context.payload.pull_request.title;
+            const prNumber = context.payload.pull_request.number;
+            
+            console.log(`Analyzing PR #${prNumber}: "${title}"`);
+            
+            // Remove existing version labels
+            const existingLabels = context.payload.pull_request.labels.map(l => l.name);
+            const versionLabels = ['major', 'minor', 'patch'];
+            const labelsToRemove = existingLabels.filter(l => versionLabels.includes(l));
+            
+            for (const label of labelsToRemove) {
+              console.log(`Removing existing label: ${label}`);
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                name: label
+              });
+            }
+            
+            // Determine version bump type from PR title
+            let bumpType = 'patch'; // default
+            
+            // Check for breaking changes (major)
+            if (title.includes('BREAKING CHANGE:') || 
+                title.includes('!:') ||
+                /^[a-z]+!:/.test(title)) {
+              bumpType = 'major';
+            }
+            // Check for features (minor)
+            else if (title.startsWith('feat:') || 
+                     title.startsWith('feature:') ||
+                     title.startsWith('feat(') ||
+                     title.startsWith('feature(')) {
+              bumpType = 'minor';
+            }
+            // Check for fixes (patch)
+            else if (title.startsWith('fix:') || 
+                     title.startsWith('fix(')) {
+              bumpType = 'patch';
+            }
+            // Default to patch for other conventional commit types
+            
+            console.log(`Adding label: ${bumpType}`);
+            
+            // Add the appropriate label
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              labels: [bumpType]
+            });
+            
+            console.log(`✅ PR labeled with: ${bumpType}`);
+
