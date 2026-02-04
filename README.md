@@ -246,7 +246,12 @@ npm run test:e2e:ui
 
 # Run in debug mode
 npm run test:e2e:debug
+
+# View test coverage analysis (~50% UI coverage)
+npm run test:e2e:coverage
 ```
+
+**E2E Test Coverage:** The test suite provides ~50% UI coverage across 22 tests, with excellent coverage of navigation (90%), page loads (80%), and responsive design (70%). See [web/e2e/COVERAGE.md](./web/e2e/COVERAGE.md) for detailed analysis.
 
 For more details on e2e testing, see [web/e2e/README.md](./web/e2e/README.md).
 
