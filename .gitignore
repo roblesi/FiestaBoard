@@ -1,5 +1,7 @@
 # Environment variables - NEVER commit these!
 .env
+.env.local
+.env.*.local
 
 # Codespaces
 .devcontainer/secrets.json
