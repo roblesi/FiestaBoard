@@ -209,6 +209,8 @@ SENSITIVE_FIELDS = {
     "finnhub_api_key",
     "purpleair_api_key",
     "openweathermap_api_key",
+    "client_id",
+    "client_secret",
 }
 
 
