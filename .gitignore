@@ -40,6 +40,11 @@ ENV/
 web/out/
 web/.next/
 
+# Playwright
+web/playwright-report/
+web/test-results/
+web/playwright/.cache/
+
 # IDE
 .vscode/
 .idea/
