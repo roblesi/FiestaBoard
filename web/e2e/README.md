@@ -41,6 +41,23 @@ View the HTML report from the last test run:
 npm run test:e2e:report
 ```
 
+### View Test Coverage
+
+View a detailed coverage analysis of what UI features are tested:
+
+```bash
+npm run test:e2e:coverage
+```
+
+This displays:
+- Coverage percentage by feature
+- What's tested vs. not tested
+- Interaction type coverage
+- Pages covered
+- Recommendations for improving coverage
+
+For a detailed written analysis, see [COVERAGE.md](./COVERAGE.md).
+
 ## Test Structure
 
 The e2e tests are organized by feature:
@@ -87,29 +104,71 @@ The tests are configured to run in CI with:
 
 ## Coverage
 
-These tests cover the main user workflows:
+### Current Coverage: ~50%
 
-1. **Initial Setup & Navigation**
+The test suite currently covers approximately **50% of UI functionality** across 22 tests in 5 test files.
+
+**View detailed coverage analysis:**
+```bash
+npm run test:e2e:coverage
+```
+
+**Read the full coverage report:** [COVERAGE.md](./COVERAGE.md)
+
+### What's Covered
+
+**High Coverage (60-90%)**
+- ✅ Navigation and routing (90%)
+- ✅ Page loads and rendering (80%)
+- ✅ Responsive design testing (70%)
+- ✅ Pages management workflows (70%)
+
+**Medium Coverage (40-60%)**
+- ⚠️ Button visibility (60%)
+- ⚠️ Form display (50%)
+- ⚠️ Dashboard features (60%)
+- ⚠️ Configuration pages (40%)
+
+**Low Coverage (<40%)**
+- ❌ Form submissions (10%)
+- ❌ Data CRUD operations (20%)
+- ❌ Service lifecycle (0%)
+- ❌ Error handling (0%)
+- ❌ Real-time updates (0%)
+
+### Test Distribution
+
+1. **Initial Setup & Navigation** (3 tests)
    - Dashboard loads correctly
    - Navigation between pages works
    - Responsive design on mobile
 
-2. **Page Management**
+2. **Page Management** (8 tests)
    - Viewing the pages list
    - Creating new pages
    - Page editor functionality
    - Navigating back from creation
 
-3. **Configuration**
+3. **Configuration** (6 tests)
    - Accessing Integrations
    - Accessing Settings
    - Accessing Schedule
 
+4. **Complete Workflows** (5 tests)
+   - End-to-end user journeys
+   - State persistence
+   - Multi-viewport testing
+
 ## Future Tests
 
-Additional tests to consider:
-- Service start/stop functionality
-- Page activation and preview
+Additional tests recommended to reach 80%+ coverage:
+- **High Priority**: Service start/stop functionality
+- **High Priority**: Complete page creation (save)
+- **High Priority**: Page activation workflow
+- **High Priority**: Settings save functionality
+- **High Priority**: Plugin enable/disable
+- Page editing (existing pages)
+- Page deletion
 - Plugin configuration
 - API integration tests
 - Visual regression tests
