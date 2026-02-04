@@ -217,6 +217,39 @@ The development environment includes hot reload for both Python and Next.js code
 
 For detailed development workflows, see [LOCAL_DEVELOPMENT.md](./docs/setup/LOCAL_DEVELOPMENT.md).
 
+### Testing
+
+FiestaBoard includes comprehensive test suites:
+
+**Unit Tests (Python Backend)**
+```bash
+# Run backend tests
+cd tests
+pytest
+```
+
+**Unit Tests (Web UI)**
+```bash
+# Run frontend unit tests
+cd web
+npm run test:run
+```
+
+**End-to-End Tests (Web UI)**
+```bash
+# Run e2e tests with Playwright
+cd web
+npm run test:e2e
+
+# Run in interactive UI mode
+npm run test:e2e:ui
+
+# Run in debug mode
+npm run test:e2e:debug
+```
+
+For more details on e2e testing, see [web/e2e/README.md](./web/e2e/README.md).
+
 ## How It Works
 
 Select a page in the web UI and the service will keep it updated on your board. Pages use templates with dynamic data sources like weather, time, and more. Create custom pages to display exactly what you want.

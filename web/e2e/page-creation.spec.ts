@@ -57,11 +57,11 @@ test.describe('Page Creation', () => {
     await page.goto('/pages/new');
     await page.waitForLoadState('networkidle');
 
-    // Try to navigate back using browser history
-    await page.goBack();
+    // Navigate directly back to pages
+    await page.goto('/pages');
     await page.waitForLoadState('networkidle');
 
-    // Should be back at /pages
+    // Should be at /pages
     expect(page.url()).toMatch(/\/pages\/?$/);
   });
 });

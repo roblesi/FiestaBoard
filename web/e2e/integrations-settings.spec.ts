@@ -26,8 +26,8 @@ test.describe('Settings', () => {
     await page.goto('/settings');
     await page.waitForLoadState('networkidle');
 
-    // Check that the Settings heading is visible
-    await expect(page.getByRole('heading', { name: /settings/i })).toBeVisible();
+    // Check that the Settings heading is visible (be more specific - get the h1)
+    await expect(page.getByRole('heading', { name: 'Settings', exact: true }).first()).toBeVisible();
   });
 
   test('should display settings form', async ({ page }) => {

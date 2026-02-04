@@ -37,11 +37,10 @@ test.describe('Pages Management', () => {
     const newButton = page.getByRole('button', { name: /new/i });
     await newButton.click();
 
-    // Wait for navigation
-    await page.waitForLoadState('networkidle');
+    // Wait for navigation with a longer timeout
+    await page.waitForURL('**/pages/new', { timeout: 10000 });
 
     // Check that we're on the new page creation page
-    // The URL should be /pages/new
     expect(page.url()).toContain('/pages/new');
   });
 
@@ -50,8 +49,8 @@ test.describe('Pages Management', () => {
     await page.waitForLoadState('networkidle');
 
     // The PageGridSelector component should be present
-    // We can check if the card content area exists
-    const cardContent = page.locator('[class*="CardContent"]').first();
+    // We can check if the card content area exists using data-slot
+    const cardContent = page.locator('[data-slot="card-content"]').first();
     await expect(cardContent).toBeVisible();
   });
 });
