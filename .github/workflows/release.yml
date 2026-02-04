@@ -64,11 +64,13 @@ jobs:
       build_pi: ${{ steps.bump_type.outputs.build_pi }}
       platforms: ${{ steps.bump_type.outputs.build_pi == 'true' && 'linux/amd64,linux/arm/v7,linux/arm64' || 'linux/amd64' }}
     steps:
+      # Use RELEASE_PAT when branch protection/rulesets block GITHUB_TOKEN from pushing to main.
+      # Add repo secret RELEASE_PAT (PAT with repo scope) and allow that user to bypass rules on main.
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.RELEASE_PAT || secrets.GITHUB_TOKEN }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
