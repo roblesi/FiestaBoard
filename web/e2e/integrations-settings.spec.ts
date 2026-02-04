@@ -15,9 +15,6 @@ test.describe('Integrations', () => {
 
     // The page should have loaded successfully
     expect(page.url()).toContain('/integrations');
-    
-    // Wait a bit for any dynamic content to load
-    await page.waitForTimeout(1000);
   });
 });
 
@@ -58,8 +55,5 @@ test.describe('Schedule', () => {
 
     // The page should have loaded successfully
     expect(page.url()).toContain('/schedule');
-    
-    // Wait for any dynamic content
-    await page.waitForTimeout(1000);
   });
 });

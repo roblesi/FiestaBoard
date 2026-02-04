@@ -5,9 +5,6 @@ test.describe('Page Creation', () => {
     await page.goto('/pages/new');
     await page.waitForLoadState('networkidle');
 
-    // Wait for the page to be ready
-    await page.waitForTimeout(1000);
-
     // The form should be visible
     // Look for common form elements that would be in a page creation UI
     const pageContent = await page.content();
@@ -19,7 +16,6 @@ test.describe('Page Creation', () => {
   test('should allow creating a new page with a name', async ({ page }) => {
     await page.goto('/pages/new');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // Try to find a name/title input field
     // This is a common pattern in forms
@@ -42,7 +38,6 @@ test.describe('Page Creation', () => {
   test('should have a template editor', async ({ page }) => {
     await page.goto('/pages/new');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // Look for editor-related elements
     // TipTap editor typically has contenteditable elements
