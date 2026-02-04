@@ -1,6 +1,6 @@
 {
   "name": "web",
-  "version": "1.27.11",
+  "version": "1.27.12",
   "private": true,
   "scripts": {
     "dev": "next dev --webpack",
