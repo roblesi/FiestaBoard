@@ -22,10 +22,10 @@ jobs:
         id: check
         run: |
           MSG="${{ github.event.head_commit.message }}"
-          ACTOR="${{ github.actor }}"
-          if echo "$MSG" | grep -qE '^chore: bump version to ' && [ "$ACTOR" = "github-actions[bot]" ]; then
+          # Skip when head commit is our version-bump (avoids loop when push uses RELEASE_PAT and actor is not github-actions[bot])
+          if echo "$MSG" | grep -qE '^chore: bump version to '; then
             echo "skip=true" >> $GITHUB_OUTPUT
-            echo "Skipping: trigger commit is our own version bump."
+            echo "Skipping: trigger commit is a version-bump commit."
           else
             echo "skip=false" >> $GITHUB_OUTPUT
           fi
