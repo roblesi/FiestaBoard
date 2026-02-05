@@ -387,6 +387,98 @@ function BooleanField({ name, value, onChange, disabled }: FieldProps) {
   );
 }
 
+/** WSF route options for the route picker (id matches WSDOT API route_id) */
+const WSDOT_FERRY_ROUTES = [
+  { id: 1, label: "Seattle – Bainbridge Island" },
+  { id: 2, label: "Seattle – Bremerton" },
+  { id: 3, label: "Fauntleroy – Vashon – Southworth" },
+  { id: 4, label: "Point Defiance – Tahlequah" },
+  { id: 5, label: "Anacortes – San Juan Islands" },
+  { id: 6, label: "Anacortes – Sidney B.C." },
+  { id: 7, label: "Mukilteo – Clinton" },
+  { id: 8, label: "Port Townsend – Keystone" },
+  { id: 9, label: "Edmonds – Kingston" },
+] as const;
+
+interface WsdotRoutePickerProps extends FieldProps {
+  maxItems?: number;
+}
+
+function WsdotRoutePicker({ name, property, value, onChange, disabled, maxItems = 4 }: WsdotRoutePickerProps) {
+  const items = Array.isArray(value) ? value : [];
+  const routeEntries = items.map((item) => (item && typeof item === "object" && "route_id" in item ? Number((item as { route_id: number }).route_id) : 0));
+
+  const setRouteAt = (index: number, routeId: number) => {
+    const next = [...routeEntries];
+    next[index] = routeId;
+    onChange(next.map((id) => ({ route_id: id })));
+  };
+
+  const handleAdd = () => {
+    const firstId = WSDOT_FERRY_ROUTES[0]?.id ?? 1;
+    onChange([...items, { route_id: firstId }]);
+  };
+
+  const handleRemove = (index: number) => {
+    const next = items.filter((_, i) => i !== index) as { route_id: number }[];
+    onChange(next);
+  };
+
+  const canAdd = routeEntries.length < maxItems;
+  const canRemove = routeEntries.length > 0;
+
+  return (
+    <div className="space-y-3">
+      {routeEntries.map((routeId, index) => (
+        <div key={index} className="flex gap-2 items-center">
+          <Select
+            value={routeId && WSDOT_FERRY_ROUTES.some((r) => r.id === routeId) ? String(routeId) : String(WSDOT_FERRY_ROUTES[0]?.id ?? "")}
+            onValueChange={(val) => setRouteAt(index, parseInt(val, 10))}
+            disabled={disabled}
+          >
+            <SelectTrigger id={`${name}-${index}`} className="flex-1">
+              <SelectValue placeholder="Select a ferry route" />
+            </SelectTrigger>
+            <SelectContent>
+              {WSDOT_FERRY_ROUTES.map((route) => (
+                <SelectItem key={route.id} value={String(route.id)}>
+                  {route.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {canRemove && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => handleRemove(index)}
+              disabled={disabled}
+              className="h-9 w-9 shrink-0 text-destructive hover:text-destructive"
+              aria-label="Remove route"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      ))}
+      {canAdd && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleAdd}
+          disabled={disabled}
+          className="w-full"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add ferry route
+        </Button>
+      )}
+    </div>
+  );
+}
+
 interface ArrayFieldProps extends FieldProps {
   itemSchema: SchemaProperty;
 }
@@ -540,6 +632,19 @@ function FormField({ name, property, value, onChange, required, disabled, onLoca
         />
       );
     case "array":
+      if (property["ui:widget"] === "wsdot-route-picker" && property.items) {
+        return (
+          <WsdotRoutePicker
+            name={name}
+            property={property}
+            value={value}
+            onChange={onChange}
+            required={required}
+            disabled={disabled}
+            maxItems={property.maxItems ?? 4}
+          />
+        );
+      }
       if (property.items) {
         return (
           <ArrayField
