@@ -111,6 +111,19 @@ COPY plugin-registry.json ./plugin-registry.json
 # marketplace can show a plugin's board before you install it.
 COPY plugin-previews.json ./plugin-previews.json
 
+# Precompile the Python sources into the image (issue #1955).
+#
+# `.dockerignore` excludes `__pycache__/`, so without this the image ships
+# no bytecode and the very first import — the one uvicorn does at boot —
+# compiles every module in src/ and plugins/. Measured on this tree:
+# 529ms cold vs 331ms warm, i.e. ~198ms (37%) added to every container
+# start and every reboot, scaling with CPU on a Pi.
+#
+# `|| true`: a plugin that cannot be byte-compiled must not fail the image
+# build. compileall skips what it cannot parse and the module still works
+# at runtime the way it does today — this is a cache warm, not a gate.
+RUN python -m compileall -q /app/src /app/plugins || true
+
 # Copy the static SPA bundle. Vite emits /app/build/client/ with
 # index.html + hashed assets/ subdirectory. nginx serves this directly
 # (see nginx.conf::location /).
