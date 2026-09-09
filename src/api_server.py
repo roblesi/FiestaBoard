@@ -257,7 +257,7 @@ async def lifespan(app: FastAPI):
     # src/system/mdns.py), and nothing is served while startup waits. The
     # `.local` name is advertised a moment later instead of the API booting
     # seconds later — and losing it entirely is already a survivable,
-    # logged outcome. Issue #1950.
+    # logged outcome. Issue #1955.
     try:
         from .system.mdns import start_mdns_background
 

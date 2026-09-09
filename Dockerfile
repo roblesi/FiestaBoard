@@ -111,7 +111,7 @@ COPY plugin-registry.json ./plugin-registry.json
 # marketplace can show a plugin's board before you install it.
 COPY plugin-previews.json ./plugin-previews.json
 
-# Precompile the Python sources into the image (issue #1950).
+# Precompile the Python sources into the image (issue #1955).
 #
 # `.dockerignore` excludes `__pycache__/`, so without this the image ships
 # no bytecode and the very first import — the one uvicorn does at boot —

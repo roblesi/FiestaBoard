@@ -1,4 +1,4 @@
-"""mDNS registration must not hold the startup path (issue #1950).
+"""mDNS registration must not hold the startup path (issue #1955).
 
 ``zeroconf.register_service()`` blocks until the multicast registration is
 accepted or zeroconf's internal event loop gives up. On a network where

@@ -176,7 +176,7 @@ def start_mdns() -> bool:
 
 
 def start_mdns_background(on_registered: Callable[[str], None] | None = None) -> threading.Thread:
-    """Register the mDNS service without holding the calling thread (#1950).
+    """Register the mDNS service without holding the calling thread (#1955).
 
     ``zeroconf.register_service()`` blocks for the whole of its internal
     timeout when multicast does not reach a responder — measured at 5.2 s

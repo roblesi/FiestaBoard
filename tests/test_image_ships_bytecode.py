@@ -1,4 +1,4 @@
-"""The image must ship precompiled bytecode (issue #1950).
+"""The image must ship precompiled bytecode (issue #1955).
 
 ``.dockerignore`` excludes ``__pycache__/``, so nothing the build copies in
 carries bytecode. Without an explicit ``compileall`` the first import in a
